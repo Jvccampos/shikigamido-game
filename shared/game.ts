@@ -1,126 +1,20 @@
+import { randomState, random, shuffle, type RandomState } from "./random.js";
 import { yokaiIds, masculineIds } from "./traits.js";
 import { baseKeywords } from "./keywords.js";
 import { spellSpecs, transferableKeywords } from "./spells.js";
-import catalog from "../data/cards.json" with { type: "json" };
-type Seat = 0 | 1;
-type DeckInput = {
-  name: string;
-  element: string;
-  cardIds: string[];
-  omionji: string;
-};
-type Player = {
-  id: string;
-  element: string;
-  library: string[];
-  hand: string[];
-  discard: string[];
-  pe: number;
-  maxPe: number;
-  permanentPe: number;
-  mulligan: boolean;
-  ready?: boolean;
-  resurrectedAnubis?: boolean;
-  costTaxUntil?: number;
-  concealTurn?: number;
-};
-type Unit = {
-  id: string;
-  cardId: string;
-  owner: Seat;
-  x: number;
-  y: number;
-  hp: number;
-  maxHp: number;
-  attack: number;
-  speed: number;
-  summonedTurn: number;
-  kind: "unit" | "omionji" | "curse" | "crystal" | "wall";
-  level?: number;
-  statuses?: Record<string, any>;
-  captured?: Unit[];
-  equipment?: Unit[];
-};
-type Game = {
-  duel?: { seat: Seat; unitId: string; opponentId?: string };
-  followup?: { seat: Seat; unitId: string; distance: number; label: string };
-  flowers?: {
-    id: string;
-    unitId: string;
-    owner: Seat;
-    x: number;
-    y: number;
-    hp: number;
-  }[];
-  setup?: boolean;
-  rolls?: [number, number][];
-  phaseOwner?: Seat;
-  centerChoices?: Record<string, string | null>;
-  centerPending?: boolean;
-  edges?: [number, number, number, number][];
-  combat?: {
-    attackerId: string;
-    defenderId: string;
-    x: number;
-    y: number;
-    ranged?: boolean;
-    returnPriority: Seat;
-  };
-  events?: any[];
-  revision?: number;
-  draw?: boolean;
-  turn: number;
-  phase: number;
-  priority: Seat;
-  first: Seat;
-  players: [Player, Player];
-  units: Unit[];
-  pending: { unit: Unit; returnTurn: number }[];
-  stack: any[];
-  terrain: {
-    kind: "lake" | "wind" | "fire";
-    x: number;
-    y: number;
-    owner: Seat;
-    x2?: number;
-    y2?: number;
-    until?: number;
-  }[];
-  passes: number;
-  moveCounts?: [number, number];
-  moved: string[];
-  actions: number;
-  winner: Seat | null;
-  log: string[];
-};
-type Cmd = {
-  type: string;
-  cardId?: string;
-  unitId?: string;
-  targetId?: string;
-  targetId2?: string;
-  x?: number;
-  y?: number;
-  extraPe?: number;
-  cardIds?: string[];
-  handIndex?: number;
-  handIndices?: number[];
-  choice?: string;
-  x2?: number;
-  y2?: number;
-};
-const elements = ["agua", "fogo", "terra", "vento", "vazio"];
+import { cards, allCards, elements } from "./cards.js";
+import { isCommand } from "./model.js";
+import type {
+  Seat,
+  DeckInput,
+  Player,
+  Unit,
+  Game,
+  Cmd,
+  EventPayload,
+  GameEvent,
+} from "./model.js";
 const phases = ["Compra", "Invocação", "Movimento", "Magia", "Descarte"];
-const allCards = catalog.cards as any[];
-const cards = new Map(allCards.map((c) => [c.id, c]));
-const shuffle = (a: string[]) => {
-  const b = [...a];
-  for (let i = b.length - 1; i; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [b[i], b[j]] = [b[j], b[i]];
-  }
-  return b;
-};
 const draw = (p: Player, n = 1) => {
   while (n-- && p.library.length) p.hand.push(p.library.shift()!);
 };
@@ -133,7 +27,7 @@ const spend = (p: Player, cost: number) => {
 };
 const at = (g: Game, x: number, y: number) =>
   g.units.find((u) => u.x === x && u.y === y);
-const uid = () => Math.random().toString(36).slice(2, 10);
+const uid = (g: Game) => `id-${(g.sequence = (g.sequence || 0) + 1)}`;
 const valid = (x: number, y: number) =>
   Number.isInteger(x) &&
   Number.isInteger(y) &&
@@ -289,8 +183,12 @@ function validateDeck(input: any) {
     return "Toda magia deve conter o elemento principal.";
   return null;
 }
-function makePlayer(id: string, d: any): Player {
-  const library = shuffle(d.cardIds as string[]);
+function makePlayer(
+  id: string,
+  d: DeckInput,
+  source: RandomState | undefined,
+): Player {
+  const library = shuffle(d.cardIds, source);
   const p = {
     id,
     element: d.element,
@@ -306,15 +204,17 @@ function makePlayer(id: string, d: any): Player {
   return p;
 }
 function omionji(owner: Seat, element: string): Unit {
+  const card = cards.get(`omionji-${element}`);
+  if (card?.kind !== "omionji") throw Error("Omionji inválido.");
   return {
     id: `o${owner}`,
     cardId: `omionji-${element}`,
     owner,
     x: owner ? 6 : 0,
     y: owner ? 4 : 2,
-    hp: cards.get(`omionji-${element}`)!.stats.health,
-    maxHp: cards.get(`omionji-${element}`)!.stats.health,
-    attack: cards.get(`omionji-${element}`)!.stats.attack,
+    hp: card.stats.health,
+    maxHp: card.stats.health,
+    attack: card.stats.attack,
     speed: 2,
     summonedTurn: 0,
     kind: "omionji",
@@ -337,16 +237,27 @@ function crystal(owner: Seat, n: number): Unit {
     statuses: {},
   };
 }
-function freshGame(hostId: string, guestId: string, a: any, b: any): Game {
+export const RULES_VERSION = 1;
+function freshGame(
+  hostId: string,
+  guestId: string,
+  a: DeckInput,
+  b: DeckInput,
+  seed?: number,
+): Game {
+  const source = randomState(seed);
   const rolls: [number, number][] = [];
   do {
     rolls.push([
-      1 + Math.floor(Math.random() * 6),
-      1 + Math.floor(Math.random() * 6),
+      1 + Math.floor(random(source) * 6),
+      1 + Math.floor(random(source) * 6),
     ]);
   } while (rolls.at(-1)![0] === rolls.at(-1)![1]);
   const first = (rolls.at(-1)![0] > rolls.at(-1)![1] ? 0 : 1) as Seat;
   return {
+    rulesVersion: RULES_VERSION,
+    random: source,
+    sequence: 0,
     setup: true,
     phaseOwner: first,
     rolls,
@@ -357,7 +268,7 @@ function freshGame(hostId: string, guestId: string, a: any, b: any): Game {
     phase: 0,
     priority: first,
     first,
-    players: [makePlayer(hostId, a), makePlayer(guestId, b)],
+    players: [makePlayer(hostId, a, source), makePlayer(guestId, b, source)],
     units: [
       omionji(0, a.element),
       omionji(1, b.element),
@@ -469,9 +380,12 @@ function elementalDamage(attacker: Unit, defender: Unit, g?: Game) {
 const adjacent = (a: { x: number; y: number }, b: { x: number; y: number }) =>
   Math.max(Math.abs(a.x - b.x), Math.abs(a.y - b.y)) === 1;
 const alive = (g: Game, u: Unit) => g.units.some((x) => x.id === u.id);
-const event = (g: Game, e: any) => {
+const event = <T extends EventPayload>(
+  g: Game,
+  e: T,
+): T & { id: string; turn: number; phase: number } => {
   const snapshot = structuredClone({
-    id: uid(),
+    id: uid(g),
     turn: g.turn,
     phase: g.phase,
     ...e,
@@ -515,9 +429,11 @@ function makeUnit(
   x: number,
   y: number,
 ): Unit {
-  const card = cards.get(cardId)!;
+  const card = cards.get(cardId);
+  if (!card || card.kind === "spell")
+    throw Error("Apenas criaturas podem ser invocadas.");
   return {
-    id: uid(),
+    id: uid(g),
     cardId,
     owner: seat,
     x,
@@ -553,7 +469,7 @@ function summonEffects(g: Game, u: Unit, targetId?: string) {
   }
   if (u.cardId === "tigre-carmesim")
     (g.flowers ??= []).push({
-      id: uid(),
+      id: uid(g),
       unitId: u.id,
       owner: u.owner,
       x: u.x,
@@ -577,7 +493,7 @@ function destroy(g: Game, u: Unit, killer?: Unit) {
     const level = Math.min(3, (u.level || 1) + 1),
       [x, y] = spawns[u.owner];
     g.units.push({
-      id: uid(),
+      id: uid(g),
       cardId: `maldicao-${level}`,
       owner: u.owner,
       x,
@@ -591,7 +507,7 @@ function destroy(g: Game, u: Unit, killer?: Unit) {
       level,
       statuses: {},
     });
-    event(g, { type: "summon", unit: g.units.at(-1) });
+    event(g, { type: "summon", unit: g.units.at(-1)! });
     g.log.push(`Maldição nível ${level} invocada no portal de origem.`);
     return;
   }
@@ -623,7 +539,7 @@ function destroy(g: Game, u: Unit, killer?: Unit) {
     )
       p.hand.push(u.cardId);
     else if (u.cardId === "taodu-corrupto")
-      p.library = shuffle([...p.library, u.cardId]);
+      p.library = shuffle([...p.library, u.cardId], g.random);
     else p.discard.push(u.cardId);
   }
   if (u.cardId === "tsuchi-o-gato-da-terra") {
@@ -764,7 +680,7 @@ function fight(g: Game, a: Unit, d: Unit) {
   const beforeA = structuredClone(a),
     beforeD = structuredClone(d);
   // Reserve the cue before damage triggers; finish it within this atomic command.
-  const combatCue = event(g, {
+  const combatCue = event<Extract<EventPayload, { type: "combat" }>>(g, {
     type: "combat",
     attacker: beforeA,
     defender: beforeD,
@@ -798,7 +714,7 @@ function fight(g: Game, a: Unit, d: Unit) {
       d.kind === "unit" &&
       a.owner === d.owner &&
       g.units.some((o) => o.cardId === "omionji-terra" && o.owner === a.owner));
-  if (a.cardId === "cachorro-do-mato" && Math.random() < 0.5) quick = true;
+  if (a.cardId === "cachorro-do-mato" && random(g.random) < 0.5) quick = true;
   const ad = elementalDamage(a, d, g),
     dd =
       d.statuses?.stun || d.cardId === "bolinhas-explosivas"
@@ -824,7 +740,7 @@ function fight(g: Game, a: Unit, d: Unit) {
   ) {
     destroy(g, d, a);
     quick = true;
-  } else if (a.statuses?.fireball && Math.random() < 0.5)
+  } else if (a.statuses?.fireball && random(g.random) < 0.5)
     g.log.push("Fireball errou no dado.");
   else da = takeDamage(g, d, ad, a, true);
   const equip =
@@ -932,7 +848,7 @@ function moveCurses(g: Game) {
         y,
         d: Math.min(...targets.map((t) => distance(x, y, t.x, t.y))),
         center: Math.abs(x - 3) + Math.abs(y - 3),
-        roll: Math.random(),
+        roll: random(g.random),
       }))
       .sort((a, b) => a.d - b.d || a.center - b.center || a.roll - b.roll);
     const target = options[0];
@@ -1045,7 +961,7 @@ function startTurn(g: Game) {
     for (const owner of [0, 1] as Seat[]) {
       const [x, y] = spawns[owner];
       g.units.push({
-        id: uid(),
+        id: uid(g),
         cardId: "maldicao-1",
         owner,
         x,
@@ -1059,7 +975,7 @@ function startTurn(g: Game) {
         level: 1,
         statuses: {},
       });
-      event(g, { type: "summon", unit: g.units.at(-1) });
+      event(g, { type: "summon", unit: g.units.at(-1)! });
     }
     g.centerPending = true;
     g.centerChoices = {};
@@ -1247,7 +1163,7 @@ function resolveSpell(
     g.log.push(`${card.name}: o alvo saiu de campo.`);
     return;
   }
-  const spellCue = event(g, {
+  const spellCue = event<Extract<EventPayload, { type: "spell" }>>(g, {
     type: "spell",
     seat,
     cardId,
@@ -1363,7 +1279,7 @@ function resolveSpell(
         t!.speed = Math.ceil(t!.speed / 2);
         g.units.push({
           ...structuredClone(t!),
-          id: uid(),
+          id: uid(g),
           x: spot[0],
           y: spot[1],
           summonedTurn: g.turn,
@@ -1388,7 +1304,7 @@ function resolveSpell(
     case "mamoru-n-9-wonder-wall":
       if (!at(g, x!, y!))
         g.units.push({
-          id: uid(),
+          id: uid(g),
           cardId: "wonder-wall",
           owner: seat,
           x: x!,
@@ -1823,8 +1739,10 @@ function ability(g: Game, seat: Seat, c: Cmd): string | undefined {
   g.log.push(`${cardOf(u)?.name} ativou seu efeito.`);
 }
 function apply(g: Game, seat: Seat, c: Cmd): string | undefined {
-  if (!c || typeof c !== "object" || typeof c.type !== "string")
-    return "Comando inválido.";
+  if (!isCommand(c)) return "Comando inválido.";
+  if ((g.rulesVersion ?? 1) > RULES_VERSION)
+    return "Esta partida usa uma versão mais recente das regras.";
+  g.rulesVersion ??= RULES_VERSION;
   if (g.winner !== null || g.draw) return "A partida terminou.";
   const p = g.players[seat];
   if (!p) return "Jogador inválido.";
@@ -1856,7 +1774,7 @@ function apply(g: Game, seat: Seat, c: Cmd): string | undefined {
       const returned = indices
         .sort((a, b) => b - a)
         .map((i) => p.hand.splice(i, 1)[0]);
-      p.library = shuffle([...p.library, ...returned]);
+      p.library = shuffle([...p.library, ...returned], g.random);
       draw(p, returned.length);
       p.mulligan = true;
       return;
@@ -2172,7 +2090,7 @@ function apply(g: Game, seat: Seat, c: Cmd): string | undefined {
     } else {
       u.x = c.x!;
       u.y = c.y!;
-      event(g, { type: "move", unitId: u.id, unit: u, path });
+      event(g, { type: "move", unitId: u.id, unit: u, path: path! });
     }
     const terrain = g.terrain.find(
       (z) => z.x === u.x && z.y === u.y && z.kind === "lake",
@@ -2227,7 +2145,7 @@ function apply(g: Game, seat: Seat, c: Cmd): string | undefined {
         c.y2,
       );
     else {
-      g.stack.push({ ...c, seat });
+      g.stack.push({ ...c, cardId: card.id, seat });
       g.priority = (1 - seat) as Seat;
       g.passes = 0;
       g.log.push(`${card.name} na pilha. O oponente pode responder.`);
@@ -2337,4 +2255,4 @@ export {
   kw,
   route,
 };
-export type { Seat, DeckInput, Player, Unit, Game, Cmd };
+export type { Seat, DeckInput, Player, Unit, Game, Cmd, GameEvent };

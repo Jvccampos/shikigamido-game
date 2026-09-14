@@ -15,5 +15,12 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true
   },
-  "include": ["client", "server", "shared", "vite.config.ts"]
+  "include": [
+    "client",
+    "server",
+    "shared",
+    "vite.config.ts",
+    "tests",
+    "playwright.config.ts"
+  ]
 }

@@ -6,9 +6,13 @@ import {
   apply,
   linked,
   elementalDamage,
-  cards,
 } from "../shared/game.js";
-const deck = { element: "agua", cardIds: Array(30).fill("taodu-corrupto") };
+const deck = {
+  name: "Fixture",
+  omionji: "omionji-agua",
+  element: "agua",
+  cardIds: Array(30).fill("taodu-corrupto"),
+};
 const game = () => freshGame("a", "b", deck, deck);
 test("decks reject more than two copies", () =>
   assert.match(validateDeck(deck) || "", /cópias/));

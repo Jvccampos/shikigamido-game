@@ -1,5 +1,5 @@
 import { useState } from "preact/hooks";
-import { cards, phases, type Game } from "../shared/game.js";
+import { cards, phases, type Game, type GameEvent } from "../shared/game.js";
 const cell = (u: any) =>
   !u
     ? ""
@@ -52,16 +52,19 @@ export function Journal(p: {
       <span className="event-icon">{id === "hidden" ? "?" : "✦"}</span>
     );
   }
-  function event(e: any) {
-    const c = cards.get(e.cardId || e.unit?.cardId),
+  function event(e: GameEvent) {
+    const unit = "unit" in e ? e.unit : undefined,
+      cardId = "cardId" in e ? e.cardId : unit?.cardId,
+      seat = "seat" in e ? e.seat : unit?.owner;
+    const c = cards.get(cardId || ""),
       name =
         c?.name ||
-        (e.unit?.kind === "crystal"
+        (unit?.kind === "crystal"
           ? "Cristal de invocação"
-          : e.unit?.kind === "curse"
-            ? `Maldição ${e.unit.level || ""}`
+          : unit?.kind === "curse"
+            ? `Maldição ${unit.level || ""}`
             : "Carta oculta"),
-      owner = p.names[e.seat ?? e.unit?.owner] || "";
+      owner = p.names[seat ?? -1] || "";
     let title = "",
       detail = "";
     switch (e.type) {
@@ -71,7 +74,7 @@ export function Journal(p: {
         break;
       case "summon":
         title =
-          e.unit?.kind === "curse" ? "Uma maldição surgiu" : `${owner} invocou`;
+          unit?.kind === "curse" ? "Uma maldição surgiu" : `${owner} invocou`;
         detail = `${name} · ${cell(e.unit)}`;
         break;
       case "move":
@@ -125,7 +128,7 @@ export function Journal(p: {
     }
     return (
       <>
-        {thumb(e.cardId || e.unit?.cardId)}
+        {thumb(cardId)}
         <div className="event-body">
           <strong>{title}</strong>
           <p>{detail}</p>

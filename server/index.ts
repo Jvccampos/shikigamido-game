@@ -1,3 +1,4 @@
+import { isCommand } from "../shared/model.js";
 import type { Context } from "./database.js";
 import {
   validateDeck,
@@ -5,7 +6,6 @@ import {
   apply,
   type Game,
   type Seat,
-  type Cmd,
 } from "../shared/game.js";
 import { publicRoom } from "../shared/visibility.js";
 const clean = (v: unknown, n = 80) =>
@@ -227,8 +227,7 @@ export default {
     ) => {
       const id = ctx.auth.userId;
       if (!id) return { error: "Entre na sua conta para jogar." };
-      if (!raw || typeof raw !== "object" || Array.isArray(raw))
-        return { error: "Comando inválido." };
+      if (!isCommand(raw)) return { error: "Comando inválido." };
       return ctx.db.transaction((tx) => {
         const r: any = tx.rooms
           .where("code", clean(c, 6).toUpperCase())
@@ -239,7 +238,7 @@ export default {
         const g = structuredClone(r.state) as Game;
         const seat = g.players.findIndex((p) => p.id === id);
         if (seat < 0) return { error: "Espectadores não enviam comandos." };
-        const cmd = raw as Cmd;
+        const cmd = raw;
         const independentSetup =
           g.setup &&
           ((cmd.type === "ready" && !g.players[seat].ready) ||
@@ -260,7 +259,7 @@ export default {
               "A partida foi atualizada. Confira o tabuleiro e tente novamente.",
             room: publicRoom(r, id),
           };
-        const error = apply(g, seat as Seat, raw as Cmd);
+        const error = apply(g, seat as Seat, raw);
         if (error) return { error };
         g.revision = (g.revision || 0) + 1;
         g.log = g.log.slice(-100);

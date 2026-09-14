@@ -8,7 +8,6 @@ import {
   cards,
   kw,
   moveOptions,
-  summonCells,
   validateDeck,
   type Game,
   type Unit,
@@ -26,6 +25,7 @@ const game = (element = "agua") => {
 };
 const unit = (id: string, owner: Seat = 0, x = 1, y = 1): Unit => {
   const c = cards.get(id)!;
+  assert(c.kind !== "spell");
   return {
     id: crypto.randomUUID(),
     cardId: id,
@@ -114,7 +114,11 @@ test("Devolver adds its printed amount only when defending", () => {
   a.maxHp = 20;
   g.units.push(a, d);
   fight(g, a, d);
-  assert.equal(g.events?.at(-1).defenseDamage, 4);
+  assert.equal(
+    [...(g.events || [])].reverse().find((e) => e.type === "combat")
+      ?.defenseDamage,
+    4,
+  );
 });
 test("shield absorbs combat damage and is consumed", () => {
   const g = game(),
@@ -313,7 +317,15 @@ test("spectator receives no private summon identity through event history", () =
     u = unit("taodu-katana");
   u.statuses = { hidden: true };
   g.units.push(u);
-  g.events = [{ id: "e", type: "summon", unit: structuredClone(u) }];
+  g.events = [
+    {
+      id: "e",
+      turn: g.turn,
+      phase: g.phase,
+      type: "summon",
+      unit: structuredClone(u),
+    },
+  ];
   const r = publicRoom({ state: g, spectators: [] }, null);
   assert.equal(r.state.units.at(-1).cardId, "hidden");
   assert.equal(r.state.events[0].unit.cardId, "hidden");
@@ -363,7 +375,9 @@ test("a hidden summon stays hidden in history even after removal", () => {
   const g = game(),
     u = unit("taodu-katana");
   u.statuses = { hidden: true };
-  g.events = [{ id: "e", type: "summon", unit: u }];
+  g.events = [
+    { id: "e", turn: g.turn, phase: g.phase, type: "summon", unit: u },
+  ];
   const r = publicRoom({ state: g, spectators: [] }, null);
   assert.equal(r.state.events[0].unit.cardId, "hidden");
 });
@@ -397,7 +411,11 @@ test("Duelo lets each owner choose its monster and caster choose attack order", 
   play(g, 1, { type: "duel", unitId: d.id });
   assert.equal(g.priority, 0);
   play(g, 0, { type: "duel", choice: "defender" });
-  assert.equal(g.events?.at(-1).attacker.id, d.id);
+  assert.equal(
+    [...(g.events || [])].reverse().find((e) => e.type === "combat")?.attacker
+      .id,
+    d.id,
+  );
 });
 
 test("draw is automatic before each invocation round, once per player", () => {
@@ -447,6 +465,7 @@ test("curse presentation announces arrival and approach before damage or respawn
   const arrival = g.events!.find(
     (e) => e.type === "summon" && e.unit.id === curse.id,
   );
+  assert(arrival?.type === "summon");
   const target = unit("chifre-de-fogo", 0, 0, 6);
   target.attack = 50;
   g.units.push(target);
@@ -475,14 +494,33 @@ test("hidden cards stay private in movement, destruction and spell snapshots", (
   const g = game();
   const u = unit("taodu-katana");
   u.statuses = { hidden: true };
-  g.events = ["move", "destroy"].map((type) => ({
-    id: type,
-    type,
-    unit: structuredClone(u),
-  }));
+  g.events = [
+    {
+      id: "move",
+      type: "move",
+      turn: g.turn,
+      phase: g.phase,
+      unitId: u.id,
+      unit: structuredClone(u),
+      path: [[u.x, u.y]],
+    },
+    {
+      id: "destroy",
+      type: "destroy",
+      turn: g.turn,
+      phase: g.phase,
+      unitId: u.id,
+      unit: structuredClone(u),
+    },
+  ];
   g.events.push({
     id: "spell",
     type: "spell",
+    turn: g.turn,
+    phase: g.phase,
+    seat: 0,
+    cardId: "mamoru-n-18-pele-de-ourico",
+    element: "agua",
     beforeTarget: structuredClone(u),
     afterTarget: structuredClone(u),
   });
@@ -521,7 +559,7 @@ test("curse that defeats Ice Serpent at zero dexterity stays still next turn", (
     !g.events!.some(
       (e) =>
         e.turn === 5 &&
-        ["move", "approach"].includes(e.type) &&
+        (e.type === "move" || e.type === "approach") &&
         e.unitId === curse.id,
     ),
   );

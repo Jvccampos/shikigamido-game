@@ -107,9 +107,6 @@
   align-items: center;
   pointer-events: none;
 }
-.duelist-opponent {
-  top: 85px;
-}
 .duelist-self {
   bottom: 45px;
 }
@@ -124,7 +121,6 @@
   box-shadow:
     0 0 0 4px #122b2299,
     0 6px 24px #000a;
-  pointer-events: auto;
 }
 .side-1 .duelist-portrait {
   border-color: #d68d75 !important;
@@ -252,7 +248,6 @@
 }
 .arena-pass {
   position: absolute;
-  right: 24px;
   top: 48%;
   display: flex;
   align-items: center;
@@ -381,7 +376,6 @@
   height: 25px;
   padding: 0;
   font-size: 20px;
-  opacity: 0;
 }
 .fan-card:hover .fan-zoom,
 .fan-card:focus-within .fan-zoom {
@@ -724,7 +718,6 @@
     margin: 5px 0 9px;
   }
   .arena-phase > small {
-    font-size: 7px;
     letter-spacing: 2px;
   }
   .duelist-opponent {
@@ -750,22 +743,13 @@
   .duelist-info > b {
     font-size: 11px;
     max-width: 110px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-  .duelist-info > small {
-    font-size: 6px;
   }
   .duelist-element {
     display: none;
   }
   .arena-pass {
     top: auto;
-    bottom: 148px;
-    right: 10px;
     padding: 9px 10px 9px 19px;
-    font-size: 9px;
     max-width: 145px;
   }
   .arena-pass b {
@@ -823,7 +807,6 @@
     margin: 5px 0 12px;
   }
   .arena-context {
-    top: auto;
     bottom: 202px;
     right: 10px;
     padding: 8px;
@@ -1095,7 +1078,6 @@ footer {
     width: 310px;
   }
   .arena-phase h1 {
-    font-size: 21px;
     margin: 4px 0 7px;
   }
   .arena-phase > small {
@@ -1195,7 +1177,6 @@ footer {
     right: 7px;
     max-width: 135px;
     padding: 10px 8px 10px 20px;
-    font-size: 9px;
   }
   .arena-pass b {
     font-size: 20px;
@@ -1209,7 +1190,6 @@ footer {
   }
   .arena-drawer {
     top: 45px;
-    bottom: 20px;
     right: 8px;
     width: 275px;
   }
@@ -1832,7 +1812,6 @@ footer {
   left: 24px;
   right: auto;
   top: auto;
-  bottom: 185px;
   max-width: 265px;
 }
 .arena-hover {
@@ -2035,9 +2014,6 @@ footer {
   .duelist-opponent {
     top: 114px;
   }
-  .duelist-self {
-    bottom: 148px;
-  }
   .duelist-life {
     width: 38px;
     height: 23px;
@@ -2047,7 +2023,6 @@ footer {
   }
   .player-resources {
     gap: 2px;
-    margin-top: 4px;
   }
   .player-resources > div {
     grid-template-columns: 40px auto;
@@ -2079,12 +2054,10 @@ footer {
     right: 10px;
     top: auto;
     bottom: 225px;
-    max-height: 220px;
     width: auto;
     padding: 22px 16px;
   }
   .arena-context {
-    left: 10px;
     bottom: 207px;
     max-width: 160px;
     top: auto;
@@ -2096,7 +2069,6 @@ footer {
     top: auto;
     bottom: 198px;
     width: 155px;
-    right: 10px;
   }
   .open-discard small {
     display: none;
@@ -2253,7 +2225,6 @@ footer {
     top: 148px;
     bottom: 20px;
     width: 230px;
-    max-height: none;
   }
   .arena-context {
     bottom: 130px;
@@ -2275,7 +2246,6 @@ footer {
   .open-discard {
     top: calc(42% + 65px);
     bottom: auto;
-    right: 8px;
     width: 130px;
     padding: 10px;
   }
@@ -2544,22 +2514,16 @@ footer {
   }
 }
 @media (max-width: 759px) {
-  .arena-phase {
-    top: 48px;
-  }
   .phase-steps {
-    gap: 12px;
     margin-top: 8px;
   }
   .phase-steps span {
     font-size: 7px;
     letter-spacing: 0.4px;
-    padding-bottom: 4px;
   }
   .phase-instruction {
     font-size: 9px;
     max-width: 290px;
-    margin-top: 6px;
   }
   .arena-phase h1 {
     font-size: 18px;
@@ -2585,7 +2549,6 @@ footer {
     font-size: 12px !important;
   }
   .stack-heading > span {
-    font-size: 6px;
     margin-top: 4px;
   }
   .pending-combat {
@@ -2664,9 +2627,6 @@ footer {
   .drawer-aim {
     font-size: 9px;
     padding: 7px;
-  }
-  .duelist-self {
-    bottom: 148px;
   }
   .preparing-position .arena-phase {
     top: 50px;
@@ -2824,7 +2784,6 @@ footer {
 @media (max-width: 759px) {
   .arena-stack-panel {
     top: 150px;
-    max-height: 95px;
     padding: 6px;
   }
   .arena-stack-panel > p {

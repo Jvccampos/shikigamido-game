@@ -14,6 +14,7 @@ import {
   connected,
   cards as catalog,
   type Game,
+  type GameEvent,
   type Unit,
 } from "../shared/game.js";
 export type Point = { x: number; y: number };
@@ -76,7 +77,7 @@ export class ArenaScene {
   private unitLayout = "";
   private eventIds = new Set<string>();
   private eventBaseline = false;
-  private queue: any[] = [];
+  private queue: GameEvent[] = [];
   private presenting = false;
   private activeViews = new Set<string>();
   private cancels = new Set<() => void>();
@@ -541,7 +542,7 @@ export class ArenaScene {
       bases = [
         card?.stats.attack ?? u.attack,
         card?.stats.health ?? u.maxHp,
-        card?.stats.speed ?? u.speed,
+        typeof card?.stats.speed === "number" ? card.stats.speed : u.speed,
       ];
     stats.forEach((value, i) => {
       const t = label(
@@ -677,29 +678,31 @@ export class ArenaScene {
   private async playQueue() {
     this.presenting = true;
     while (this.queue.length && !this.destroyed) {
-      const e = this.queue.shift(),
+      const e = this.queue.shift()!,
         l = layout(this.app.screen.width, this.app.screen.height);
+      const unit = "unit" in e ? e.unit : undefined;
+      const cardId = "cardId" in e ? e.cardId : unit?.cardId;
+      const palette: Record<string, number> = {
+        agua: 0x83d6ff,
+        fogo: 0xff945f,
+        vento: 0xa8f1c2,
+        terra: 0xebc981,
+        vazio: 0xcba2ff,
+      };
+      const element = "element" in e ? e.element : undefined;
       const color =
-        (
-          {
-            agua: 0x83d6ff,
-            fogo: 0xff945f,
-            vento: 0xa8f1c2,
-            terra: 0xebc981,
-            vazio: 0xcba2ff,
-          } as any
-        )[e.element || catalog.get(e.cardId || e.unit?.cardId)?.types?.[0]] ||
+        palette[element || catalog.get(cardId || "")?.types[0] || ""] ||
         0xe3d7a3;
       const name =
-        catalog.get(e.cardId || e.unit?.cardId)?.name ||
-        (e.unit?.kind === "curse" ? "Maldição" : "Carta oculta");
+        catalog.get(cardId || "")?.name ||
+        (unit?.kind === "curse" ? "Maldição" : "Carta oculta");
       if (e.type === "summon") {
         this.state.onPresentation(
           e.unit.kind === "curse"
             ? `Uma maldição surgiu no portal`
             : `${name} entrou no campo`,
         );
-        const u = e.unit as Unit,
+        const u = e.unit,
           item = this.ensureUnit(u),
           point = l.point(u.x, u.y),
           ring = new Graphics();
@@ -766,8 +769,8 @@ export class ArenaScene {
         this.activeViews.delete(e.unitId);
       } else if (e.type === "combat") {
         this.state.onPresentation(`${e.keyword} · resolvendo dano`);
-        const a = e.attacker as Unit,
-          d = e.defender as Unit,
+        const a = e.attacker,
+          d = e.defender,
           ai = this.ensureUnit(a),
           di = this.ensureUnit(d),
           ap = { x: ai.view.x, y: ai.view.y },
@@ -861,11 +864,11 @@ export class ArenaScene {
         );
       } else if (e.type === "spell") {
         this.state.onPresentation(`${name} resolve`);
-        const target = this.units.get(e.targetId),
+        const target = this.units.get(e.targetId || ""),
           point = target
             ? { x: target.view.x, y: target.view.y }
             : typeof e.x === "number"
-              ? l.point(e.x, e.y)
+              ? l.point(e.x, e.y ?? 3)
               : { x: l.cx, y: l.cy };
         const ring = new Graphics();
         this.fx.addChild(ring);

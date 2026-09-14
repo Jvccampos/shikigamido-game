@@ -6,10 +6,11 @@
     "dev": "node scripts/dev.mjs",
     "deploy": "railway up",
     "typecheck": "tsc --noEmit",
-    "test": "node scripts/test.mjs",
-    "test:browser": "node scripts/arena-smoke.mjs",
+    "test": "node --import tsx --test tests/*.test.ts",
+    "test:browser": "playwright test",
     "start": "node dist/server.mjs",
-    "test:multiplayer": "node --import tsx scripts/arena-multiplayer.mjs"
+    "test:multiplayer": "playwright test --grep multiplayer",
+    "check": "npm run typecheck && npm test"
   },
   "type": "module",
   "devDependencies": {

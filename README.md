@@ -17,12 +17,15 @@ Abra http://localhost:5175. Vite encaminha API e WebSocket ao servidor na porta 
 
 ## Organização do código
 
-- `shared/game.ts` aplica comandos e regras. Servidor e treino usam o mesmo motor; a arena apenas apresenta o resultado.
+- `shared/game.ts` aplica comandos e regras. Servidor e treino usam o mesmo motor; a arena apenas apresenta o resultado. `shared/model.ts` define estado, comandos e eventos; `shared/cards.ts` tipa e valida o catálogo ao carregar.
 - `shared/visibility.ts` prepara a visão de cada jogador ou espectador, ocultando mãos, baralhos e peças secretas antes da transmissão.
-- `client/index.tsx` reúne navegação, baralhos, lobby e comandos. `client/arena.tsx` controla a interface da partida; `client/arena-scene.ts` desenha e anima o tabuleiro PixiJS.
+- `client/index.tsx` reúne navegação, baralhos, lobby e treino. `client/match-interaction.tsx` concentra seleção, arraste, alvos e controles contextuais. `client/card.tsx` apresenta cartas e leitura ampliada.
+- `client/arena.tsx` controla a interface da partida; `client/arena-scene.ts` desenha e anima o tabuleiro PixiJS. `client/network.ts` mantém a conexão da sala e aplica a mesma verificação de revisão às respostas HTTP e WebSocket.
 - `server/index.ts` trata salas e baralhos. `server/main.ts` fornece HTTP, sessões e WebSocket; `server/database.ts` concentra a persistência SQLite.
 
-Os testes de salas usam SQLite em memória através do mesmo módulo de persistência da aplicação. O build rejeita declarações e parâmetros sem uso.
+Os testes de salas usam SQLite em memória através do mesmo módulo de persistência da aplicação. A checagem de tipos inclui os testes e rejeita declarações e parâmetros sem uso.
+
+`shared/random.ts` usa a aleatoriedade nativa nas partidas reais. Testes podem fornecer uma semente explícita para reproduzir compras, combates e movimentos de maldições. A semente nunca aparece na visão pública da sala. Partidas registram a versão das regras; estados antigos sem esse campo continuam compatíveis com a versão 1.
 
 ## Jogar
 
@@ -62,17 +65,21 @@ Use o painel de variáveis do Railway para os segredos; não os coloque no códi
 ## Verificação
 
 ```sh
-npm run typecheck
-npm test
+npm run check
+npx playwright install chromium
 npm run test:browser
-node --import tsx scripts/arena-multiplayer.mjs
+npm run test:multiplayer
 node --import tsx scripts/spell-ux.mjs
 node --import tsx scripts/combat-smoke.mjs
 node scripts/ui-sweep.mjs
 node scripts/readability-smoke.mjs
 ```
 
-Os testes cobrem baralhos, cópias, grafo, fases, combate, efeitos, privacidade, lobby, revisões concorrentes, SQLite, HTTP e WebSocket. Os scripts de navegador criam perfis/salas de QA, exercitam o arraste real, acompanham com um espectador e salvam capturas em `.sited/qa/` (pasta local ignorada). `TEST_URL` permite executar os mesmos fluxos contra o deploy.
+O comando `check` executa a checagem de tipos e os testes de regras, catálogo, privacidade, salas, SQLite, HTTP e WebSocket.
+
+`test:browser` compila a aplicação e inicia um servidor isolado na porta 3187 com SQLite em memória. Exercita a preparação em quatro tamanhos de tela e uma partida com dois jogadores e espectador, incluindo resposta HTTP atrasada, reconexão, invocação e movimento por arraste. `test:multiplayer` executa apenas essa segunda parte. Falhas deixam capturas e traces em `.sited/playwright-results/` e um relatório em `.sited/playwright-report/`. O GitHub Actions executa essas verificações a cada push e pull request.
+
+Os scripts adicionais de magia, combate e revisão visual usam o servidor de desenvolvimento já aberto e salvam capturas em `.sited/qa/`. `TEST_URL` permite direcionar os testes de navegador e esses scripts a outro servidor, inclusive ao deploy. Eles criam perfis e salas de QA nesse servidor.
 
 ## Interpretações ainda provisórias
 

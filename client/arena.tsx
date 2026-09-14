@@ -1,28 +1,35 @@
+import type { Selection } from "./match-interaction.js";
 import { OpeningHand, DiscardChoice } from "./choices.js";
 import { Journal } from "./journal.js";
 import { useEffect, useRef, useState } from "preact/hooks";
 import type { ComponentChildren } from "preact";
 import { ArenaScene, type Point } from "./arena-scene.js";
-import { cards, phases, type Game, type Unit } from "../shared/game.js";
+import {
+  cards,
+  phases,
+  type Game,
+  type Unit,
+  type Cmd,
+} from "../shared/game.js";
 type Props = {
   game: Game;
   seat: number;
   code: string;
   names: string[];
   highlights: Point[];
-  selected: any;
+  selected: Selection | null;
   targets: string[];
   mulligan: number[];
   startY: number;
   busy: boolean;
   controls: ComponentChildren;
   onExit: () => void;
-  onAct: (c: any) => void;
+  onAct: (c: Cmd) => void;
   onHand: (index: number) => void;
   onCell: (x: number, y: number, u?: Unit) => void;
   onSelect: (u: Unit) => void;
-  onDrag: (data: any) => void;
-  onDrop: (x: number, y: number, u?: Unit, data?: any) => void;
+  onDrag: (data: Selection | null) => void;
+  onDrop: (x: number, y: number, u?: Unit, data?: Selection | null) => void;
   onFocus: (card: any, unit?: Unit) => void;
   onStartY: (y: number) => void;
   onMulligan: () => void;
@@ -78,7 +85,7 @@ export function Arena(p: Props) {
     opponent = p.seat === 0 ? 1 : 0,
     yourTurn = p.seat === g.priority,
     done = g.winner !== null || g.draw,
-    card = p.selected?.kind === "hand" ? cards.get(p.selected.cardId) : null;
+    card = p.selected?.kind === "hand" ? cards.get(p.selected?.cardId) : null;
   const previousHand = useRef<{
     count: number;
     library: number;
@@ -407,6 +414,7 @@ export function Arena(p: Props) {
                   : `Vez de ${p.names[g.priority]}`;
   return (
     <section
+      aria-busy={p.busy || !ready}
       className={`arena-shell ${g.setup ? "preparing-position" : ""} ${opening ? "choosing-hand" : ""} ${drawing ? "drawing" : ""} ${responseContext ? "response-mode" : ""} ${presenting ? "presenting" : ""}`}
       aria-label="Partida de Shikigamido"
     >
@@ -748,7 +756,7 @@ export function Arena(p: Props) {
         <button className="arena-context" onClick={() => setDrawer(!drawer)}>
           {card?.name ||
             cards.get(
-              g.units.find((u) => u.id === p.selected.unitId)?.cardId || "",
+              g.units.find((u) => u.id === p.selected?.unitId)?.cardId || "",
             )?.name ||
             "Unidade"}{" "}
           <span>{drawer ? "×" : "Efeitos ↗"}</span>

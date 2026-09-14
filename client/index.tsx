@@ -1,7 +1,7 @@
+import { E, SPEED, CardFace, Focus } from "./card.js";
+import { useMatchInteraction } from "./match-interaction.js";
 import { Arena } from "./arena.js";
 import { enterAsGuest } from "./network.js";
-import { abilities } from "../shared/abilities.js";
-import { yokaiIds, masculineIds } from "../shared/traits.js";
 import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import {
   openLogin,
@@ -9,241 +9,19 @@ import {
   useAuth,
   useMutation,
   useQuery,
+  useRoom,
 } from "./network.js";
 import {
   allCards,
   cards as catalog,
   phases as PHASES,
   validateDeck,
-  summonCells,
-  moveOptions,
-  route,
   apply,
-  kw,
   type Game,
-  type Unit,
   type Cmd,
-  type Seat,
 } from "../shared/game.js";
-import { spellSpecs, transferableKeywords } from "../shared/spells.js";
 import { practiceGame, starterDeck, botCommand } from "../shared/practice.js";
 import { publicRoom } from "../shared/visibility.js";
-const E: Record<string, [string, string, string]> = {
-  agua: ["#68c5ef", "水", "Água"],
-  fogo: ["#f57b62", "火", "Fogo"],
-  terra: ["#d7ae67", "地", "Terra"],
-  vento: ["#8cd8b6", "風", "Vento"],
-  vazio: ["#be9aee", "空", "Vazio"],
-};
-const SPEED: Record<string, string> = {
-  slow: "Lenta",
-  fast: "Rápida",
-  instant: "Instantânea",
-};
-function unitName(u: any) {
-  return (
-    catalog.get(u?.cardId)?.name ||
-    (u?.kind === "crystal"
-      ? "Cristal de invocação"
-      : u?.kind === "curse"
-        ? `Maldição · nível ${u.level}`
-        : u?.kind === "omionji"
-          ? "Omionji"
-          : u?.kind === "wall"
-            ? "Parede de terra"
-            : "Carta oculta")
-  );
-}
-function Stat({
-  value,
-  base,
-  label,
-  icon,
-}: {
-  value: number;
-  base: number;
-  label: string;
-  icon: string;
-}) {
-  return (
-    <span
-      className={`stat ${value < base ? "down" : value > base ? "up" : "equal"}`}
-      title={`${label}: ${value}. Original: ${base}.`}
-    >
-      <small>{icon}</small>
-      {value}
-      {value !== base && <sup>{value > base ? "↑" : "↓"}</sup>}
-    </span>
-  );
-}
-function Stats({ unit, card }: { unit?: any; card: any }) {
-  return card?.kind === "spell" ? (
-    <span className="spell-speed">
-      {SPEED[card.stats.speed]} · {card.stats.cost} PE
-    </span>
-  ) : (
-    <div className="stats">
-      <Stat
-        value={unit?.attack ?? card?.stats.attack ?? 0}
-        base={card?.stats.attack ?? unit?.attack ?? 0}
-        label="Ataque"
-        icon="⚔"
-      />
-      <Stat
-        value={unit?.hp ?? card?.stats.health ?? 0}
-        base={card?.stats.health ?? unit?.maxHp ?? 0}
-        label="Vida"
-        icon="♥"
-      />
-      <Stat
-        value={unit?.speed ?? card?.stats.speed ?? 0}
-        base={card?.stats.speed ?? unit?.speed ?? 0}
-        label="Velocidade"
-        icon="➟"
-      />
-    </div>
-  );
-}
-function CardFace({
-  card,
-  unit,
-  compact = false,
-}: {
-  card: any;
-  unit?: any;
-  compact?: boolean;
-}) {
-  return (
-    <div
-      className={`card-face ${compact ? "compact" : ""}`}
-      style={{ "--element": E[card?.types?.[0] || "vazio"][0] }}
-    >
-      {card?.asset ? (
-        <img
-          src={card.asset}
-          alt={card.name}
-          loading="lazy"
-          draggable={false}
-        />
-      ) : (
-        <div className="card-placeholder">
-          <span>
-            {unit?.kind === "crystal"
-              ? "◆"
-              : unit?.kind === "curse"
-                ? "禍"
-                : "式"}
-          </span>
-          <b>{unitName(unit)}</b>
-        </div>
-      )}
-      {unit && unit.cardId !== "hidden" && <Stats unit={unit} card={card} />}
-    </div>
-  );
-}
-function Focus({
-  card,
-  unit,
-  onClose,
-}: {
-  card: any;
-  unit?: any;
-  onClose: () => void;
-}) {
-  const close = useRef<HTMLButtonElement>(null);
-  useEffect(() => {
-    const previous = document.activeElement as HTMLElement;
-    close.current?.focus();
-    const key = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-      if (e.key === "Tab") {
-        e.preventDefault();
-        close.current?.focus();
-      }
-    };
-    window.addEventListener("keydown", key);
-    return () => {
-      window.removeEventListener("keydown", key);
-      previous?.focus?.();
-    };
-  }, []);
-  return (
-    <div className="modal-scrim" onClick={onClose}>
-      <section
-        className="card-focus"
-        role="dialog"
-        aria-modal="true"
-        aria-label={card?.name || unitName(unit)}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <button
-          ref={close}
-          className="close"
-          onClick={onClose}
-          aria-label="Fechar carta"
-        >
-          ×
-        </button>
-        <CardFace card={card} unit={unit} />
-        <div className="focus-text">
-          <p className="eyebrow">
-            {card?.types?.map((e: string) => E[e][2]).join(" · ") ||
-              "Peça do tabuleiro"}
-          </p>
-          <h2>{card?.name || unitName(unit)}</h2>
-          <Stats unit={unit} card={card} />
-          <p>
-            {card?.effect_text ||
-              (unit?.kind === "crystal"
-                ? "Tem 3 de vida. Invoque monstros nos espaços conectados a este cristal."
-                : unit?.kind === "curse"
-                  ? "Avança automaticamente até o Omionji mais próximo. Ao ser destruída, retorna ao portal com um nível a mais, até nível 3."
-                  : "")}
-          </p>
-          {unit && (
-            <p className="muted">
-              Atributos atuais. <span className="up">Verde ↑ acima</span> ·{" "}
-              <span className="down">vermelho ↓ abaixo</span> do valor original.
-            </p>
-          )}
-          {(yokaiIds.has(card?.id) || masculineIds.has(card?.id)) && (
-            <p className="muted">
-              Para efeitos de combate:{" "}
-              {[
-                yokaiIds.has(card?.id) && "Yokai",
-                masculineIds.has(card?.id) && "masculino",
-              ]
-                .filter(Boolean)
-                .join(" · ")}
-            </p>
-          )}
-          {unit?.statuses && (
-            <div className="status-tags">
-              {statusLabels(unit).map((s) => (
-                <span key={s}>{s}</span>
-              ))}
-            </div>
-          )}
-          <small>Esc para fechar</small>
-        </div>
-      </section>
-    </div>
-  );
-}
-function statusLabels(u: any) {
-  const s = u.statuses || {};
-  return [
-    s.shield && "Escudo",
-    s.burn && `Burn ${s.burn}`,
-    s.softStun && "Imobilizado",
-    s.stun && "Atordoado",
-    s.centerBonus && "Bônus do centro",
-    s.hidden && "Oculto",
-    s.block && `Block ${s.block}`,
-    s.range && `Range ${s.range}`,
-    u.equipment?.length && `${u.equipment.length} equipamento(s)`,
-  ].filter(Boolean) as string[];
-}
 export function App() {
   const [loginOpen, setLoginOpen] = useState(false),
     [nickname, setNickname] = useState("");
@@ -277,63 +55,41 @@ export function App() {
         localStorage.getItem("shiki-room") ||
         "",
     ),
-    [room, setRoom] = useState<any>(null),
     [practice, setPractice] = useState<Game | null>(null),
     [toast, setToast] = useState(""),
     [busy, setBusy] = useState(false),
     [sceneBusy, setSceneBusy] = useState(false),
     [focus, setFocus] = useState<any>(null);
-  const [selected, setSelected] = useState<any>(null),
-    [drag, setDrag] = useState<any>(null),
-    [targetIds, setTargetIds] = useState<string[]>([]),
-    [cells, setCells] = useState<{ x: number; y: number }[]>([]),
-    [choice, setChoice] = useState(""),
-    [extra, setExtra] = useState(0),
-    [mulligan, setMulligan] = useState<number[]>([]),
-    [startY, setStartY] = useState(2),
-    [concede, setConcede] = useState(false);
-  const liveRoom = useQuery<any>("room", [practice ? "" : code]);
+  const [concede, setConcede] = useState(false);
+  const liveRoom = useRoom(code, view === "sala" && !practice);
+  const room = useMemo(
+    () => (practice ? practiceRoom(practice) : liveRoom.data),
+    [practice, liveRoom.data],
+  );
   const toastTimer = useRef<any>(null),
-    lastRevision = useRef(-1),
     hovered = useRef<any>(null),
     localRef = useRef(practice);
   localRef.current = practice;
-  const g = room?.state as Game | undefined,
+  const g = (Array.isArray(room?.state?.players) ? room.state : undefined) as
+      Game | undefined,
     seat = room?.seat ?? -1,
-    me = seat >= 0 ? g?.players?.[seat] : null,
-    myTurn = !!g && seat === g.priority && !g.setup && !g.centerPending,
-    finished = !!g && ((g.winner !== null && g.winner !== undefined) || g.draw),
-    selectedCard =
-      selected?.kind === "hand" ? catalog.get(selected.cardId) : null,
-    selectedUnit = g?.units?.find((u) => u.id === selected?.unitId);
+    myTurn = !!g && seat === g.priority && !g.setup && !g.centerPending;
+  const interaction = useMatchInteraction(
+    g,
+    seat,
+    busy || sceneBusy,
+    act,
+    setFocus,
+    code,
+  );
   const flash = (message: string) => {
     setToast(message);
     clearTimeout(toastTimer.current);
     toastTimer.current = setTimeout(() => setToast(""), 5000);
   };
-  const clear = () => {
-    setTargetMode(false);
-    setSelected(null);
-    setTargetIds([]);
-    setCells([]);
-    setExtra(0);
-    setChoice("");
-    setDrag(null);
-  };
-  function receive(r: any) {
-    if (!r) return;
-    const rev = r.state?.revision ?? -1;
-    if (r.code === code && rev >= 0 && rev < lastRevision.current) return;
-    lastRevision.current = rev;
-    setRoom(r);
-  }
   useEffect(() => {
     if (!selectedDeck && decks.data?.[0]) setSelectedDeck(decks.data[0].id);
   }, [decks.data]);
-  useEffect(() => {
-    if (view === "sala" && !practice && liveRoom.data?.code === code)
-      receive(liveRoom.data);
-  }, [liveRoom.data, view, !!practice]);
   useEffect(() => {
     const key = (e: KeyboardEvent) => {
       if (
@@ -344,7 +100,7 @@ export function App() {
         return;
       if (e.key === "Escape") {
         setFocus(null);
-        clear();
+        interaction.arena.onClear();
       }
       if (e.key.toLowerCase() === "f" && hovered.current) {
         setFocus(hovered.current);
@@ -375,13 +131,11 @@ export function App() {
         if (!apply(clean, 1, { type: "pass" })) {
           clean.revision = (clean.revision || 0) + 1;
           setPractice(clean);
-          setRoom(practiceRoom(clean));
         }
         return;
       }
       next.revision = (next.revision || 0) + 1;
       setPractice(next);
-      setRoom(practiceRoom(next));
     }, 750);
     return () => clearTimeout(timer);
   }, [practice, sceneBusy]);
@@ -411,7 +165,7 @@ export function App() {
     setBusy(true);
     try {
       const result = await fn();
-      if (result?.room) receive(result.room);
+      if (result?.room) liveRoom.receive(result.room);
       if (result?.error) flash(result.error);
       return result;
     } catch (e) {
@@ -425,19 +179,21 @@ export function App() {
     }
   }
   async function act(cmd: Cmd) {
-    if (busy || sceneBusy) return;
+    if (busy || sceneBusy) return false;
     if (practice) {
       const next = structuredClone(practice),
         error = apply(next, 0, cmd);
-      if (error) return flash(error);
+      if (error) {
+        flash(error);
+        return false;
+      }
       next.revision = (next.revision || 0) + 1;
       setPractice(next);
-      setRoom(practiceRoom(next));
-      clear();
-      return;
+
+      return true;
     }
     const r = await request(() => command.mutate(code, cmd, g?.revision || 0));
-    if (r && !r.error) clear();
+    return !!r && !r.error;
   }
   useEffect(() => {
     if (
@@ -456,17 +212,16 @@ export function App() {
   function startPractice() {
     const game = practiceGame(element);
     setSceneBusy(false);
-    lastRevision.current = -1;
+
     setPractice(game);
-    setRoom(practiceRoom(game));
+
     setCode("TREINO");
-    setStartY(2);
-    clear();
+    interaction.reset();
     setView("sala");
   }
   async function enter(spectator = false) {
     setPractice(null);
-    lastRevision.current = -1;
+
     const r = await request(() =>
       joinRoom.mutate(code, selectedDeck || undefined, spectator),
     );
@@ -477,7 +232,7 @@ export function App() {
   }
   async function makeRoom() {
     setPractice(null);
-    lastRevision.current = -1;
+
     const r = await request(() => createRoom.mutate(selectedDeck));
     if (r?.room) {
       setCode(r.room.code);
@@ -530,169 +285,6 @@ export function App() {
     [element, search, filter],
   );
   const count = (id: string) => chosen.filter((x) => x === id).length;
-  function pickHand(index: number) {
-    if (g?.setup) {
-      if (me?.mulligan || me?.ready) return;
-      setMulligan(
-        mulligan.includes(index)
-          ? mulligan.filter((i) => i !== index)
-          : [...mulligan, index],
-      );
-      return;
-    }
-    clear();
-    setSelected({ kind: "hand", cardId: me!.hand[index], index });
-  }
-  useEffect(() => {
-    if (!g?.setup || me?.mulligan || me?.ready) setMulligan([]);
-  }, [g?.setup, me?.mulligan, me?.ready]);
-  const [targetMode, setTargetMode] = useState(false);
-  const active = drag || selected,
-    activeCard = active?.kind === "hand" ? catalog.get(active.cardId) : null,
-    activeUnit = g?.units?.find((u) => u.id === active?.unitId);
-  const highlights = useMemo(() => {
-    if (!g || seat < 0 || finished || g.setup) return [];
-    if (g.followup?.seat === seat) {
-      const u = g.units.find((u) => u.id === g.followup!.unitId);
-      return u
-        ? Array.from({ length: 49 }, (_, i) => ({
-            x: i % 7,
-            y: Math.floor(i / 7),
-          })).filter((v) => {
-            const p = route(g, u, v.x, v.y);
-            return (
-              p &&
-              p.length > 0 &&
-              p.length <= g.followup!.distance &&
-              !g.units.some((u) => u.x === v.x && u.y === v.y)
-            );
-          })
-        : [];
-    }
-    if (activeCard?.kind === "unit" && myTurn && g.phase === 1)
-      return summonCells(g, seat as Seat);
-    if (activeUnit && myTurn && g.phase === 2)
-      return moveOptions(g, activeUnit);
-    return [];
-  }, [g?.revision, active?.unitId, active?.cardId, myTurn, finished]);
-  function chooseTarget(u: Unit) {
-    setTargetIds((prev) =>
-      prev.includes(u.id)
-        ? prev.filter((id) => id !== u.id)
-        : [...prev.slice(-1), u.id],
-    );
-  }
-  function dropAt(x: number, y: number, u?: Unit, data = active) {
-    setDrag(null);
-    if (g?.followup?.seat === seat) {
-      void act({ type: "followup", x, y });
-      return;
-    }
-    if (!data) return;
-    if (data.kind === "unit") {
-      if (data.unitId === u?.id) return;
-      if (g?.phase === 2 && g.priority === seat)
-        void act({ type: "move", unitId: data.unitId, x, y });
-      return;
-    }
-    const card = catalog.get(data.cardId);
-    if (!card) return;
-    if (card.kind === "unit") {
-      void act({
-        type: "summon",
-        cardId: card.id,
-        handIndex: data.index,
-        choice: data.fromDeck ? "library" : undefined,
-        x,
-        y,
-        targetId: targetIds[0],
-        targetId2: targetIds[1],
-      });
-      return;
-    }
-    const spec = spellSpecs[card.id];
-    setSelected(data);
-    const t = u ? [u.id] : [];
-    setTargetIds(t);
-    setCells([{ x, y }]);
-    if (
-      [
-        "unit",
-        "ally",
-        "windAlly",
-        "omionjiFire",
-        "combat",
-        "lake",
-        "none",
-      ].includes(spec.target)
-    )
-      void act({
-        type: "cast",
-        cardId: card.id,
-        handIndex: data.index,
-        targetId: u?.id,
-        x,
-        y,
-      });
-  }
-  function cellClick(x: number, y: number, u?: Unit) {
-    if (g?.followup?.seat === seat) {
-      void act({ type: "followup", x, y });
-      return;
-    }
-    if (g?.setup) {
-      if (x === (seat ? 6 : 0) && (y === 2 || y === 4)) setStartY(y);
-      return;
-    }
-    if (g?.centerPending) {
-      if (u && u.owner === seat) setSelected({ kind: "unit", unitId: u.id });
-      return;
-    }
-    if (selectedCard?.kind === "spell") {
-      if (u) chooseTarget(u);
-      setCells((prev) => [...prev.slice(-1), { x, y }]);
-      return;
-    }
-    if (
-      selectedUnit &&
-      !targetMode &&
-      g?.phase === 2 &&
-      selectedUnit.owner === seat &&
-      selectedUnit.id !== u?.id &&
-      (!u || u.owner !== seat || u.kind === "curse")
-    ) {
-      dropAt(x, y, u, selected);
-      return;
-    }
-    if (selectedCard?.kind === "unit") {
-      if (u) {
-        chooseTarget(u);
-        setCells([{ x, y }]);
-      } else dropAt(x, y, u, selected);
-      return;
-    }
-    if (u) {
-      if (
-        selectedUnit &&
-        u.id !== selectedUnit.id &&
-        (targetMode || g?.phase !== 2)
-      ) {
-        chooseTarget(u);
-        setCells([{ x, y }]);
-      } else {
-        clear();
-        setSelected({ kind: "unit", unitId: u.id });
-      }
-    } else setCells((prev) => [...prev.slice(-1), { x, y }]);
-  }
-  const abilitySpec = selectedUnit
-    ? abilities[selectedUnit.cardId] ||
-      (selectedUnit.statuses?.construir
-        ? abilities["kuma-no-tsuno"]
-        : undefined)
-    : undefined;
-  const canPlay =
-    !!me && !g?.setup && !g?.centerPending && !finished && !busy && !sceneBusy;
   return (
     <div
       className={`app ${view === "sala" && g?.players ? "in-game playing-arena" : ""}`}
@@ -833,7 +425,7 @@ export function App() {
                       onClick={() => {
                         setCode(r.code);
                         setPractice(null);
-                        lastRevision.current = -1;
+
                         setView("sala");
                       }}
                     >
@@ -1258,421 +850,11 @@ export function App() {
               seat={seat}
               code={code}
               names={[playerName(0), playerName(1)]}
-              highlights={highlights}
-              selected={selected}
-              targets={targetIds}
-              mulligan={mulligan}
-              startY={startY}
+              {...interaction.arena}
               busy={busy || sceneBusy}
               onPresentationBusy={setSceneBusy}
               onExit={() => setView("inicio")}
-              onAct={act}
-              onHand={pickHand}
-              onCell={cellClick}
-              onSelect={(u) => {
-                if (
-                  u.owner === seat &&
-                  !targetMode &&
-                  selected?.kind !== "hand"
-                ) {
-                  clear();
-                  setSelected({ kind: "unit", unitId: u.id });
-                }
-              }}
-              onDrag={setDrag}
-              onDrop={dropAt}
-              onFocus={(card, unit) => setFocus({ card, unit })}
-              onStartY={setStartY}
-              onMulligan={() => {
-                void act({ type: "mulligan", handIndices: mulligan });
-                setMulligan([]);
-              }}
-              onClear={clear}
               onConcede={() => setConcede(true)}
-              controls={
-                <>
-                  {" "}
-                  <div className="selection-panel">
-                    <p className="eyebrow">
-                      {selectedCard
-                        ? "CARTA SELECIONADA"
-                        : selectedUnit
-                          ? "UNIDADE SELECIONADA"
-                          : "SUA PRÓXIMA AÇÃO"}
-                    </p>
-                    {selectedCard || selectedUnit ? (
-                      <>
-                        <button
-                          onClick={() =>
-                            setFocus({
-                              card:
-                                selectedCard ||
-                                catalog.get(selectedUnit!.cardId),
-                              unit: selectedUnit,
-                            })
-                          }
-                        >
-                          <CardFace
-                            card={
-                              selectedCard || catalog.get(selectedUnit!.cardId)
-                            }
-                            unit={selectedUnit}
-                          />
-                        </button>
-                        <h3>{selectedCard?.name || unitName(selectedUnit)}</h3>
-                        <p>
-                          {selectedCard?.effect_text ||
-                            catalog.get(selectedUnit?.cardId || "")
-                              ?.effect_text}
-                        </p>
-                        {selectedUnit && (
-                          <div className="status-tags">
-                            {statusLabels(selectedUnit).map((s) => (
-                              <span key={s}>{s}</span>
-                            ))}
-                          </div>
-                        )}
-                      </>
-                    ) : (
-                      <>
-                        <span className="selection-seal">式</span>
-                        <h3>
-                          {seat < 0
-                            ? "Assista ao duelo"
-                            : g.setup
-                              ? "Sua primeira escolha"
-                              : myTurn
-                                ? "O caminho é seu."
-                                : "Observe o campo."}
-                        </h3>
-                        <p>
-                          {g.setup
-                            ? "Selecione cartas da mão para trocar, ou confirme para mantê-las."
-                            : "Passe o cursor em uma carta e pressione F para ler seus efeitos."}
-                        </p>
-                      </>
-                    )}
-                    {selectedCard?.kind === "spell" && (
-                      <div className="target-controls">
-                        <p>{spellSpecs[selectedCard.id]?.hint}</p>
-                        {targetIds.map((id, i) => (
-                          <small key={id}>
-                            Alvo {i + 1}:{" "}
-                            {unitName(g.units.find((u) => u.id === id))}
-                          </small>
-                        ))}
-                        {cells.map((c, i) => (
-                          <small key={i}>
-                            Casa {i + 1}: {c.x + 1}, {c.y + 1}
-                          </small>
-                        ))}
-                        {["discardVoid", "discardCat"].includes(
-                          spellSpecs[selectedCard.id].target,
-                        ) && (
-                          <select
-                            aria-label="Carta do descarte"
-                            value={choice}
-                            onChange={(e) => setChoice(e.currentTarget.value)}
-                          >
-                            <option value="">Escolha no descarte</option>
-                            {[...new Set(me?.discard || [])]
-                              .filter((id) =>
-                                selectedCard.id === "ritual-do-gato-sete-vidas"
-                                  ? /gato|neko/.test(id)
-                                  : catalog.get(id)?.kind === "unit" &&
-                                    catalog.get(id)?.types.includes("vazio"),
-                              )
-                              .map((id) => (
-                                <option key={id} value={id}>
-                                  {catalog.get(id)?.name}
-                                </option>
-                              ))}
-                          </select>
-                        )}
-                        {selectedCard.id === "gishiki-n-9-mimetismo" && (
-                          <select
-                            aria-label="Keyword"
-                            value={choice}
-                            onChange={(e) => setChoice(e.currentTarget.value)}
-                          >
-                            <option value="">Escolha a keyword</option>
-                            {transferableKeywords.map((k) => (
-                              <option key={k}>{k}</option>
-                            ))}
-                          </select>
-                        )}
-                        {selectedCard.id ===
-                          "mamorudo-n-17-defesa-da-fagulha" && (
-                          <select
-                            aria-label="Papel no combate"
-                            value={choice}
-                            onChange={(e) => setChoice(e.currentTarget.value)}
-                          >
-                            <option value="attacker">Atacante</option>
-                            <option value="defender">Defensor</option>
-                          </select>
-                        )}
-                        {[
-                          "mamoru-n-9-wonder-wall",
-                          "mamoru-n-5-transferencia-espiritual",
-                        ].includes(selectedCard.id) && (
-                          <label>
-                            {selectedCard.id === "mamoru-n-9-wonder-wall"
-                              ? "PE extra"
-                              : "Dano transferido"}
-                            <input
-                              type="number"
-                              min="0"
-                              max="99"
-                              value={extra}
-                              onInput={(e) =>
-                                setExtra(Number(e.currentTarget.value))
-                              }
-                            />
-                          </label>
-                        )}
-                        <button
-                          className="gold"
-                          disabled={!canPlay}
-                          onClick={() =>
-                            act({
-                              type: "cast",
-                              cardId: selectedCard.id,
-                              handIndex: selected.index,
-                              targetId: targetIds[0],
-                              targetId2: targetIds[1],
-                              x: cells[0]?.x,
-                              y: cells[0]?.y,
-                              x2: cells[1]?.x,
-                              y2: cells[1]?.y,
-                              extraPe: extra,
-                              choice,
-                            })
-                          }
-                        >
-                          Conjurar ·{" "}
-                          {selectedCard.stats.cost +
-                            (selectedCard.id === "mamoru-n-9-wonder-wall"
-                              ? extra
-                              : 0)}{" "}
-                          PE
-                        </button>
-                      </div>
-                    )}
-                    {selectedUnit &&
-                      selectedUnit.owner === seat &&
-                      (abilitySpec ||
-                        kw(selectedUnit, "Range") ||
-                        selectedUnit.statuses?.range) && (
-                        <div className="target-controls">
-                          <button
-                            className="outline"
-                            onClick={() => setTargetMode(!targetMode)}
-                          >
-                            {targetMode
-                              ? "Modo de alvos ativo · voltar a mover"
-                              : "Escolher alvos para efeito ou Range"}
-                          </button>
-                          <small>
-                            {abilitySpec?.hint ||
-                              "Escolha um alvo para o ataque à distância."}
-                          </small>
-                          {targetIds.map((id) => (
-                            <small key={id}>
-                              Alvo: {unitName(g.units.find((u) => u.id === id))}
-                            </small>
-                          ))}
-                          {cells.map((v, i) => (
-                            <small key={i}>
-                              Casa: {v.x + 1}, {v.y + 1}
-                            </small>
-                          ))}
-                          {selectedUnit.cardId === "chama-marinha" && (
-                            <select
-                              value={choice}
-                              onChange={(e) => setChoice(e.currentTarget.value)}
-                            >
-                              <option value="">Elemento de combate</option>
-                              {catalog
-                                .get(selectedUnit.cardId)
-                                ?.types.map((e: string) => (
-                                  <option key={e} value={e}>
-                                    {E[e][2]}
-                                  </option>
-                                ))}
-                            </select>
-                          )}
-                          {abilitySpec && (
-                            <button
-                              className="outline"
-                              disabled={!canPlay}
-                              onClick={() =>
-                                act({
-                                  type: "ability",
-                                  unitId: selectedUnit.id,
-                                  targetId: targetIds[0],
-                                  x: cells[0]?.x,
-                                  y: cells[0]?.y,
-                                  choice,
-                                })
-                              }
-                            >
-                              {abilitySpec.label}
-                            </button>
-                          )}
-                          {(kw(selectedUnit, "Range") ||
-                            selectedUnit.statuses?.range) > 0 && (
-                            <button
-                              className="outline"
-                              disabled={!canPlay || !targetIds[0]}
-                              onClick={() =>
-                                act({
-                                  type: "attack",
-                                  unitId: selectedUnit.id,
-                                  targetId: targetIds[0],
-                                })
-                              }
-                            >
-                              Ataque à distância
-                            </button>
-                          )}
-                        </div>
-                      )}
-                    {g.duel &&
-                      !g.duel.opponentId &&
-                      g.duel.seat !== seat &&
-                      me && (
-                        <button
-                          className="gold"
-                          disabled={
-                            !selectedUnit ||
-                            selectedUnit.kind !== "unit" ||
-                            selectedUnit.owner !== seat
-                          }
-                          onClick={() =>
-                            act({ type: "duel", unitId: selectedUnit?.id })
-                          }
-                        >
-                          Escolher para o duelo
-                        </button>
-                      )}
-                    {g.duel?.opponentId && g.duel.seat === seat && (
-                      <div className="target-controls">
-                        <p>Seu monstro deve atacar ou defender?</p>
-                        <button
-                          className="gold"
-                          onClick={() =>
-                            act({ type: "duel", choice: "attacker" })
-                          }
-                        >
-                          Meu monstro ataca
-                        </button>
-                        <button
-                          className="outline"
-                          onClick={() =>
-                            act({ type: "duel", choice: "defender" })
-                          }
-                        >
-                          Meu monstro defende
-                        </button>
-                      </div>
-                    )}
-                    {selectedCard?.kind === "unit" && (
-                      <div className="target-controls">
-                        {targetIds.map((id) => (
-                          <small key={id}>
-                            Alvo da invocação:{" "}
-                            {unitName(g.units.find((u) => u.id === id))}
-                          </small>
-                        ))}
-                        {["anubis-o-gato-da-morte"].includes(
-                          selectedCard.id,
-                        ) && (
-                          <>
-                            <small>
-                              Selecione o gato a sacrificar no campo.
-                            </small>
-                            <button
-                              className="gold"
-                              disabled={!targetIds[0]}
-                              onClick={() =>
-                                act({
-                                  type: "summon",
-                                  cardId: selectedCard.id,
-                                  handIndex: selected.index,
-                                  choice: selected.fromDeck
-                                    ? "library"
-                                    : undefined,
-                                  targetId: targetIds[0],
-                                })
-                              }
-                            >
-                              Invocar por sacrifício
-                            </button>
-                          </>
-                        )}
-                      </div>
-                    )}
-                    {selected && (
-                      <button className="clear-selection" onClick={clear}>
-                        Limpar seleção · Esc
-                      </button>
-                    )}
-                  </div>
-                  {!!(me as any)?.summonableDeck?.length &&
-                    g.phase === 1 &&
-                    myTurn && (
-                      <div className="stack-panel">
-                        <p className="eyebrow">INVOCAÇÃO DO BARALHO</p>
-                        {(me as any).summonableDeck.map((id: string) => (
-                          <button
-                            key={id}
-                            onClick={() => {
-                              clear();
-                              setSelected({
-                                kind: "hand",
-                                cardId: id,
-                                index: -1,
-                                fromDeck: true,
-                              });
-                            }}
-                          >
-                            {catalog.get(id)?.name}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  {(g.stack.length > 0 || g.combat) && (
-                    <div className="stack-panel">
-                      <p className="eyebrow">RESPOSTAS · {g.passes}/2 PASSES</p>
-                      {g.combat && (
-                        <p>
-                          ⚔{" "}
-                          {unitName(
-                            g.units.find((u) => u.id === g.combat?.attackerId),
-                          )}{" "}
-                          →{" "}
-                          {unitName(
-                            g.units.find((u) => u.id === g.combat?.defenderId),
-                          )}
-                        </p>
-                      )}
-                      {[...g.stack].reverse().map((s, i) => (
-                        <button
-                          key={i}
-                          onClick={() =>
-                            setFocus({ card: catalog.get(s.cardId) })
-                          }
-                        >
-                          {i === 0 ? "↳ " : ""}
-                          {catalog.get(s.cardId)?.name}
-                        </button>
-                      ))}
-                      <small>A última magia resolve primeiro.</small>
-                    </div>
-                  )}
-                </>
-              }
             />
           )}
         </main>

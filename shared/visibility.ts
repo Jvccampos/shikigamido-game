@@ -29,6 +29,8 @@ export function publicRoom(room: any, userId: string | null) {
     ? g.players.findIndex((p: any) => p.id === userId)
     : -1;
   if (!Array.isArray(g?.players)) return r;
+  // Random state can reveal future draws; it never belongs in a player response.
+  delete g.random;
   const viewer = r.seat;
   g.players = g.players.map((p: any, i: number) => {
     const value = {
