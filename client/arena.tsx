@@ -4,8 +4,16 @@ import type { Selection } from "./match-interaction.js";
 import { OpeningHand, DiscardChoice } from "./choices.js";
 import { Journal } from "./journal.js";
 import { ElementsGuide } from "./elements-guide.js";
+import { DuelContext } from "./duel-context.js";
+import { ActionPreview } from "./action-preview.js";
+import type {
+  ActionPlan,
+  ActionPreview as Preview,
+} from "../shared/action-advice.js";
+import { movementReason, previewAction } from "../shared/action-advice.js";
+import { unitInsights } from "../shared/unit-insight.js";
 import { ArenaNotices, FieldEvent } from "./arena-notices.js";
-import { useEffect, useRef, useState } from "preact/hooks";
+import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import type { ComponentChildren } from "preact";
 import { ArenaScene, type Point } from "./arena-scene.js";
 import { cards, phases, type Cmd } from "../shared/game.js";
@@ -15,6 +23,12 @@ type Props = {
   code: string;
   names: string[];
   highlights: Point[];
+  handPlans: ActionPlan[];
+  readyAbilities: string[];
+  onAbility: (unit: UnitView) => void;
+  validTargets: string[];
+  preview: Preview | null;
+  onAim: (point: Point | null) => void;
   selected: Selection | null;
   targets: string[];
   mulligan: number[];
@@ -87,6 +101,14 @@ export function Arena(p: Props) {
     yourTurn = p.seat === g.priority,
     done = g.winner !== null || g.draw,
     card = p.selected?.kind === "hand" ? cards.get(p.selected?.cardId) : null;
+  const combatPreview = useMemo(
+    () =>
+      g.combat && !g.stack.length
+        ? previewAction(g, g.priority, { type: "pass" })
+        : null,
+    [g.revision],
+  );
+  const decisionPreview = p.preview || combatPreview;
   const previousHand = useRef<{
     count: number;
     library: number;
@@ -143,6 +165,15 @@ export function Arena(p: Props) {
       highlights: v.highlights,
       selectedId: v.selected?.unitId,
       targets: v.targets,
+      validTargets: v.validTargets,
+      readyAbilities: v.readyAbilities,
+      onAbility: (u: UnitView) => {
+        v.onAbility(u);
+        setDrawer(true);
+      },
+      previewPath: v.preview?.error ? [] : v.preview?.path || [],
+      affected: v.preview?.affected || [],
+      onAim: v.onAim,
       startY: v.startY,
       onCell: (x: number, y: number, u?: UnitView) => v.onCell(x, y, u),
       onSelect: (u: UnitView) => v.onSelect(u),
@@ -185,7 +216,17 @@ export function Arena(p: Props) {
   }, []);
   useEffect(() => {
     if (ready) scene.current?.update(state());
-  }, [ready, g, p.highlights, p.selected, p.targets, p.startY]);
+  }, [
+    ready,
+    g,
+    p.highlights,
+    p.selected,
+    p.targets,
+    p.startY,
+    p.preview,
+    p.validTargets,
+    p.readyAbilities,
+  ]);
   useEffect(() => {
     if (card?.kind === "spell" || g.duel) setDrawer(true);
     if (!p.selected && !g.duel) setDrawer(false);
@@ -223,6 +264,13 @@ export function Arena(p: Props) {
       };
       dragRef.current = next;
       setDragging(next);
+      if (next.moving && host.current) {
+        const rect = host.current.getBoundingClientRect();
+        latest.current.onAim(
+          scene.current?.cellAt(e.clientX - rect.left, e.clientY - rect.top) ||
+            null,
+        );
+      }
     };
     const end = (e: PointerEvent) => {
       const d = dragRef.current;
@@ -490,44 +538,58 @@ export function Arena(p: Props) {
       {p.seat >= 0 && player(p.seat, "duelist-self")}
       {p.seat < 0 && player(1, "duelist-self")}
       <div className={`arena-phase ${yourTurn ? "active" : ""}`}>
-        <small>
-          TURNO {String(g.turn).padStart(2, "0")} ·{" "}
-          {g.setup
-            ? "PREPARAÇÃO"
-            : drawing
-              ? "COMPRA AUTOMÁTICA"
-              : phases[g.phase].toUpperCase()}
-        </small>
-        <h1>{drawing ? "Uma nova carta, novos caminhos" : turnText}</h1>
-        <div className="phase-steps">
-          {(responseContext
-            ? [
-                g.combat || resolvingCombat ? "Ataque" : "Conjuração",
-                "Respostas",
-                "Resolução",
-              ]
-            : phases.slice(1)
-          ).map((phase, i) => (
-            <span
-              key={phase}
-              className={
-                (
-                  responseContext
-                    ? i === (resolvingCombat || resolvingSpell ? 2 : 1)
-                    : i === g.phase - 1
-                )
-                  ? "current"
-                  : ""
-              }
-            >
-              {phase}
-            </span>
-          ))}
-        </div>
-        {!g.setup && (
-          <p className="phase-instruction" role="status">
-            {instruction}
-          </p>
+        {!g.setup ? (
+          <DuelContext
+            game={g}
+            seat={p.seat}
+            names={p.names}
+            presenting={
+              presenting ||
+              (drawing ? "Compra automática · carta vindo para a mão" : null)
+            }
+          />
+        ) : (
+          <>
+            <small>
+              TURNO {String(g.turn).padStart(2, "0")} ·{" "}
+              {g.setup
+                ? "PREPARAÇÃO"
+                : drawing
+                  ? "COMPRA AUTOMÁTICA"
+                  : phases[g.phase].toUpperCase()}
+            </small>
+            <h1>{drawing ? "Uma nova carta, novos caminhos" : turnText}</h1>
+            <div className="phase-steps">
+              {(responseContext
+                ? [
+                    g.combat || resolvingCombat ? "Ataque" : "Conjuração",
+                    "Respostas",
+                    "Resolução",
+                  ]
+                : phases.slice(1)
+              ).map((phase, i) => (
+                <span
+                  key={phase}
+                  className={
+                    (
+                      responseContext
+                        ? i === (resolvingCombat || resolvingSpell ? 2 : 1)
+                        : i === g.phase - 1
+                    )
+                      ? "current"
+                      : ""
+                  }
+                >
+                  {phase}
+                </span>
+              ))}
+            </div>
+            {!g.setup && (
+              <p className="phase-instruction" role="status">
+                {instruction}
+              </p>
+            )}
+          </>
         )}
       </div>
       <div
@@ -662,6 +724,7 @@ export function Arena(p: Props) {
           <div className="hand-fan">
             {me.hand.map((id, index) => {
               const c = cards.get(id)!,
+                plan = p.handPlans[index],
                 center = index - (me.hand.length - 1) / 2,
                 n = Math.min(
                   80,
@@ -674,7 +737,7 @@ export function Arena(p: Props) {
               return (
                 <div
                   key={`${index}-${id}`}
-                  className={`fan-card ${p.selected?.index === index && p.selected?.kind === "hand" ? "selected" : ""}  ${dragging?.index === index && dragging.moving ? "dragged" : ""}`}
+                  className={`fan-card ${plan?.reason ? "not-playable" : "playable"} ${p.selected?.index === index && p.selected?.kind === "hand" ? "selected" : ""}  ${dragging?.index === index && dragging.moving ? "dragged" : ""}`}
                   style={{
                     "--offset": `${center * n}px`,
                     "--angle": `${angle}deg`,
@@ -686,7 +749,10 @@ export function Arena(p: Props) {
                     className="fan-art"
                     onPointerDown={(e) => {
                       if (e.button !== 0 || p.busy || done) return;
-                      if (g.setup) {
+                      if (
+                        g.setup ||
+                        (p.handPlans[index]?.reason && g.phase !== 4)
+                      ) {
                         p.onHand(index);
                         return;
                       }
@@ -720,13 +786,14 @@ export function Arena(p: Props) {
                         p.onHand(index);
                       }
                     }}
-                    aria-label={`Selecionar ${c.name}, cópia ${index + 1}`}
+                    title={plan?.reason || "Disponível para jogar"}
+                    aria-label={`Selecionar ${c.name}, cópia ${index + 1}. ${plan?.reason || "Disponível"}`}
                   >
                     <img src={c.asset} alt={c.name} draggable={false} />
                     <b
-                      className={`fan-cost ${c.stats.cost > me.pe + me.permanentPe ? "unaffordable" : ""}`}
+                      className={`fan-cost ${(plan?.cost ?? c.stats.cost) > me.pe + me.permanentPe ? "unaffordable" : ""}`}
                     >
-                      {c.stats.cost}
+                      {plan?.cost ?? c.stats.cost}
                     </b>
                     {g.setup && !me.mulligan && p.mulligan.includes(index) && (
                       <span className="fan-exchange">↻</span>
@@ -743,6 +810,20 @@ export function Arena(p: Props) {
               );
             })}
           </div>
+        </div>
+      )}
+      {!g.setup &&
+        !discardOpen &&
+        !presenting &&
+        (handHover !== null || p.selected?.kind === "hand") && (
+          <div className="hand-action-hint" role="status">
+            {p.handPlans[handHover ?? p.selected?.index ?? -1]?.reason ||
+              "Disponível · escolha um alvo iluminado"}
+          </div>
+        )}
+      {!g.setup && !discardOpen && !response && p.preview && !presenting && (
+        <div className="arena-action-preview">
+          <ActionPreview preview={p.preview} />
         </div>
       )}
       {dragging?.moving && me && (
@@ -815,8 +896,23 @@ export function Arena(p: Props) {
                   ? `Maldição nível ${hover.level}`
                   : "Carta oculta")}
           </b>
+          <small>{movementReason(g, hover) || "Movimento disponível"}</small>
+          <div className="hover-effects">
+            {p.readyAbilities.includes(hover.id) && (
+              <span>✦ Habilidade disponível</span>
+            )}
+            {unitInsights(g, hover)
+              .slice(0, 3)
+              .map((entry) => (
+                <span key={entry.label} title={entry.detail}>
+                  {entry.label}
+                </span>
+              ))}
+          </div>
           <small>
-            {hover.cardId !== "hidden" ? "F ou botão direito para ler" : ""}
+            {hover.cardId !== "hidden"
+              ? "F ou botão direito para detalhes"
+              : ""}
           </small>
         </div>
       )}
@@ -871,6 +967,7 @@ export function Arena(p: Props) {
               );
             })}
           </div>
+          {decisionPreview && <ActionPreview preview={decisionPreview} />}
           <p>
             {g.passes === 1
               ? "Um passe confirmado. O próximo passe resolve."

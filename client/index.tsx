@@ -966,6 +966,7 @@ export function App() {
       {focus && (
         <Focus
           {...focus}
+          game={g}
           unit={g?.units?.find((u) => u.id === focus.unit?.id) || focus.unit}
           onClose={() => setFocus(null)}
         />

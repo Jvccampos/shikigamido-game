@@ -135,6 +135,22 @@ export function ElementsGuide({ onClose }: { onClose: () => void }) {
           Nas peças, ↑ indica aumento e ↓ indica redução em relação à carta
           original.
         </p>
+        <details className="piece-state-key">
+          <summary>Estados das peças</summary>
+          <p>
+            ➟ Movimento disponível · ◷ Invocado neste turno · ✓ Movimento usado
+            · × Movimento impedido.
+          </p>
+          <p>
+            ✦ Habilidade disponível. Toque no selo para escolher os alvos.
+            Contorno verde marca alvos válidos; dourado marca as peças afetadas
+            pela prévia.
+          </p>
+          <p>
+            Abra os detalhes de uma peça para consultar efeitos, origem dos
+            bônus e quando terminam.
+          </p>
+        </details>
       </section>
     </dialog>
   );

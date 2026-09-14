@@ -6,14 +6,21 @@ import { abilities } from "../shared/abilities.js";
 import { spellSpecs, transferableKeywords } from "../shared/spells.js";
 import {
   cards as catalog,
-  summonCells,
   moveOptions,
   route,
   kw,
   type Cmd,
-  type Seat,
 } from "../shared/game.js";
-import { E, CardFace, unitName, statusLabels } from "./card.js";
+import {
+  hasAbility,
+  cardPlan,
+  abilityPlan,
+  commandError,
+  actionCost,
+  previewAction,
+} from "../shared/action-advice.js";
+import { unitInsights } from "../shared/unit-insight.js";
+import { E, CardFace, unitName } from "./card.js";
 
 export type Selection =
   | {
@@ -47,7 +54,9 @@ export function useMatchInteraction(
     [choice, setChoice] = useState(""),
     [extra, setExtra] = useState(0),
     [mulligan, setMulligan] = useState<number[]>([]),
-    [startY, setStartY] = useState(2);
+    [startY, setStartY] = useState(2),
+    [aim, setAim] = useState<{ x: number; y: number } | null>(null),
+    [feedback, setFeedback] = useState("");
   const me = seat >= 0 ? g?.players?.[seat] : null,
     myTurn = !!g && seat === g.priority && !g.setup && !g.centerPending,
     finished = !!g && ((g.winner !== null && g.winner !== undefined) || g.draw),
@@ -55,10 +64,18 @@ export function useMatchInteraction(
       selected?.kind === "hand" ? catalog.get(selected.cardId) : null,
     selectedUnit = g?.units?.find((u) => u.id === selected?.unitId);
   async function act(command: Cmd) {
+    if (busy || !g) return;
+    const error = commandError(g, seat, command);
+    if (error) {
+      setFeedback(error);
+      return;
+    }
     if (await onAct(command)) clear();
   }
   const clear = () => {
     setTargetMode(false);
+    setAim(null);
+    setFeedback("");
     setSelected(null);
     setTargetIds([]);
     setCells([]);
@@ -86,6 +103,104 @@ export function useMatchInteraction(
   const active = drag || selected,
     activeCard = active?.kind === "hand" ? catalog.get(active.cardId) : null,
     activeUnit = g?.units?.find((u) => u.id === active?.unitId);
+  const handPlans = useMemo(
+    () => (g && me ? me.hand.map((id, i) => cardPlan(g, seat, id, i)) : []),
+    [g?.revision, seat],
+  );
+  const unitPlans = useMemo(
+    () =>
+      new Map(
+        g?.units
+          .filter((u) => u.owner === seat && hasAbility(u))
+          .map((u) => [u.id, abilityPlan(g, seat, u)]),
+      ),
+    [g?.revision, seat],
+  );
+  const activePlan = useMemo(
+    () =>
+      !g
+        ? undefined
+        : activeCard
+          ? active?.fromDeck
+            ? cardPlan(g, seat, activeCard.id, -1, true)
+            : handPlans[active?.index ?? -1]
+          : activeUnit
+            ? unitPlans.get(activeUnit.id)
+            : undefined,
+    [
+      g?.revision,
+      seat,
+      active?.cardId,
+      active?.index,
+      active?.unitId,
+      handPlans,
+      unitPlans,
+    ],
+  );
+  const castCommand: Cmd = {
+    type: "cast",
+    cardId: selectedCard?.id,
+    handIndex: selected?.index,
+    targetId: targetIds[0],
+    targetId2: targetIds[1],
+    x: cells[0]?.x,
+    y: cells[0]?.y,
+    x2: cells[1]?.x,
+    y2: cells[1]?.y,
+    extraPe: extra,
+    choice,
+  };
+  const abilityCommand: Cmd = {
+    type: "ability",
+    unitId: selectedUnit?.id,
+    targetId: targetIds[0],
+    x: cells[0]?.x,
+    y: cells[0]?.y,
+    choice,
+  };
+  const rangedCommand: Cmd = {
+    type: "attack",
+    unitId: selectedUnit?.id,
+    targetId: targetIds[0],
+  };
+  const castError =
+    g && selectedCard?.kind === "spell"
+      ? commandError(g, seat, castCommand)
+      : undefined;
+  const abilityError =
+    g && selectedUnit ? commandError(g, seat, abilityCommand) : undefined;
+  const rangedError =
+    g && selectedUnit ? commandError(g, seat, rangedCommand) : undefined;
+  const draftOptions = (activePlan?.options || []).filter(
+    (c) =>
+      (!targetIds[0] || c.targetId === targetIds[0]) &&
+      (!targetIds[1] || c.targetId2 === targetIds[1]) &&
+      (activeCard?.id !== "ventos-favoraveis" ||
+        !cells[0] ||
+        (c.x === cells[0].x && c.y === cells[0].y)),
+  );
+  const validTargets = [
+    ...new Set(
+      draftOptions
+        .map((c) => (targetIds.length ? c.targetId2 : c.targetId))
+        .filter((id): id is string => !!id),
+    ),
+  ];
+  if (
+    activeUnit &&
+    targetMode &&
+    (kw(activeUnit, "Range") || activeUnit.statuses?.range) &&
+    g
+  )
+    for (const u of g.units)
+      if (
+        !commandError(g, seat, {
+          type: "attack",
+          unitId: activeUnit.id,
+          targetId: u.id,
+        })
+      )
+        validTargets.push(u.id);
   const highlights = useMemo(() => {
     if (!g || seat < 0 || finished || g.setup) return [];
     if (g.followup?.seat === seat) {
@@ -105,13 +220,46 @@ export function useMatchInteraction(
           })
         : [];
     }
-    if (activeCard?.kind === "unit" && myTurn && g.phase === 1)
-      return summonCells(g, seat as Seat);
-    if (activeUnit && myTurn && g.phase === 2)
+    if (activeCard || (activeUnit && targetMode))
+      return draftOptions
+        .filter((c) => c.x !== undefined && c.y !== undefined)
+        .map((c) =>
+          activeCard?.id === "ventos-favoraveis" && cells.length
+            ? { x: c.x2!, y: c.y2! }
+            : { x: c.x!, y: c.y! },
+        );
+    if (
+      activeUnit &&
+      myTurn &&
+      g.phase === 2 &&
+      g.phaseOwner === seat &&
+      !g.combat &&
+      !g.stack.length
+    )
       return moveOptions(g, activeUnit);
     return [];
-  }, [g?.revision, active?.unitId, active?.cardId, myTurn, finished]);
+  }, [
+    g?.revision,
+    active?.unitId,
+    active?.cardId,
+    active?.index,
+    myTurn,
+    finished,
+    targetMode,
+    targetIds.join(),
+    cells.map((c) => `${c.x},${c.y}`).join(),
+  ]);
   function chooseTarget(u: UnitView) {
+    setFeedback("");
+    const multiple =
+      selectedCard?.kind === "spell" &&
+      ["twoAllies", "twoUnits", "redirect"].includes(
+        spellSpecs[selectedCard.id].target,
+      );
+    if (!multiple) {
+      setTargetIds((v) => (v[0] === u.id ? [] : [u.id]));
+      return;
+    }
     setTargetIds((prev) =>
       prev.includes(u.id)
         ? prev.filter((id) => id !== u.id)
@@ -141,7 +289,7 @@ export function useMatchInteraction(
         choice: data.fromDeck ? "library" : undefined,
         x,
         y,
-        targetId: targetIds[0],
+        targetId: u?.id || targetIds[0],
         targetId2: targetIds[1],
       });
       return;
@@ -223,22 +371,115 @@ export function useMatchInteraction(
   }
   const abilitySpec = selectedUnit
     ? abilities[selectedUnit.cardId] ||
-      (selectedUnit.statuses?.construir
+      (selectedUnit.statuses?.construir || kw(selectedUnit, "Construir")
         ? abilities["kuma-no-tsuno"]
         : undefined)
     : undefined;
   const canPlay = !!me && !g?.setup && !g?.centerPending && !finished && !busy;
 
+  const preview = useMemo(() => {
+    if (!g || !active || g.setup || finished) return null;
+    if (feedback)
+      return {
+        title: "Ação indisponível",
+        cost: 0,
+        energy: 0,
+        reserve: 0,
+        error: feedback,
+        lines: [],
+        affected: [],
+        path: [],
+      };
+    const atAim = aim && g.units.find((u) => u.x === aim.x && u.y === aim.y);
+    let command: Cmd | undefined;
+    if (activeUnit) {
+      if (targetMode) {
+        const targetId = atAim?.id || targetIds[0];
+        command = abilitySpec
+          ? {
+              ...abilityCommand,
+              ...(aim || {}),
+              targetId: targetIds[0] || targetId,
+            }
+          : targetId
+            ? { ...rangedCommand, targetId }
+            : undefined;
+      } else if (aim && (aim.x !== activeUnit.x || aim.y !== activeUnit.y))
+        command = { type: "move", unitId: activeUnit.id, ...aim };
+    } else if (activeCard?.kind === "unit" && aim)
+      command = {
+        type: "summon",
+        cardId: activeCard.id,
+        handIndex: active.index,
+        choice: active.fromDeck ? "library" : undefined,
+        ...aim,
+        targetId: atAim?.id || targetIds[0],
+      };
+    else if (activeCard?.kind === "spell") {
+      command = {
+        ...castCommand,
+        cardId: activeCard.id,
+        handIndex: active.index,
+      };
+      if (aim) {
+        if (atAim)
+          command =
+            targetIds.length &&
+            ["twoAllies", "twoUnits", "redirect"].includes(
+              spellSpecs[activeCard.id].target,
+            )
+              ? { ...command, targetId2: atAim.id }
+              : { ...command, targetId: atAim.id };
+        command =
+          activeCard.id === "ventos-favoraveis" && cells.length
+            ? { ...command, x2: aim.x, y2: aim.y }
+            : { ...command, ...aim };
+      }
+    }
+    return command ? previewAction(g, seat, command) : null;
+  }, [
+    g?.revision,
+    active?.unitId,
+    active?.cardId,
+    active?.index,
+    aim?.x,
+    aim?.y,
+    targetIds.join(),
+    cells.map((c) => `${c.x},${c.y}`).join(),
+    extra,
+    choice,
+    targetMode,
+    feedback,
+    finished,
+  ]);
   function reset() {
     clear();
     setMulligan([]);
     setStartY(2);
   }
   useEffect(reset, [code]);
+  useEffect(() => {
+    clear();
+  }, [g?.turn, g?.phase, g?.phaseOwner]);
   return {
     reset,
     arena: {
       selected,
+      handPlans,
+      readyAbilities: [...unitPlans]
+        .filter(([, plan]) => plan.options.length)
+        .map(([id]) => id),
+      onAbility: (u: UnitView) => {
+        clear();
+        setSelected({ kind: "unit", unitId: u.id });
+        setTargetMode(true);
+      },
+      preview,
+      validTargets,
+      onAim: (cell: { x: number; y: number } | null) =>
+        setAim((previous) =>
+          previous?.x === cell?.x && previous?.y === cell?.y ? previous : cell,
+        ),
       highlights,
       targets: targetIds,
       mulligan,
@@ -294,9 +535,12 @@ export function useMatchInteraction(
                     catalog.get(selectedUnit?.cardId || "")?.effect_text}
                 </p>
                 {selectedUnit && (
-                  <div className="status-tags">
-                    {statusLabels(selectedUnit).map((s) => (
-                      <span key={s}>{s}</span>
+                  <div className="unit-insights">
+                    {unitInsights(g, selectedUnit).map((entry) => (
+                      <p key={entry.label} className={entry.tone}>
+                        <b>{entry.label}</b>
+                        <span>{entry.detail}</span>
+                      </p>
                     ))}
                   </div>
                 )}
@@ -397,30 +641,19 @@ export function useMatchInteraction(
                 )}
                 <button
                   className="gold"
-                  disabled={!canPlay}
-                  onClick={() =>
-                    act({
-                      type: "cast",
-                      cardId: selectedCard.id,
-                      handIndex: selected?.index,
-                      targetId: targetIds[0],
-                      targetId2: targetIds[1],
-                      x: cells[0]?.x,
-                      y: cells[0]?.y,
-                      x2: cells[1]?.x,
-                      y2: cells[1]?.y,
-                      extraPe: extra,
-                      choice,
-                    })
-                  }
+                  disabled={!canPlay || !!castError}
+                  onClick={() => act(castCommand)}
                 >
-                  Conjurar ·{" "}
-                  {selectedCard.stats.cost +
-                    (selectedCard.id === "mamoru-n-9-wonder-wall"
-                      ? extra
-                      : 0)}{" "}
-                  PE
+                  Conjurar · {actionCost(g, seat, castCommand)} PE
                 </button>
+                <p
+                  className={`action-requirement ${castError ? "unavailable" : "available"}`}
+                  role="status"
+                >
+                  {activePlan?.reason ||
+                    castError ||
+                    "Alvo válido · pronto para conjurar"}
+                </p>
               </div>
             )}
             {selectedUnit &&
@@ -434,9 +667,14 @@ export function useMatchInteraction(
                     onClick={() => setTargetMode(!targetMode)}
                   >
                     {targetMode
-                      ? "Modo de alvos ativo · voltar a mover"
-                      : "Escolher alvos para efeito ou Range"}
+                      ? "← Voltar ao movimento"
+                      : "Escolher alvo da habilidade / alcance"}
                   </button>
+                  <p className="action-requirement" role="status">
+                    {abilitySpec
+                      ? abilityError || "Habilidade pronta"
+                      : rangedError || "Ataque pronto"}
+                  </p>
                   <small>
                     {abilitySpec?.hint ||
                       "Escolha um alvo para o ataque à distância."}
@@ -469,17 +707,8 @@ export function useMatchInteraction(
                   {abilitySpec && (
                     <button
                       className="outline"
-                      disabled={!canPlay}
-                      onClick={() =>
-                        act({
-                          type: "ability",
-                          unitId: selectedUnit.id,
-                          targetId: targetIds[0],
-                          x: cells[0]?.x,
-                          y: cells[0]?.y,
-                          choice,
-                        })
-                      }
+                      disabled={!canPlay || !!abilityError}
+                      onClick={() => act(abilityCommand)}
                     >
                       {abilitySpec.label}
                     </button>
@@ -489,7 +718,7 @@ export function useMatchInteraction(
                     0) > 0 && (
                     <button
                       className="outline"
-                      disabled={!canPlay || !targetIds[0]}
+                      disabled={!canPlay || !!rangedError}
                       onClick={() =>
                         act({
                           type: "attack",
@@ -546,7 +775,16 @@ export function useMatchInteraction(
                     <small>Selecione o gato a sacrificar no campo.</small>
                     <button
                       className="gold"
-                      disabled={!targetIds[0]}
+                      disabled={
+                        !canPlay ||
+                        !!commandError(g, seat, {
+                          type: "summon",
+                          cardId: selectedCard.id,
+                          handIndex: selected?.index,
+                          choice: selected?.fromDeck ? "library" : undefined,
+                          targetId: targetIds[0],
+                        })
+                      }
                       onClick={() =>
                         act({
                           type: "summon",

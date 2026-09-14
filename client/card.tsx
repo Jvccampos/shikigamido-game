@@ -1,4 +1,6 @@
 import type { Card } from "../shared/cards.js";
+import { unitInsights } from "../shared/unit-insight.js";
+import type { GameView } from "../shared/room.js";
 import type { UnitView } from "../shared/room.js";
 export type CardFocus = { card: Card | undefined; unit?: UnitView };
 import { useEffect, useRef } from "preact/hooks";
@@ -124,6 +126,7 @@ export function CardFace({
   );
 }
 export function Focus({
+  game,
   card,
   unit,
   onClose,
@@ -131,6 +134,7 @@ export function Focus({
   card: Card | undefined;
   unit?: UnitView;
   onClose: () => void;
+  game?: GameView;
 }) {
   const close = useRef<HTMLButtonElement>(null);
   useEffect(() => {
@@ -200,7 +204,17 @@ export function Focus({
                 .join(" · ")}
             </p>
           )}
-          {unit?.statuses && (
+          {unit && game && (
+            <div className="unit-insights">
+              {unitInsights(game, unit).map((entry) => (
+                <p key={entry.label} className={entry.tone}>
+                  <b>{entry.label}</b>
+                  <span>{entry.detail}</span>
+                </p>
+              ))}
+            </div>
+          )}
+          {unit?.statuses && !game && (
             <div className="status-tags">
               {statusLabels(unit).map((s) => (
                 <span key={s}>{s}</span>

@@ -73,9 +73,15 @@ export function fight(g: Game, a: Unit, d: Unit) {
       g.players[d.owner].permanentPe + 1,
     );
   if (a.cardId === "furame-ku") a.speed++;
-  if (a.cardId === "dragao-do-inverno") d.speed = Math.max(0, d.speed - 1);
-  if (a.cardId === "serpente-de-gelo") d.speed = Math.max(0, d.speed - 1);
-  if (d.cardId === "serpente-de-gelo") a.speed = Math.max(0, a.speed - 1);
+  const slow = (target: Unit, source: Unit) => {
+    if (target.speed <= 0) return;
+    target.speed--;
+    const st = (target.statuses ??= {});
+    st.speedLoss = (st.speedLoss || 0) + 1;
+    (st.speedLossSources ??= []).push(source.cardId);
+  };
+  if (["dragao-do-inverno", "serpente-de-gelo"].includes(a.cardId)) slow(d, a);
+  if (d.cardId === "serpente-de-gelo") slow(a, d);
   const engulf = kw(a, "Engolir") ? a : kw(d, "Engolir") ? d : null;
   if (engulf) {
     const victim = engulf === a ? d : a;

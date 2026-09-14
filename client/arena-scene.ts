@@ -1,3 +1,4 @@
+import { movementMarker } from "../shared/unit-insight.js";
 import type { GameView, UnitView } from "../shared/room.js";
 import type { GameEvent } from "../shared/model.js";
 import { layout } from "../shared/arena-layout.js";
@@ -21,6 +22,12 @@ export type ArenaState = {
   highlights: Point[];
   selectedId?: string;
   targets: string[];
+  validTargets?: string[];
+  readyAbilities?: string[];
+  onAbility?: (unit: UnitView) => void;
+  previewPath?: [number, number][];
+  affected?: string[];
+  onAim?: (cell: Point | null) => void;
   startY: number;
   onCell: (x: number, y: number, u?: UnitView) => void;
   onSelect: (u: UnitView) => void;
@@ -114,6 +121,7 @@ export class ArenaScene {
       this.app.screen.height,
     );
     this.app.stage.on("globalpointermove", (e) => {
+      this.state.onAim?.(this.cellAt(e.global.x, e.global.y) || null);
       if (!this.drag) return;
       const d = this.drag;
       if (
@@ -200,6 +208,9 @@ export class ArenaScene {
       JSON.stringify(state.highlights),
       state.selectedId,
       state.targets.join(),
+      state.validTargets?.join(),
+      JSON.stringify(state.previewPath),
+      state.affected?.join(),
       state.game.setup,
       state.startY,
     ].join("|");
@@ -263,6 +274,12 @@ export class ArenaScene {
         u.statuses?.shield,
         u.statuses?.burn,
         u.statuses?.hidden,
+        state.game.turn,
+        state.game.moved.includes(u.id),
+        JSON.stringify(u.statuses),
+        state.validTargets?.includes(u.id),
+        state.readyAbilities?.includes(u.id),
+        state.affected?.includes(u.id),
       ].join("|");
       if (!item) {
         const view = new Container();
@@ -316,6 +333,24 @@ export class ArenaScene {
           .stroke({ width: 1, color: 0xefdda5, alpha: locked ? 0.08 : 0.48 });
       }
     this.board.addChild(paths);
+    const previewPath = this.state.previewPath || [];
+    if (previewPath.length > 1) {
+      const trail = new Graphics();
+      previewPath.forEach(([x, y], i) => {
+        const point = l.point(x, y);
+        if (!i) trail.moveTo(point.x, point.y);
+        else trail.lineTo(point.x, point.y);
+      });
+      trail.stroke({ color: 0x9df0dc, width: 5, alpha: 0.8 });
+      this.board.addChild(trail);
+      const last = previewPath.at(-1)!;
+      const end = l.point(...last);
+      this.board.addChild(
+        new Graphics()
+          .circle(end.x, end.y, 23)
+          .stroke({ color: 0x9df0dc, width: 3 }),
+      );
+    }
     for (const t of game.terrain) {
       const q = l.point(t.x, t.y);
       const glow = new Graphics()
@@ -602,6 +637,57 @@ export class ArenaScene {
       number.anchor.set(0.5);
       number.position.set(-w * 0.5, -h * 0.5);
       view.addChild(number);
+    }
+    const marker = movementMarker(this.state.game, u);
+    if (marker && !this.state.game.setup) {
+      const badge = label(
+        marker.symbol,
+        Math.max(12, size * 0.2),
+        marker.color,
+      );
+      badge.anchor.set(0.5);
+      badge.position.set(-w * 0.4, -h * 0.48);
+      view.addChild(
+        new Graphics()
+          .circle(badge.x, badge.y, 11)
+          .fill({ color: 0x091e19, alpha: 0.95 }),
+        badge,
+      );
+    }
+    if (
+      this.state.validTargets?.includes(u.id) ||
+      this.state.affected?.includes(u.id)
+    ) {
+      view.addChild(
+        new Graphics()
+          .roundRect(-w / 2 - 4, -h / 2 - 4, w + 8, h + 8, 6)
+          .stroke({
+            color: this.state.affected?.includes(u.id) ? 0xf2c983 : 0x8ee8cc,
+            width: 3,
+            alpha: 0.9,
+          }),
+      );
+    }
+    if (this.state.readyAbilities?.includes(u.id)) {
+      const ability = new Container();
+      ability.position.set(0, -h * 0.5);
+      const star = label("✦", 16, 0xf4dfa0);
+      star.anchor.set(0.5);
+      ability.addChild(
+        new Graphics()
+          .circle(0, 0, 12)
+          .fill(0x193e30)
+          .stroke({ color: 0xdac680, width: 1 }),
+        star,
+      );
+      ability.eventMode = "static";
+      ability.cursor = "pointer";
+      ability.on("pointerdown", (e) => e.stopPropagation());
+      ability.on("pointertap", (e) => {
+        e.stopPropagation();
+        this.state.onAbility?.(u);
+      });
+      view.addChild(ability);
     }
     const inspect = label("⤢", 11, 0xf1ddb2);
     inspect.position.set(w * 0.3, -h * 0.5);

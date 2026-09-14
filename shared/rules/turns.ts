@@ -92,6 +92,10 @@ export function startTurn(g: Game) {
     if ((st.dualUntil ?? Infinity) < g.turn) {
       u.attack = st.dualAttack ?? u.attack;
       u.speed = st.dualSpeed ?? u.speed;
+      st.speedLoss = st.dualSpeedLoss || 0;
+      st.speedLossSources = st.dualSpeedLossSources || [];
+      delete st.dualSpeedLoss;
+      delete st.dualSpeedLossSources;
       u.maxHp = st.dualMaxHp ?? u.maxHp;
       u.hp = Math.min(u.hp, u.maxHp);
       delete st.dualUntil;

@@ -40,6 +40,10 @@ export function publicGame(game: Game, viewer: Seat | -1): GameView {
         ...e,
         beforeTarget: e.beforeTarget && conceal(e.beforeTarget),
         afterTarget: e.afterTarget && conceal(e.afterTarget),
+        changes: e.changes?.map((change) => ({
+          before: change.before && conceal(change.before),
+          after: change.after && conceal(change.after),
+        })),
       };
     if ("unit" in e) return { ...e, unit: conceal(e.unit) };
     return e;

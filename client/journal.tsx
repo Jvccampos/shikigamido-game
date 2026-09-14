@@ -1,3 +1,5 @@
+import { unitChanges } from "../shared/unit-changes.js";
+import { pieceName } from "../shared/action-advice.js";
 import type { Card } from "../shared/cards.js";
 import type { GameView, UnitView } from "../shared/room.js";
 import type { GameEvent } from "../shared/model.js";
@@ -113,10 +115,29 @@ export function Journal(p: {
         title = `${name} foi derrotado`;
         detail = owner;
         break;
-      case "spell":
-        title = name;
-        detail = "Magia resolvida";
+      case "spell": {
+        title = `${name} · resolvida`;
+        const changes =
+          e.changes ||
+          (e.beforeTarget && e.afterTarget
+            ? [{ before: e.beforeTarget, after: e.afterTarget }]
+            : []);
+        detail =
+          changes
+            .map(({ before, after }) => {
+              if (!before) return `${pieceName(after)} entrou em campo`;
+              if (!after) return `${pieceName(before)} saiu de campo`;
+              const changes = unitChanges(before, after);
+              return changes.length
+                ? `${pieceName(after)}: ${changes.join(" · ")}`
+                : "";
+            })
+            .filter(Boolean)
+            .join("; ") ||
+          c?.effect_text ||
+          "Magia resolvida";
         break;
+      }
       case "ability":
         title = name;
         detail = "Habilidade ativada";

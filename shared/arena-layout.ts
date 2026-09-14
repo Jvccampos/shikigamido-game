@@ -2,7 +2,7 @@
 export function layout(w: number, h: number) {
   const compact = h < 560 && w > h,
     mobile = w < 760;
-  const top = compact ? 62 : mobile ? 174 : 132,
+  const top = compact ? 90 : mobile ? 174 : 132,
     bottom = compact ? 105 : mobile ? 188 : 205;
   const step = Math.max(
     18,

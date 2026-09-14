@@ -202,6 +202,7 @@ export function resolveSpell(
     g.log.push(`${card.name}: o alvo saiu de campo.`);
     return;
   }
+  const beforeUnits = structuredClone(g.units);
   const spellCue = event<Extract<EventPayload, { type: "spell" }>>(g, {
     type: "spell",
     seat,
@@ -312,6 +313,8 @@ export function resolveSpell(
         st.dualMaxHp = t!.maxHp;
         st.dualUntil = g.turn + 1;
         st.dualSpeed = t!.speed;
+        st.dualSpeedLoss = st.speedLoss || 0;
+        st.dualSpeedLossSources = [...(st.speedLossSources || [])];
         t!.attack = Math.ceil(t!.attack / 2);
         t!.maxHp = Math.ceil(t!.maxHp / 2);
         t!.hp = Math.min(Math.ceil(t!.hp / 2), t!.maxHp);
@@ -441,6 +444,15 @@ export function resolveSpell(
       break;
   }
   if (t) spellCue.afterTarget = structuredClone(t);
+  spellCue.changes = [
+    ...new Set([...beforeUnits.map((u) => u.id), ...g.units.map((u) => u.id)]),
+  ].flatMap((id) => {
+    const before = beforeUnits.find((u) => u.id === id);
+    const after = g.units.find((u) => u.id === id);
+    return JSON.stringify(before) === JSON.stringify(after)
+      ? []
+      : [{ before, after: after && structuredClone(after) }];
+  });
   g.log.push(`${card.name} resolveu.`);
 }
 

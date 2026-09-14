@@ -26,6 +26,8 @@ export type UnitStatuses = {
   [key: string]: StatusValue;
   [expiry: `${string}Until`]: number | undefined;
   abilityTurn?: number;
+  speedLoss?: number;
+  speedLossSources?: string[];
   auraHp?: number;
   auraSpeed?: number;
   block?: number;
@@ -38,6 +40,8 @@ export type UnitStatuses = {
   dualAttack?: number;
   dualMaxHp?: number;
   dualSpeed?: number;
+  dualSpeedLoss?: number;
+  dualSpeedLossSources?: string[];
   fedSpeed?: boolean;
   fisherBoost?: number;
   healDrawTurn?: number;
@@ -211,6 +215,7 @@ export type EventPayload<U = Unit> =
       element: string;
       beforeTarget?: U;
       afterTarget?: U;
+      changes?: { before?: U; after?: U }[];
     }
   | {
       type: "combat";
