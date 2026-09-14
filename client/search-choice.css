@@ -1,0 +1,144 @@
+.search-scrim {
+  position: absolute;
+  inset: 0;
+  z-index: 115;
+  display: grid;
+  place-items: center;
+  background: #031310bb;
+  backdrop-filter: blur(4px);
+  padding: 20px;
+}
+.search-choice {
+  width: min(740px, 100%);
+  max-height: 90dvh;
+  overflow: auto;
+  padding: 26px;
+  border: 1px solid #bdb07888;
+  border-radius: 14px;
+  background: linear-gradient(145deg, #19352c, #0a211a);
+  box-shadow: 0 20px 60px #000a;
+  color: #e2e5d6;
+  outline: none;
+}
+.search-source {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.search-source > img {
+  width: 44px;
+  height: 62px;
+  object-fit: cover;
+  border-radius: 4px;
+}
+.search-source small {
+  font: 11px Arial;
+  letter-spacing: 1px;
+  color: #d8c695;
+}
+.search-choice h2 {
+  margin: 7px 0;
+  font: 30px Georgia;
+  color: #f1e1b6;
+}
+.search-choice > p {
+  font: 15px/1.5 Arial;
+  margin: 20px 0;
+}
+.search-choice .choice-cards {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 18px;
+  max-height: 48dvh;
+  overflow: auto;
+  width: 100%;
+  margin: 16px 0;
+  padding: 6px;
+}
+.search-choice .choice-card {
+  width: 154px;
+  flex: 0 0 154px;
+}
+.search-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 12px;
+  margin-top: 22px;
+}
+.search-actions button {
+  min-height: 44px;
+  padding: 10px 18px;
+  font: 14px Arial;
+}
+.search-privacy {
+  display: block;
+  margin-top: 14px;
+  color: #a7bfae;
+  font: 12px/1.4 Arial;
+  text-align: center;
+}
+@media (max-width: 759px) {
+  .search-scrim {
+    padding: 10px;
+  }
+  .search-choice {
+    padding: 16px;
+  }
+  .search-choice h2 {
+    font-size: 24px;
+  }
+  .search-choice .choice-card {
+    width: 125px;
+    flex-basis: 125px;
+  }
+  .search-choice .choice-cards {
+    gap: 10px;
+  }
+  .search-actions {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+}
+@media (max-height: 540px) and (min-width: 600px) {
+  .search-scrim {
+    padding: 12px;
+  }
+  .search-choice {
+    display: grid;
+    grid-template-columns: 230px 1fr;
+    gap: 10px 18px;
+    padding: 16px;
+    width: min(800px, 100%);
+    max-height: calc(100dvh - 24px);
+  }
+  .search-source {
+    grid-column: 1;
+    gap: 10px;
+  }
+  .search-choice h2 {
+    font-size: 24px;
+  }
+  .search-choice > p {
+    grid-column: 1;
+    margin: 0;
+    align-self: start;
+  }
+  .search-choice .choice-cards {
+    grid-column: 2;
+    grid-row: 1 / span 3;
+    margin: 0;
+    max-height: none;
+    gap: 12px;
+  }
+  .search-choice .choice-card {
+    width: clamp(90px, calc((100dvh - 170px) * 0.6), 140px);
+    flex-basis: clamp(90px, calc((100dvh - 170px) * 0.6), 140px);
+  }
+  .search-actions,
+  .search-privacy {
+    grid-column: 1 / -1;
+    margin: 0;
+  }
+}

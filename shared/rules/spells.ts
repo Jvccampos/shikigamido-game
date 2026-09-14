@@ -319,14 +319,16 @@ export function resolveSpell(
         t!.maxHp = Math.ceil(t!.maxHp / 2);
         t!.hp = Math.min(Math.ceil(t!.hp / 2), t!.maxHp);
         t!.speed = Math.ceil(t!.speed / 2);
-        g.units.push({
+        const copy = {
           ...structuredClone(t!),
           id: uid(g),
           x: spot[0],
           y: spot[1],
           summonedTurn: g.turn,
           statuses: { copy: true, ephemeralUntil: g.turn + 1 },
-        });
+        };
+        g.units.push(copy);
+        summonEffects(g, copy);
       }
       break;
     }

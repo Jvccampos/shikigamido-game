@@ -10,7 +10,7 @@ export type Card = {
   artwork?: { url?: string };
 } & (
   | {
-      kind: "unit" | "omionji";
+      kind: "unit" | "omionji" | "curse";
       stats: { cost: number; attack: number; health: number; speed: number };
     }
   | {
@@ -33,7 +33,7 @@ for (const card of source.cards) {
     !card.name ||
     !card.effect_text ||
     !card.asset.startsWith("/assets/cards/") ||
-    !["unit", "omionji", "spell"].includes(card.kind) ||
+    !["unit", "omionji", "spell", "curse"].includes(card.kind) ||
     !card.types.length ||
     card.types.some((type) => !elements.includes(type)) ||
     !Number.isInteger(card.stats.cost) ||

@@ -29,6 +29,8 @@ export function validateDeck(raw: unknown) {
     .map((id: string) => cards.get(id))
     .filter(Boolean) as NonNullable<ReturnType<typeof cards.get>>[];
   if (set.length !== 30) return "Carta desconhecida.";
+  if (set.some((c) => c.kind === "curse"))
+    return "Maldições não entram no baralho. Remova as cartas com Amaldiçoado.";
   if (set.some((c) => c.kind === "omionji"))
     return "Omionji fica fora das 30 cartas.";
   if (set.filter((c) => c.types.includes(input.element as string)).length < 20)

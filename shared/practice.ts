@@ -7,6 +7,7 @@ import {
   type Cmd,
   type Seat,
 } from "./game.js";
+import { searchOptions } from "./rules/searches.js";
 export function starterDeck(element: string) {
   const pool = allCards
     .filter(
@@ -39,6 +40,16 @@ export function practiceGame(element = "agua") {
 }
 export function botCommand(g: Game, seat: Seat): Cmd {
   const p = g.players[seat];
+  const search = g.searches?.[0];
+  if (search) {
+    const cardId = searchOptions(g, search)[0];
+    return {
+      type: "search",
+      promptId: search.id,
+      cardId,
+      choice: cardId ? undefined : "skip",
+    };
+  }
   if (g.setup) return { type: "ready", y: 4 };
   if (g.centerPending) return { type: "center" };
   if (g.followup) return { type: "pass" };

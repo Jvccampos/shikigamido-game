@@ -107,10 +107,10 @@ export function makeUnit(
     attack: card.stats.attack,
     speed: card.stats.speed,
     summonedTurn: g.turn,
-    kind: "unit",
+    kind: card.kind === "curse" ? "curse" : "unit",
     statuses: {
-      shield: keyword(card.effect_text, "Escudo") > 0,
-      hidden: g.players[seat].concealTurn === g.turn,
+      shield: card.id !== "potaru" && keyword(card.effect_text, "Escudo") > 0,
+      hidden: card.kind !== "curse" && g.players[seat].concealTurn === g.turn,
     },
   };
 }

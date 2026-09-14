@@ -93,7 +93,16 @@ export type Unit = {
   captured?: Unit[];
   equipment?: Unit[];
 };
+export type CardSearch = {
+  id: string;
+  seat: Seat;
+  sourceCardId: string;
+  zone: "library" | "discard";
+  family: "taodu" | "cat";
+  optional: boolean;
+};
 export type Game = {
+  searches?: CardSearch[];
   rulesVersion?: number;
   random?: RandomState;
   sequence?: number;
@@ -149,6 +158,7 @@ export type Game = {
   log: string[];
 };
 export const commandTypes = [
+  "search",
   "concede",
   "mulligan",
   "ready",
@@ -165,6 +175,7 @@ export const commandTypes = [
   "discardMany",
 ] as const;
 export type Cmd = {
+  promptId?: string;
   type: (typeof commandTypes)[number];
   cardId?: string;
   unitId?: string;
@@ -183,6 +194,14 @@ export type Cmd = {
 
 /** Events describe completed commands. Unit snapshots must never share mutable state. */
 export type EventPayload<U = Unit> =
+  | {
+      type: "search";
+      seat: Seat;
+      sourceCardId: string;
+      zone: "library" | "discard";
+      outcome: "chosen" | "skipped" | "empty";
+      cardId?: string;
+    }
   | { type: "turn"; phase: number }
   | { type: "summon"; unit: U }
   | { type: "ability"; unit: U }
@@ -241,7 +260,14 @@ export function isCommand(value: unknown): value is Cmd {
     !(commandTypes as readonly string[]).includes(c.type)
   )
     return false;
-  const strings = ["cardId", "unitId", "targetId", "targetId2", "choice"];
+  const strings = [
+    "cardId",
+    "unitId",
+    "targetId",
+    "targetId2",
+    "choice",
+    "promptId",
+  ];
   const numbers = ["x", "y", "x2", "y2", "extraPe", "handIndex"];
   const allowed = new Set([
     "type",

@@ -29,6 +29,7 @@ import { fight, settleCombat } from "./rules/combat.js";
 import { cards } from "./cards.js";
 import { ability, spellError, resolveSpell } from "./rules/spells.js";
 import { destroy, summonEffects, heal, takeDamage } from "./rules/units.js";
+import { resolveSearch } from "./rules/searches.js";
 
 export function apply(g: Game, seat: Seat, c: Cmd): string | undefined {
   if (!isCommand(c)) return "Comando inválido.";
@@ -44,6 +45,9 @@ export function apply(g: Game, seat: Seat, c: Cmd): string | undefined {
     g.log.push(`Jogador ${seat + 1} concedeu.`);
     return;
   }
+  if (c.type === "search") return resolveSearch(g, seat, c);
+  if (g.searches?.length)
+    return "Conclua a escolha da carta antes de continuar.";
   if (g.setup) {
     if (c.type === "mulligan") {
       if (p.mulligan) return "Mulligan indisponível.";

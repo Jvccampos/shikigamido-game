@@ -9,8 +9,9 @@ import {
   kw,
   makeUnit,
 } from "./core.js";
-import { spawns, at, neighbors, valid } from "./board.js";
-import { shuffle } from "../random.js";
+import { at, neighbors, valid } from "./board.js";
+import { requestSearch } from "./searches.js";
+import { spawnCurse } from "./curses.js";
 
 export function heal(g: Game, u: Unit, n: number) {
   if (["neko-o-gato-eletrico", "omionji-fogo"].includes(u.cardId)) return;
@@ -42,13 +43,22 @@ export function heal(g: Game, u: Unit, n: number) {
 }
 
 export function summonEffects(g: Game, u: Unit, targetId?: string) {
-  const p = g.players[u.owner];
-  const search = (ids: string[], re: RegExp) => {
-    const i = ids.findIndex((id) => re.test(id));
-    if (i >= 0) p.hand.push(ids.splice(i, 1)[0]);
-  };
-  if (u.cardId === "taodu-curador") search(p.library, /taodu/);
-  if (u.cardId === "anubis-o-gato-da-morte") search(p.discard, /gato|neko/);
+  if (u.cardId === "taodu-curador")
+    requestSearch(g, {
+      seat: u.owner,
+      sourceCardId: u.cardId,
+      zone: "library",
+      family: "taodu",
+      optional: true,
+    });
+  if (u.cardId === "anubis-o-gato-da-morte")
+    requestSearch(g, {
+      seat: u.owner,
+      sourceCardId: u.cardId,
+      zone: "discard",
+      family: "cat",
+      optional: false,
+    });
   if (u.cardId === "gato-do-cristal-duplo") {
     const t = g.units.find(
       (x) => x.id === targetId && x.kind === "unit" && x.id !== u.id,
@@ -81,33 +91,12 @@ export function destroy(g: Game, u: Unit, killer?: Unit) {
     return;
   }
   if (u.kind === "crystal" || u.kind === "wall") return;
-  if (u.kind === "curse") {
-    const level = Math.min(3, (u.level || 1) + 1),
-      [x, y] = spawns[u.owner];
-    g.units.push({
-      id: uid(g),
-      cardId: `maldicao-${level}`,
-      owner: u.owner,
-      x,
-      y,
-      hp: 3 + level * 3,
-      maxHp: 3 + level * 3,
-      attack: level + 1,
-      speed: 1,
-      summonedTurn: g.turn,
-      kind: "curse",
-      level,
-      statuses: {},
-    });
-    event(g, { type: "summon", unit: g.units.at(-1)! });
-    g.log.push(`Maldição nível ${level} invocada no portal de origem.`);
-    return;
-  }
   const cho = g.units.find(
     (o) => o.cardId === "omionji-vazio" && o.owner === u.owner,
   );
   if (
     cho &&
+    u.kind !== "curse" &&
     typesOf(u).includes("vazio") &&
     cho.statuses?.deathDrawTurn !== g.turn
   ) {
@@ -119,7 +108,7 @@ export function destroy(g: Game, u: Unit, killer?: Unit) {
       kw(u, "Ressurgir"),
       Number(u.statuses?.ressurgir || 0),
     );
-  if (!u.statuses?.copy) {
+  if (u.kind !== "curse" && !u.statuses?.copy) {
     if (resurrect) {
       (g.pending ??= []).push({
         unit: { ...u, hp: u.maxHp, statuses: { resurrected: true } },
@@ -130,26 +119,30 @@ export function destroy(g: Game, u: Unit, killer?: Unit) {
       g.units.some((x) => x.cardId === "tigre-cinza" && x.owner === u.owner)
     )
       p.hand.push(u.cardId);
-    else if (u.cardId === "taodu-corrupto")
-      p.library = shuffle([...p.library, u.cardId], g.random);
     else p.discard.push(u.cardId);
   }
   if (u.cardId === "tsuchi-o-gato-da-terra") {
-    const i = p.library.findIndex((id) => /gato|neko/.test(id));
-    if (i >= 0) p.hand.push(p.library.splice(i, 1)[0]);
+    requestSearch(g, {
+      seat: u.owner,
+      sourceCardId: u.cardId,
+      zone: "library",
+      family: "cat",
+      optional: false,
+    });
+  }
+  if (killer && kw(killer, "Alimentar")) {
+    const st = (killer.statuses ??= {});
+    killer.attack++;
+    killer.maxHp++;
+    killer.hp++;
+    if (!st.fedSpeed) {
+      killer.speed++;
+      st.fedSpeed = true;
+    }
   }
   if (killer && killer.kind !== "curse" && killer.kind !== "crystal") {
     const kp = g.players[killer.owner],
       st = (killer.statuses ??= {});
-    if (kw(killer, "Alimentar")) {
-      killer.attack++;
-      killer.maxHp++;
-      killer.hp++;
-      if (!st.fedSpeed) {
-        killer.speed++;
-        st.fedSpeed = true;
-      }
-    }
     if (killer.cardId === "aguia-cacadora" && u.kind === "unit")
       killer.attack++;
     if (
@@ -236,6 +229,8 @@ export function destroy(g: Game, u: Unit, killer?: Unit) {
       g.units.push(captured);
     } else g.players[captured.owner].hand.push(captured.cardId);
   }
+  if (u.kind === "curse")
+    spawnCurse(g, u.owner, Math.min(3, (u.level || 1) + 1));
 }
 
 export function takeDamage(

@@ -1,9 +1,10 @@
 import { type Game, type Seat } from "../model.js";
-import { neighbors, valid, at, spawns } from "./board.js";
+import { neighbors, valid, at } from "./board.js";
 import { random } from "../random.js";
-import { event, draw, alive, typesOf, adjacent, uid } from "./core.js";
+import { event, draw, alive, typesOf, adjacent } from "./core.js";
 import { fight } from "./combat.js";
-import { takeDamage, heal } from "./units.js";
+import { takeDamage, heal, summonEffects } from "./units.js";
+import { spawnCurse } from "./curses.js";
 
 function moveCurses(g: Game) {
   const distance = (sx: number, sy: number, tx: number, ty: number) => {
@@ -25,30 +26,35 @@ function moveCurses(g: Game) {
   for (const c of g.units.filter(
     (u) => u.kind === "curse" && u.summonedTurn < g.turn && u.speed > 0,
   )) {
-    const targets = g.units.filter((u) => u.kind === "omionji");
-    if (!targets.length) continue;
-    const options = neighbors(c.x, c.y)
-      .filter(([x, y]) => valid(x, y))
-      .map(([x, y]) => ({
-        x,
-        y,
-        d: Math.min(...targets.map((t) => distance(x, y, t.x, t.y))),
-        center: Math.abs(x - 3) + Math.abs(y - 3),
-        roll: random(g.random),
-      }))
-      .sort((a, b) => a.d - b.d || a.center - b.center || a.roll - b.roll);
-    const target = options[0];
-    if (!target) continue;
-    const enemy = at(g, target.x, target.y);
-    event(g, {
-      type: enemy ? "approach" : "move",
-      unit: { ...c, x: enemy ? c.x : target.x, y: enemy ? c.y : target.y },
-      unitId: c.id,
-      path: [[target.x, target.y]],
-    });
-    if (!enemy || fight(g, c, enemy)) {
-      c.x = target.x;
-      c.y = target.y;
+    const steps = c.speed;
+    for (let step = 0; step < steps && alive(g, c); step++) {
+      const targets = g.units.filter((u) => u.kind === "omionji");
+      if (!targets.length) continue;
+      const options = neighbors(c.x, c.y)
+        .filter(([x, y]) => valid(x, y))
+        .map(([x, y]) => ({
+          x,
+          y,
+          d: Math.min(...targets.map((t) => distance(x, y, t.x, t.y))),
+          center: Math.abs(x - 3) + Math.abs(y - 3),
+          roll: random(g.random),
+        }))
+        .sort((a, b) => a.d - b.d || a.center - b.center || a.roll - b.roll);
+      const target = options[0];
+      if (!target) continue;
+      const enemy = at(g, target.x, target.y);
+      event(g, {
+        type: enemy ? "approach" : "move",
+        unit: { ...c, x: enemy ? c.x : target.x, y: enemy ? c.y : target.y },
+        unitId: c.id,
+        path: [[target.x, target.y]],
+      });
+      if (!enemy || fight(g, c, enemy)) {
+        c.x = target.x;
+        c.y = target.y;
+      }
+      if (g.winner !== null || g.draw) break;
+      if (enemy) break;
     }
     if (g.winner !== null || g.draw) break;
   }
@@ -78,7 +84,7 @@ export function startTurn(g: Game) {
       } else {
         u.summonedTurn = g.turn;
         g.units.push(u);
-        event(g, { type: "summon", unit: u });
+        summonEffects(g, u);
       }
       g.pending = g.pending.filter((x) => x !== item);
     }
@@ -153,23 +159,7 @@ export function startTurn(g: Game) {
   }
   if (g.turn === 3) {
     for (const owner of [0, 1] as Seat[]) {
-      const [x, y] = spawns[owner];
-      g.units.push({
-        id: uid(g),
-        cardId: "maldicao-1",
-        owner,
-        x,
-        y,
-        hp: 6,
-        maxHp: 6,
-        attack: 2,
-        speed: 1,
-        summonedTurn: 3,
-        kind: "curse",
-        level: 1,
-        statuses: {},
-      });
-      event(g, { type: "summon", unit: g.units.at(-1)! });
+      spawnCurse(g, owner, 1);
     }
     g.centerPending = true;
     g.centerChoices = {};
@@ -188,6 +178,7 @@ export function endMovement(g: Game, seat: Seat) {
       for (const t of g.units.filter(
         (t) =>
           t.owner === seat &&
+          t.kind === "unit" &&
           /taodu/.test(t.cardId) &&
           t.id !== u.id &&
           adjacent(t, u) &&

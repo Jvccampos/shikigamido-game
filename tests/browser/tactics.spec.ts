@@ -53,7 +53,8 @@ test("legal actions, movement previews and unit explanations stay usable across 
   const snake = page.getByRole("button", {
     name: /^Selecionar Serpente de Gelo/,
   });
-  await snake.click();
+  // Aim at the exposed left edge of the fanned card, not its covered center.
+  await snake.click({ position: { x: 14, y: 70 } });
   const point = layout(1440, 1000).point(0, 0);
   await page.mouse.move(point.x, point.y);
   await expect(
@@ -88,6 +89,11 @@ test("legal actions, movement previews and unit explanations stay usable across 
     [844, 390],
   ]) {
     await page.setViewportSize({ width, height });
+    await expect(page.locator(".arena-canvas canvas")).toHaveAttribute(
+      "width",
+      String(width),
+    );
+    await page.mouse.move(1, height / 2);
     const aim = layout(width, height).point(0, 3);
     await page.mouse.move(aim.x, aim.y);
     await expect(page.locator(".action-preview")).toBeVisible();

@@ -7,6 +7,7 @@ import { ElementsGuide } from "./elements-guide.js";
 import { DuelContext } from "./duel-context.js";
 import { ActionPreview } from "./action-preview.js";
 import { CombatForecast } from "./combat-preview.js";
+import { SearchChoice } from "./search-choice.js";
 import type {
   ActionPlan,
   ActionPreview as Preview,
@@ -154,9 +155,19 @@ export function Arena(p: Props) {
         !g.setup &&
         !done &&
         !g.stack.length &&
-        !g.combat,
+        !g.combat &&
+        !g.searches?.length,
     );
-  }, [g.turn, g.phase, yourTurn, g.setup, done, g.stack.length, !!g.combat]);
+  }, [
+    g.turn,
+    g.phase,
+    yourTurn,
+    g.setup,
+    done,
+    g.stack.length,
+    !!g.combat,
+    g.searches?.length,
+  ]);
   useEffect(
     () => p.onPresentationBusy(!!presenting || drawing),
     [presenting, drawing],
@@ -632,7 +643,14 @@ export function Arena(p: Props) {
       {!g.setup && !g.centerPending && !done && (
         <button
           className={`arena-pass ${yourTurn ? "enabled" : ""}`}
-          disabled={!yourTurn || p.busy || !!g.duel || drawing || !!presenting}
+          disabled={
+            !yourTurn ||
+            p.busy ||
+            !!g.duel ||
+            drawing ||
+            !!presenting ||
+            !!g.searches?.length
+          }
           onClick={() => p.onAct({ type: "pass" })}
         >
           <span>
@@ -1000,6 +1018,15 @@ export function Arena(p: Props) {
           </aside>
         )}
       <FieldEvent label={presenting} onVisible={setFieldVisible} />
+      {!done && !presenting && !drawing && g.searches?.[0]?.seat === p.seat && (
+        <SearchChoice
+          key={g.searches[0].id}
+          search={g.searches[0]}
+          busy={p.busy}
+          onAct={p.onAct}
+          onFocus={p.onFocus}
+        />
+      )}
       <ArenaNotices
         game={g}
         seat={p.seat}
@@ -1012,6 +1039,7 @@ export function Arena(p: Props) {
           drawing ||
           settledRevision !== g.revision ||
           discardOpen ||
+          !!g.searches?.length ||
           elementsOpen ||
           menu
         }

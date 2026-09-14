@@ -36,12 +36,13 @@ export function Journal(p: {
         "spell",
         "ability",
         "concede",
+        "search",
       ].includes(e.type),
     )
     .filter((e) =>
       filter === "all" || filter === "combat"
         ? filter === "all" || e.type === "combat"
-        : ["summon", "spell", "discard", "ability"].includes(e.type),
+        : ["summon", "spell", "discard", "ability", "search"].includes(e.type),
     );
   function thumb(id?: string) {
     const c = cards.get(id || "");
@@ -72,6 +73,15 @@ export function Journal(p: {
       owner = p.names[seat ?? -1] || "";
     let title: string, detail: string;
     switch (e.type) {
+      case "search":
+        title = `${cards.get(e.sourceCardId)?.name} · ${e.zone === "library" ? "Busca no baralho" : "Recuperação do descarte"}`;
+        detail =
+          e.outcome === "empty"
+            ? "Nenhuma carta compatível disponível."
+            : e.outcome === "skipped"
+              ? `${owner} decidiu não buscar.`
+              : `${owner} adicionou ${c?.name || "uma carta"} à mão.`;
+        break;
       case "turn":
         title = `Turno ${e.turn}`;
         detail = "Compra automática · energia renovada";

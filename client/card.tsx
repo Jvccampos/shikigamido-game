@@ -177,6 +177,13 @@ export function Focus({
               "Peça do tabuleiro"}
           </p>
           <h2>{card?.name || unitName(unit)}</h2>
+          {card?.kind === "curse" && (
+            <p className="eyebrow">
+              Maldição · Nível{" "}
+              {card.stats.cost <= 1 ? 1 : card.stats.cost <= 3 ? 2 : 3} · Fora
+              dos baralhos
+            </p>
+          )}
           <Stats unit={unit} card={card} />
           <p>
             {card?.effect_text ||

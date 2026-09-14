@@ -29,6 +29,14 @@ export const pieceName = (u?: UnitView) =>
 // Advice has only the same redacted information as its viewer. Never consult
 // private decks or live RNG, and never execute a preview against the live game.
 export function adviceState(view: GameView): Game {
+  const library = (seat: number) => [
+    ...new Set([
+      ...view.players[seat].summonableDeck,
+      ...(view.searches || [])
+        .filter((s) => s.seat === seat && s.zone === "library")
+        .flatMap((s) => s.options),
+    ]),
+  ];
   const visible = {
     ...view,
     events: [],
@@ -51,8 +59,8 @@ export function adviceState(view: GameView): Game {
         : (u as Unit),
     ),
     players: [
-      { ...view.players[0], library: view.players[0].summonableDeck },
-      { ...view.players[1], library: view.players[1].summonableDeck },
+      { ...view.players[0], library: library(0) },
+      { ...view.players[1], library: library(1) },
     ],
     pending: [],
     centerChoices: {},
@@ -201,6 +209,7 @@ export function cardPlan(
   });
   if (seat !== 0 && seat !== 1) return unavailable("Modo espectador");
   if (g.setup) return unavailable("Preparação da mão inicial");
+  if (g.searches?.length) return unavailable("Conclua a busca de carta");
   if (g.winner !== null || g.draw) return unavailable("Partida encerrada");
   if (g.centerPending) return unavailable("Escolha seu avanço ao centro");
   if (g.followup || g.duel)

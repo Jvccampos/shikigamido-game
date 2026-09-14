@@ -514,7 +514,7 @@ test("curse presentation announces arrival and approach before damage or respawn
   assert(approach >= 0 && combat > approach && respawn > combat);
   assert.equal(
     arrival.unit.hp,
-    6,
+    cards.get(curse.cardId)!.stats.health,
     "arrival snapshot must not change after damage",
   );
   assert.deepEqual([arrival.unit.x, arrival.unit.y], [-1, 7]);
@@ -569,6 +569,8 @@ test("curse that defeats Ice Serpent at zero dexterity stays still next turn", (
   g.turn = 3;
   startTurn(g);
   const curse = g.units.find((u) => u.kind === "curse" && u.owner === 0)!;
+  curse.speed = 1;
+  curse.attack = 2;
   const serpent = unit("serpente-de-gelo", 0, 0, 6);
   g.units.push(serpent);
   g.turn = 4;

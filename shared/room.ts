@@ -5,6 +5,7 @@ import type {
   Player,
   Seat,
   Unit,
+  CardSearch,
 } from "./model.js";
 
 export type StoredRow = { id: string; createdAt: string; updatedAt: string };
@@ -52,8 +53,15 @@ export type PlayerView = Player & {
 };
 export type GameView = Omit<
   Game,
-  "random" | "players" | "units" | "events" | "pending" | "centerChoices"
+  | "random"
+  | "players"
+  | "units"
+  | "events"
+  | "pending"
+  | "centerChoices"
+  | "searches"
 > & {
+  searches?: (CardSearch & { options: string[] })[];
   players: [PlayerView, PlayerView];
   units: UnitView[];
   events: GameEvent<UnitView>[];

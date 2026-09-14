@@ -123,7 +123,9 @@ export function App() {
       (practice.setup && !practice.players[1].ready) ||
       (practice.centerPending &&
         !Object.hasOwn(practice.centerChoices || {}, 1)) ||
-      (!practice.setup && !practice.centerPending && practice.priority === 1)
+      (!practice.setup &&
+        !practice.centerPending &&
+        (practice.searches?.[0]?.seat ?? practice.priority) === 1)
     ))
       return;
     const timer = setTimeout(() => {
@@ -210,6 +212,7 @@ export function App() {
       myTurn &&
       !g.stack.length &&
       !g.combat &&
+      !g.searches?.length &&
       !busy
     ) {
       const timer = setTimeout(() => void act({ type: "pass" }), 500);
@@ -278,6 +281,7 @@ export function App() {
         .filter(
           (c) =>
             c.kind !== "omionji" &&
+            c.kind !== "curse" &&
             (c.kind === "unit" || c.types.includes(element)) &&
             (filter === "all" ||
               (filter === "main" && c.types.includes(element)) ||
@@ -927,10 +931,12 @@ export function App() {
               setas; esta edição usa o diagrama.
             </p>
             <p>
-              O manual não fornece fichas numéricas das maldições. Valores
-              provisórios: níveis 1, 2 e 3 têm 6/9/12 de vida, 2/3/4 de ataque e
-              1 de velocidade. Nível 3 retorna como nível 3. Empates de caminho
-              favorecem o centro e depois usam sorteio.
+              As cartas com Amaldiçoado são maldições neutras e ficam fora dos
+              baralhos. Custos 0–1 formam o nível 1, custo 3 o nível 2 e custos
+              4–5 o nível 3. Cada surgimento sorteia uma carta do nível
+              correspondente, com seus atributos e efeitos impressos. Nível 3
+              retorna como nível 3. Empates de caminho favorecem o centro e
+              depois usam sorteio.
             </p>
             <p>
               A mão inicial tem 6 cartas, com uma troca opcional. Depois da
@@ -947,8 +953,9 @@ export function App() {
               Adjacência de efeitos inclui as oito casas vizinhas. Movimento e
               invocação exigem caminhos. Maiko move uma carta adjacente por uma
               conexão, uma vez por turno. Aota dá Quick Attack ao atacante
-              aliado. As habilidades opcionais de busca usam a primeira carta
-              compatível do baralho embaralhado.
+              aliado. Efeitos de busca mostram as cartas compatíveis para você
+              escolher. Buscas opcionais podem ser dispensadas; as cartas do
+              baralho permanecem privadas.
             </p>
           </section>
           <div className="actions">

@@ -42,7 +42,7 @@ test("seeded matches reproduce draws, combat, curse paths and event IDs", () => 
         ? Object.hasOwn(a.centerChoices || {}, 0)
           ? 1
           : 0
-        : a.priority;
+        : (a.searches?.[0]?.seat ?? a.priority);
     const command = botCommand(a, seat);
     const ea = apply(a, seat, structuredClone(command));
     const eb = apply(b, seat, structuredClone(command));

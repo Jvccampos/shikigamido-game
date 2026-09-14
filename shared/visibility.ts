@@ -1,4 +1,5 @@
 import type { Game, GameEvent, Player, Seat, Unit } from "./model.js";
+import { searchOptions } from "./rules/searches.js";
 import type {
   GameView,
   HiddenUnit,
@@ -29,6 +30,8 @@ export function publicGame(game: Game, viewer: Seat | -1): GameView {
   const conceal = (u: Unit): UnitView =>
     u.statuses?.hidden && u.owner !== viewer ? hiddenUnit(u) : u;
   const event = (e: GameEvent): GameEvent<UnitView> => {
+    if (e.type === "search" && e.seat !== viewer)
+      return { ...e, cardId: undefined };
     if (e.type === "combat")
       return {
         ...e,
@@ -75,6 +78,10 @@ export function publicGame(game: Game, viewer: Seat | -1): GameView {
   return {
     ...g,
     players,
+    searches: g.searches?.map((s) => ({
+      ...s,
+      options: s.seat === viewer ? searchOptions(g, s) : [],
+    })),
     units: g.units.map((u) =>
       g.setup && u.kind === "omionji" && u.owner !== viewer
         ? { ...u, y: u.owner ? 4 : 2 }
