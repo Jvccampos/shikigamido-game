@@ -1,0 +1,15 @@
+{
+  "name": "shikigamido-game",
+  "private": true,
+  "scripts": {
+    "build": "npm run typecheck && sited build .",
+    "dev": "sited dev . --slug shikigamido-game",
+    "deploy": "sited deploy . --slug shikigamido-game",
+    "typecheck": "tsc --noEmit"
+  },
+  "type": "module",
+  "devDependencies": {
+    "sited": "npm:@lucaspll/sited@^0.8.0",
+    "typescript": "^5.9.3"
+  }
+}
