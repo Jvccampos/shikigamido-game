@@ -45,9 +45,14 @@ test("practice opponent notices allow reading and fade before removal", async ({
   });
   await page.getByRole("button", { name: "Manter estas cartas" }).click();
   await page.getByRole("button", { name: "Começar neste selo" }).click();
+  // The player can confirm before the bot is ready. Wait for setup to finish
+  // before deciding whether we need to pass the player's invocation phase.
+  await expect(page.locator(".arena-shell")).not.toHaveClass(
+    /preparing-position/,
+  );
   await idle(page);
-  if (await page.locator(".arena-pass:enabled").count())
-    await page.locator(".arena-pass:enabled").click();
+  if (await page.locator(".arena-phase.active").count())
+    await page.getByRole("button", { name: "Concluir invocações" }).click();
   const finished = () =>
     page.evaluate(() =>
       (
