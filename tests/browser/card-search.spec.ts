@@ -156,9 +156,14 @@ test("Curador search is private, inspectable, responsive and puts the chosen car
   const curse = spawnCurse(g, 0, 2);
   g.revision!++;
   send();
+  await expect(page.locator(".arena-shell")).toHaveAttribute(
+    "aria-busy",
+    "true",
+  );
   await idle(page);
   const curseSpot = layout(1440, 1000).point(curse.x, curse.y);
   await page.mouse.move(curseSpot.x, curseSpot.y);
+  await expect(page.locator(".arena-hover")).toBeVisible();
   await page.keyboard.press("f");
   await expect(page.locator(".card-focus")).toContainText("Maldição · Nível 2");
   await page.screenshot({ path: ".sited/qa-search/curse.png" });
