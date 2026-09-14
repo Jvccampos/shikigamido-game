@@ -36,7 +36,7 @@ export class Repository {
   }
   all(): any[] {
     const values = this.filters.map(([, v]) => v);
-    let rows = this.db
+    const rows = this.db
       .prepare(`SELECT body FROM ${this.table}${this.clause()}`)
       .all(...values)
       .map((r: any) => JSON.parse(r.body));

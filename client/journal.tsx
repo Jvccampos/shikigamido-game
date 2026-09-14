@@ -65,8 +65,7 @@ export function Journal(p: {
             ? `Maldição ${unit.level || ""}`
             : "Carta oculta"),
       owner = p.names[seat ?? -1] || "";
-    let title = "",
-      detail = "";
+    let title: string, detail: string;
     switch (e.type) {
       case "turn":
         title = `Turno ${e.turn}`;

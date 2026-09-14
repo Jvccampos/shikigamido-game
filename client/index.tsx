@@ -124,8 +124,8 @@ export function App() {
       const original = localRef.current;
       if (!original) return;
       const next = structuredClone(original);
-      let cmd = botCommand(next, 1);
-      let error = apply(next, 1, cmd);
+      const cmd = botCommand(next, 1);
+      const error = apply(next, 1, cmd);
       if (error) {
         const clean = structuredClone(original);
         if (!apply(clean, 1, { type: "pass" })) {

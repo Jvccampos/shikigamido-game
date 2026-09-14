@@ -293,7 +293,9 @@ export function Arena(p: Props) {
       o.start();
       o.stop(ctx.currentTime + 0.22);
       o.onended = () => void ctx.close();
-    } catch {}
+    } catch {
+      // Audio may be unavailable or blocked by the browser; gameplay continues.
+    }
   }, [g.events?.at(-1)?.id, sound]);
   function player(s: number, position: string) {
     const u = (presenting ? visibleUnits : g.units).find(

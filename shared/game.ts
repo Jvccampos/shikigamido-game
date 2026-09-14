@@ -1997,7 +1997,7 @@ function apply(g: Game, seat: Seat, c: Cmd): string | undefined {
       u.statuses?.softStun
     )
       return "Essa unidade não pode mover neste turno.";
-    let path = route(g, u, c.x!, c.y!),
+    const path = route(g, u, c.x!, c.y!),
       target =
         c.type === "attack"
           ? g.units.find((t) => t.id === c.targetId)

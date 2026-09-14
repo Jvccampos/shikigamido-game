@@ -75,7 +75,16 @@ node scripts/ui-sweep.mjs
 node scripts/readability-smoke.mjs
 ```
 
-O comando `check` executa a checagem de tipos e os testes de regras, catálogo, privacidade, salas, SQLite, HTTP e WebSocket.
+O comando `check` verifica formatação, lint e tipos, depois executa os testes de regras, catálogo, privacidade, salas, SQLite, HTTP e WebSocket. O CI executa o mesmo comando.
+
+```sh
+npm run format       # Aplica Prettier ao código, estilos e documentação
+npm run format:check # Verifica sem alterar arquivos
+npm run lint         # ESLint para JavaScript e TypeScript
+npm run lint:fix     # Aplica as correções automáticas disponíveis
+```
+
+As configurações ficam em `.prettierrc.json` e `eslint.config.mjs`. O Prettier cuida da formatação; o ESLint usa as regras recomendadas para detectar erros e código desnecessário. Campos dinâmicos de estados e visões de sala ainda podem usar `any`. Assets, catálogo original, arquivos gerados e dados locais ficam fora da formatação. Não há hooks de commit ou ferramentas adicionais para executar esses comandos.
 
 `test:browser` compila a aplicação e inicia um servidor isolado na porta 3187 com SQLite em memória. Exercita a preparação em quatro tamanhos de tela e uma partida com dois jogadores e espectador, incluindo resposta HTTP atrasada, reconexão, invocação e movimento por arraste. `test:multiplayer` executa apenas essa segunda parte. Falhas deixam capturas e traces em `.sited/playwright-results/` e um relatório em `.sited/playwright-report/`. O GitHub Actions executa essas verificações a cada push e pull request.
 

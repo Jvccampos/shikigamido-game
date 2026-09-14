@@ -1,0 +1,9 @@
+# Build output, local state and QA artifacts.
+node_modules/
+dist/
+public/
+.sited/
+storage/
+# Original card catalog and npm's generated lockfile.
+data/cards.json
+package-lock.json
