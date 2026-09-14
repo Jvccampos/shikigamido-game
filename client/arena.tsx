@@ -3,6 +3,8 @@ import type { GameView, UnitView } from "../shared/room.js";
 import type { Selection } from "./match-interaction.js";
 import { OpeningHand, DiscardChoice } from "./choices.js";
 import { Journal } from "./journal.js";
+import { ElementsGuide } from "./elements-guide.js";
+import { ArenaNotices } from "./arena-notices.js";
 import { useEffect, useRef, useState } from "preact/hooks";
 import type { ComponentChildren } from "preact";
 import { ArenaScene, type Point } from "./arena-scene.js";
@@ -56,6 +58,7 @@ export function Arena(p: Props) {
     [handHover, setHandHover] = useState<number | null>(null),
     [drawer, setDrawer] = useState(false),
     [menu, setMenu] = useState(false),
+    [elementsOpen, setElementsOpen] = useState(false),
     [discardOpen, setDiscardOpen] = useState(false),
     [drawing, setDrawing] = useState(false),
     [presenting, setPresenting] = useState<string | null>(null),
@@ -187,6 +190,7 @@ export function Arena(p: Props) {
   }, [card?.id, !!g.duel, !!p.selected, p.targets.join("|")]);
   useEffect(() => {
     const key = (e: KeyboardEvent) => {
+      if (document.querySelector("dialog[open]")) return;
       if (["INPUT", "SELECT"].includes((e.target as HTMLElement)?.tagName))
         return;
       if (e.key.toLowerCase() === "f") {
@@ -329,6 +333,14 @@ export function Arena(p: Props) {
           </span>
           <div className="player-resources">
             <div
+              className="mana-total"
+              title="Total para pagar custos: energia do turno + reserva."
+              aria-label={`${v.pe + v.permanentPe} PE disponíveis. ${v.pe} energia e ${v.permanentPe} reserva.`}
+            >
+              <b key={`${v.pe}:${v.permanentPe}`}>{v.pe + v.permanentPe}</b>
+              <span>PE disponíveis</span>
+            </div>
+            <div
               className="energy-resource"
               title="Energia elemental (PE): renova no início de cada turno."
             >
@@ -337,7 +349,6 @@ export function Arena(p: Props) {
                 {v.pe}
                 <small> / {v.maxPe}</small>
               </b>
-              <em>renova por turno</em>
             </div>
             <div
               className="reserve-resource"
@@ -348,7 +359,6 @@ export function Arena(p: Props) {
                 {v.permanentPe}
                 <small> / 3</small>
               </b>
-              <em>guardada entre turnos</em>
             </div>
           </div>
         </div>
@@ -437,6 +447,25 @@ export function Arena(p: Props) {
         <span className="arena-room">
           {p.code === "TREINO" ? "TREINO" : `SALA ${p.code}`}
         </span>
+        <button
+          className="elements-toggle"
+          aria-label="Vantagens elementais"
+          title="Vantagens elementais e legenda dos atributos"
+          onClick={() => setElementsOpen(true)}
+        >
+          <svg
+            width="21"
+            height="21"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.3"
+            aria-hidden="true"
+          >
+            <path d="m12 2 10 7-4 12H6L2 9 12 2Zm0 0 6 19L2 9h20L6 21 12 2Z" />
+          </svg>
+          <small>Elementos</small>
+        </button>
         <button
           className="history-toggle"
           aria-label="Abrir histórico"
@@ -850,11 +879,29 @@ export function Arena(p: Props) {
         </aside>
       )}
       {presenting && (
-        <div className="field-event" role="status">
+        <div
+          className={`field-event ${presenting.startsWith("Uma maldição") ? "curse-notice" : ""}`}
+          role="status"
+        >
           <span className="event-pulse" />
           {presenting}
         </div>
       )}
+      <ArenaNotices
+        game={g}
+        seat={p.seat}
+        names={p.names}
+        waiting={
+          !ready ||
+          !!presenting ||
+          drawing ||
+          settledRevision !== g.revision ||
+          discardOpen ||
+          elementsOpen ||
+          menu
+        }
+      />
+      {elementsOpen && <ElementsGuide onClose={() => setElementsOpen(false)} />}
       {menu && (
         <div className="arena-menu-panel">
           <h2>Shikigamido</h2>

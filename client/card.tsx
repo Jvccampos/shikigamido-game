@@ -35,16 +35,19 @@ function Stat({
   base,
   label,
   icon,
+  kind,
 }: {
   value: number;
   base: number;
   label: string;
   icon: string;
+  kind: string;
 }) {
   return (
     <span
-      className={`stat ${value < base ? "down" : value > base ? "up" : "equal"}`}
+      className={`stat stat-${kind} ${value < base ? "down" : value > base ? "up" : "equal"}`}
       title={`${label}: ${value}. Original: ${base}.`}
+      aria-label={`${label}: ${value}. Original: ${base}.`}
     >
       <small>{icon}</small>
       {value}
@@ -64,18 +67,21 @@ function Stats({ unit, card }: { unit?: UnitView; card: Card | undefined }) {
         base={card?.stats.attack ?? unit?.attack ?? 0}
         label="Ataque"
         icon="⚔"
+        kind="attack"
       />
       <Stat
         value={unit?.hp ?? card?.stats.health ?? 0}
         base={card?.stats.health ?? unit?.maxHp ?? 0}
         label="Vida"
         icon="♥"
+        kind="health"
       />
       <Stat
         value={unit?.speed ?? card?.stats.speed ?? 0}
         base={card?.stats.speed ?? unit?.speed ?? 0}
         label="Velocidade"
         icon="➟"
+        kind="speed"
       />
     </div>
   );

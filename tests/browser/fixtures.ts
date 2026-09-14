@@ -52,9 +52,10 @@ export async function match(
   browser: Browser,
   baseURL: string,
   run: (contexts: BrowserContext[], code: string) => Promise<void>,
+  memberCount = 3,
 ) {
   const contexts = await Promise.all(
-    [0, 1, 2].map(() =>
+    Array.from({ length: memberCount }, () =>
       browser.newContext({ baseURL, viewport: { width: 1440, height: 1000 } }),
     ),
   );
@@ -81,7 +82,8 @@ export async function match(
     const created = await mutate(contexts[0].request, "createRoom", a.deck!.id),
       code = created.room!.code;
     await mutate(contexts[1].request, "joinRoom", code, b.deck!.id, false);
-    await mutate(contexts[2].request, "joinRoom", code, undefined, true);
+    if (contexts[2])
+      await mutate(contexts[2].request, "joinRoom", code, undefined, true);
     await run(contexts, code);
   } finally {
     await Promise.all(contexts.map((context) => context.close()));

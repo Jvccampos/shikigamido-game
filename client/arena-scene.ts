@@ -532,7 +532,7 @@ export class ArenaScene {
       art.addChild(icon);
     }
     const strip = new Graphics()
-      .roundRect(-w / 2, h / 2 - 17, w, 20, 3)
+      .roundRect(-w / 2, h / 2 - 21, w, 24, 3)
       .fill({ color: 0x0a1713, alpha: 0.98 });
     view.addChild(strip);
     const stats = [u.attack, u.hp, u.speed],
@@ -542,9 +542,21 @@ export class ArenaScene {
         typeof card?.stats.speed === "number" ? card.stats.speed : u.speed,
       ];
     stats.forEach((value, i) => {
+      const tint = [0xf57b62, 0x68c5ef, 0x8cd8b6][i];
+      const x = (i - 1) * w * 0.32;
+      const stacked = w < 62;
+      view.addChild(
+        new Graphics()
+          .roundRect(x - w * 0.155, h / 2 - 20, w * 0.31, 22, 3)
+          .fill({ color: tint, alpha: 0.19 }),
+      );
+      const icon = label(["⚔", "♥", "➟"][i], Math.max(8, size * 0.13), tint);
+      icon.anchor.set(0.5);
+      icon.position.set(stacked ? x : x - w * 0.09, h / 2 - (stacked ? 16 : 7));
+      view.addChild(icon);
       const t = label(
         value === null ? "?" : String(value),
-        Math.max(10, size * 0.23),
+        Math.max(10, size * 0.21),
         value === null || bases[i] === null
           ? 0xf2e4c0
           : value < bases[i]
@@ -554,8 +566,18 @@ export class ArenaScene {
               : 0xf2e4c0,
       );
       t.anchor.set(0.5);
-      t.position.set((i - 1) * w * 0.31, h / 2 - 7);
+      t.position.set(stacked ? x : x + w * 0.035, h / 2 - (stacked ? 4 : 7));
       view.addChild(t);
+      if (value !== null && bases[i] !== null && value !== bases[i]) {
+        const delta = label(
+          value > bases[i] ? "↑" : "↓",
+          9,
+          value > bases[i] ? 0x93edaf : 0xff9285,
+        );
+        delta.anchor.set(0.5);
+        delta.position.set(x + w * 0.11, h / 2 - 17);
+        view.addChild(delta);
+      }
     });
     if (u.statuses?.shield) {
       const s = new Graphics()
@@ -702,7 +724,7 @@ export class ArenaScene {
       if (e.type === "summon") {
         this.state.onPresentation(
           e.unit.kind === "curse"
-            ? `Uma maldição surgiu no portal`
+            ? `Uma maldição foi invocada! · Nível ${e.unit.level || 1}`
             : `${name} entrou no campo`,
         );
         const u = e.unit,

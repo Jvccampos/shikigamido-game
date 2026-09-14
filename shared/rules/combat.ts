@@ -4,6 +4,7 @@ import { yokaiIds, masculineIds } from "../traits.js";
 import { random } from "../random.js";
 import { destroy, takeDamage, heal } from "./units.js";
 import { at } from "./board.js";
+import { elementModifier } from "../elements.js";
 
 export function elementalDamage(attacker: Unit, defender: Unit, g?: Game) {
   let dmg = attacker.attack;
@@ -18,14 +19,7 @@ export function elementalDamage(attacker: Unit, defender: Unit, g?: Game) {
     return 0;
   if (attacker.cardId === "kappa" && dts.includes("vento")) return 0;
   if (!kw(attacker, "Amaldiçoado")) {
-    const ring = ["vazio", "vento", "fogo", "agua", "terra"];
-    for (const a of ats)
-      for (const d of dts) {
-        const ai = ring.indexOf(a),
-          di = ring.indexOf(d);
-        if (di === (ai + 2) % 5) dmg++;
-        if (di === (ai + 1) % 5) dmg--;
-      }
+    for (const a of ats) for (const d of dts) dmg += elementModifier(a, d);
   }
   if (
     ["kabuto-o-shikigami-besouro", "raposa-vigia"].includes(attacker.cardId) &&
