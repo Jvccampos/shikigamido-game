@@ -150,12 +150,23 @@ export function movementMarker(g: GameView, u: UnitView) {
     return null;
   const reason = movementReason(g, u);
   if (u.statuses?.stun || u.statuses?.softStun || !u.speed)
-    return { symbol: "×", label: reason!, color: 0xf0a29a };
-  if (u.summonedTurn === g.turn)
-    return { symbol: "◷", label: "Invocado agora", color: 0xc3bf9a };
+    return { state: "blocked", symbol: "×", label: reason!, color: 0xf0a29a };
+  if (u.kind !== "curse" && u.summonedTurn === g.turn)
+    return {
+      state: "waiting",
+      symbol: "◷",
+      label: "Invocado agora",
+      color: 0xe7cf92,
+    };
   if (u.kind !== "curse" && g.moved.includes(u.id))
-    return { symbol: "✓", label: "Movimento usado", color: 0x9ea99d };
+    return {
+      state: "moved",
+      symbol: "✓",
+      label: "Movimento usado",
+      color: 0xc0d0c5,
+    };
   return {
+    state: "ready",
     symbol: "➟",
     label: u.kind === "curse" ? "Avanço automático" : "Movimento disponível",
     color: 0x8edfc0,

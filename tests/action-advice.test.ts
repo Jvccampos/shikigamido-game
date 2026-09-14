@@ -89,6 +89,16 @@ test("movement forecasts agree with the resolved rules including Quick Attack, s
       .reverse()
       .find((e) => e.type === "combat")!;
     assert(event.type === "combat");
+    assert.equal(preview.combat?.attacker.damage, event.defenseDamage);
+    assert.equal(preview.combat?.defender.damage, event.attackDamage);
+    assert.equal(
+      preview.combat?.attacker.after?.hp,
+      resolved.units.find((u) => u.id === a.id)?.hp,
+    );
+    assert.equal(
+      preview.combat?.defender.after?.hp,
+      resolved.units.find((u) => u.id === d.id)?.hp,
+    );
     assert(
       preview.lines.some((s) =>
         s.includes(
@@ -132,6 +142,9 @@ test("hidden cards and random combat never produce a falsely exact forecast", ()
   (d.statuses ??= {}).hidden = true;
   const preview = previewAction(publicGame(g, 0), 0, c);
   assert.match(preview.uncertain!, /ocultas/);
+  assert.equal(preview.combat?.resolved, false);
+  assert.equal(preview.combat?.defender.before.cardId, "hidden");
+  assert.equal(preview.combat?.defender.damage, undefined);
   assert(!JSON.stringify(preview).includes("Lobo Branco"));
   assert(!preview.lines.some((s) => s.includes("será derrotado")));
 });

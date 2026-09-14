@@ -212,17 +212,75 @@ test("spell outcomes, pending combat and status sources are readable in a contro
   await expect(page.locator(".context-origin")).toContainText(
     "Movimento · Você",
   );
+  await page.evaluate(
+    () =>
+      new Promise<void>((resolve) =>
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+      ),
+  );
   await page.mouse.click(from.x, from.y);
   await page.mouse.move(to.x, to.y);
-  await expect(page.locator(".action-preview")).toContainText("contra-ataque");
-  await page.screenshot({ path: ".sited/qa-tactics/combat-preview.png" });
+  await expect(
+    page.getByRole("region", { name: "Prévia do combate" }),
+  ).toContainText("Derrotado");
+  await expect(page.locator(".forecast-fighter")).toHaveCount(2);
+  for (const [width, height] of [
+    [1440, 1000],
+    [1024, 768],
+    [390, 844],
+    [844, 390],
+  ]) {
+    await page.setViewportSize({ width, height });
+    const aim = layout(width, height).point(3, 2);
+    await page.mouse.move(aim.x, aim.y);
+    const forecast = page.getByRole("region", { name: "Prévia do combate" });
+    await expect(async () => {
+      // Pixi resizes on the next frame; aim again after the viewport settles.
+      await page.mouse.move(aim.x + 3, aim.y);
+      await page.mouse.move(aim.x, aim.y);
+      await expect(forecast).toBeVisible({ timeout: 500 });
+    }).toPass({ timeout: 5000 });
+    await expect(forecast).toHaveCSS("pointer-events", "none");
+    const box = (await forecast.boundingBox())!;
+    expect(box.x).toBeGreaterThanOrEqual(0);
+    expect(box.x + box.width).toBeLessThanOrEqual(width);
+    expect(box.y + box.height).toBeLessThanOrEqual(height);
+    const button = (await page.locator(".arena-pass").boundingBox())!;
+    expect(
+      box.x + box.width <= button.x ||
+        box.y + box.height <= button.y ||
+        box.x >= button.x + button.width ||
+        box.y >= button.y + button.height,
+      "Forecast must not cover the phase action",
+    ).toBe(true);
+    // The comparison should leave the two actual pieces visible on the board.
+    for (const x of [2, 3]) {
+      const piece = layout(width, height).point(x, 2);
+      expect(
+        piece.x < box.x ||
+          piece.x > box.x + box.width ||
+          piece.y < box.y ||
+          piece.y > box.y + box.height,
+      ).toBe(true);
+    }
+    await page.screenshot({
+      path: `.sited/qa-tactics/combat-preview-${width}.png`,
+    });
+  }
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.evaluate(
+    () =>
+      new Promise<void>((resolve) =>
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+      ),
+  );
   await page.mouse.click(to.x, to.y);
   await expect(page.locator(".duel-context h1")).toHaveText(
     "Resposta de Oponente",
   );
-  await expect(
-    page.locator(".arena-stack-panel .action-preview"),
-  ).toContainText("Combate anunciado");
+  await expect(page.locator(".combat-forecast")).toContainText(
+    "Combate anunciado",
+  );
   await page.screenshot({ path: ".sited/qa-tactics/combat-response.png" });
   expect(apply(g, 1, { type: "pass" })).toBeUndefined();
   expect(apply(g, 0, { type: "pass" })).toBeUndefined();
@@ -230,9 +288,21 @@ test("spell outcomes, pending combat and status sources are readable in a contro
   send();
   await idle(page);
   await page.mouse.move(to.x, to.y);
+  await expect(page.locator(".arena-hover")).toContainText("Sem velocidade");
   await page.keyboard.press("f");
   await expect(page.getByRole("dialog", { name: "Lobo Branco" })).toContainText(
     "Redução permanente causada por Serpente de Gelo",
   );
   await page.screenshot({ path: ".sited/qa-tactics/unit-source.png" });
+  await page.keyboard.press("Escape");
+  const waiting = makeUnit(g, 0, "taodu-katana", 1, 3);
+  const moved = makeUnit(g, 0, "india-do-norte", 2, 3);
+  moved.summonedTurn = 1;
+  g.moved.push(moved.id);
+  g.units.push(waiting, moved);
+  g.revision = (g.revision || 0) + 1;
+  send();
+  await idle(page);
+  await page.mouse.move(100, 400);
+  await page.screenshot({ path: ".sited/qa-tactics/piece-states.png" });
 });

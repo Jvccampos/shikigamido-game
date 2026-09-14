@@ -274,6 +274,20 @@ export function hasAbility(u: UnitView) {
   );
 }
 
+export type CombatantPreview = {
+  before: UnitView;
+  after?: UnitView;
+  damage?: number;
+  defeated?: boolean;
+};
+export type CombatPreview = {
+  attacker: CombatantPreview;
+  defender: CombatantPreview;
+  resolved: boolean;
+  announced: boolean;
+  keyword?: string;
+  modifier?: number;
+};
 export type ActionPreview = {
   title: string;
   cost: number;
@@ -284,6 +298,7 @@ export type ActionPreview = {
   affected: string[];
   path: [number, number][];
   uncertain?: string;
+  combat?: CombatPreview;
 };
 export function previewAction(
   g: GameView,
@@ -337,13 +352,23 @@ export function previewAction(
       (u.id === combat?.attackerId || u.id === c.targetId) &&
       (u.cardId === "cachorro-do-mato" || u.statuses?.fireball),
   );
-  if (forecastsCombat)
+  if (forecastsCombat) {
     result.title =
       c.type === "pass"
         ? "Combate anunciado"
         : c.type === "attack"
           ? "Ataque à distância"
           : "Iniciar combate";
+    const attacker = g.units.find((u) => u.id === combat.attackerId);
+    const defender = g.units.find((u) => u.id === combat.defenderId);
+    if (attacker && defender)
+      result.combat = {
+        attacker: { before: attacker },
+        defender: { before: defender },
+        resolved: false,
+        announced: c.type === "pass",
+      };
+  }
   if (unknown || randomCombat) {
     result.uncertain = unknown
       ? "Há cartas ocultas: o resultado completo não pode ser previsto."
@@ -370,6 +395,7 @@ export function previewAction(
       result.lines.push(
         `Relação elemental: ${modifier > 0 ? "+" : ""}${modifier} no ataque`,
       );
+      if (result.combat) result.combat.modifier = modifier;
     }
   }
   if (c.type === "cast" && cards.get(c.cardId!)?.stats.speed !== "instant") {
@@ -389,6 +415,20 @@ export function previewAction(
     );
   }
   const fight = state.events?.find((e) => e.type === "combat");
+  if (result.combat && fight?.type === "combat") {
+    result.combat.resolved = true;
+    result.combat.keyword = fight.keyword;
+    for (const [side, damage] of [
+      [result.combat.attacker, fight.defenseDamage],
+      [result.combat.defender, fight.attackDamage],
+    ] as const) {
+      side.after = state.units.find((u) => u.id === side.before.id);
+      side.damage = damage;
+      side.defeated = state.events?.some(
+        (e) => e.type === "destroy" && e.unitId === side.before.id,
+      );
+    }
+  }
   if (fight?.type === "combat")
     result.lines.push(
       `${fight.keyword}: ${fight.attackDamage} de dano · ${fight.defenseDamage} de contra-ataque`,

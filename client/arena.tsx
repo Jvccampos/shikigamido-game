@@ -6,6 +6,7 @@ import { Journal } from "./journal.js";
 import { ElementsGuide } from "./elements-guide.js";
 import { DuelContext } from "./duel-context.js";
 import { ActionPreview } from "./action-preview.js";
+import { CombatForecast } from "./combat-preview.js";
 import type {
   ActionPlan,
   ActionPreview as Preview,
@@ -69,7 +70,7 @@ export function Arena(p: Props) {
     latest = useRef(p);
   latest.current = p;
   const [ready, setReady] = useState(false),
-    [hover, setHover] = useState<UnitView | null>(null),
+    [hoverId, setHoverId] = useState<string | null>(null),
     [handHover, setHandHover] = useState<number | null>(null),
     [drawer, setDrawer] = useState(false),
     [menu, setMenu] = useState(false),
@@ -109,6 +110,7 @@ export function Arena(p: Props) {
     [g.revision],
   );
   const decisionPreview = p.preview || combatPreview;
+  const hover = g.units.find((u) => u.id === hoverId) || null;
   const previousHand = useRef<{
     count: number;
     library: number;
@@ -190,7 +192,7 @@ export function Arena(p: Props) {
       onHover: (u: UnitView | null) => {
         hoveredRef.current = u;
         if (u) handHoverRef.current = null;
-        setHover(u);
+        setHoverId(u?.id || null);
       },
     };
   }
@@ -238,7 +240,7 @@ export function Arena(p: Props) {
         return;
       if (e.key.toLowerCase() === "f") {
         const v = latest.current,
-          u = hoveredRef.current,
+          u = v.game.units.find((u) => u.id === hoveredRef.current?.id),
           i = handHoverRef.current;
         if (u) v.onFocus(cards.get(u.cardId), u);
         else if (i !== null && v.seat >= 0 && v.game.players[v.seat].hand[i])
@@ -821,11 +823,19 @@ export function Arena(p: Props) {
               "Disponível · escolha um alvo iluminado"}
           </div>
         )}
-      {!g.setup && !discardOpen && !response && p.preview && !presenting && (
-        <div className="arena-action-preview">
-          <ActionPreview preview={p.preview} />
-        </div>
+      {!g.setup && !discardOpen && !presenting && decisionPreview?.combat && (
+        <CombatForecast preview={decisionPreview} game={g} />
       )}
+      {!g.setup &&
+        !discardOpen &&
+        !response &&
+        p.preview &&
+        !p.preview.combat &&
+        !presenting && (
+          <div className="arena-action-preview">
+            <ActionPreview preview={p.preview} />
+          </div>
+        )}
       {dragging?.moving && me && (
         <div
           className="drag-ghost"
@@ -916,7 +926,7 @@ export function Arena(p: Props) {
           </small>
         </div>
       )}
-      {response && (
+      {response && !decisionPreview?.combat && (
         <aside className="arena-stack-panel" aria-label="Pilha de respostas">
           <div className="stack-heading">
             <b>{g.combat ? "⚔ Combate anunciado" : "✧ Magias em resposta"}</b>
@@ -967,7 +977,9 @@ export function Arena(p: Props) {
               );
             })}
           </div>
-          {decisionPreview && <ActionPreview preview={decisionPreview} />}
+          {decisionPreview && !decisionPreview.combat && (
+            <ActionPreview preview={decisionPreview} />
+          )}
           <p>
             {g.passes === 1
               ? "Um passe confirmado. O próximo passe resolve."

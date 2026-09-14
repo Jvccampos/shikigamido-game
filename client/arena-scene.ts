@@ -566,6 +566,57 @@ export class ArenaScene {
       icon.y = -5;
       art.addChild(icon);
     }
+    const marker = !this.state.game.setup && movementMarker(this.state.game, u);
+    if (marker && marker.state !== "ready") {
+      // Dim only the illustration. Stats, targeting, inspection and usable
+      // abilities remain bright and interactive even after movement is spent.
+      view.addChild(
+        new Graphics()
+          .roundRect(-w / 2, -h / 2, w, h - 21, 5)
+          .fill({ color: 0x03100f, alpha: 0.66 }),
+      );
+      const radius = Math.max(4, Math.min(w * 0.21, (h - 26) * 0.3));
+      const cy = -h * 0.13;
+      const emblem = new Graphics()
+        .circle(0, cy, radius)
+        .fill({ color: 0x0b211b, alpha: 0.94 })
+        .stroke({ color: marker.color, width: 1.8 });
+      if (marker.state === "waiting") {
+        emblem
+          .moveTo(0, cy - radius * 0.6)
+          .lineTo(0, cy)
+          .lineTo(radius * 0.45, cy + radius * 0.22)
+          .stroke({ color: marker.color, width: 2.3 });
+      } else if (marker.state === "moved") {
+        emblem
+          .moveTo(-radius * 0.5, cy)
+          .lineTo(-radius * 0.1, cy + radius * 0.4)
+          .lineTo(radius * 0.55, cy - radius * 0.4)
+          .stroke({ color: marker.color, width: 2.5 });
+      } else {
+        emblem
+          .moveTo(-radius * 0.38, cy - radius * 0.38)
+          .lineTo(radius * 0.38, cy + radius * 0.38)
+          .moveTo(radius * 0.38, cy - radius * 0.38)
+          .lineTo(-radius * 0.38, cy + radius * 0.38)
+          .stroke({ color: marker.color, width: 2.5 });
+      }
+      view.addChild(emblem);
+      if (w >= 50) {
+        const caption = label(
+          marker.state === "waiting"
+            ? "AGUARDE"
+            : marker.state === "moved"
+              ? "MOVEU"
+              : "BLOQUEADO",
+          Math.min(10, w * 0.135),
+          marker.color,
+        );
+        caption.anchor.set(0.5);
+        caption.position.set(0, h / 2 - 27);
+        view.addChild(caption);
+      }
+    }
     const strip = new Graphics()
       .roundRect(-w / 2, h / 2 - 21, w, 24, 3)
       .fill({ color: 0x0a1713, alpha: 0.98 });
@@ -638,19 +689,19 @@ export class ArenaScene {
       number.position.set(-w * 0.5, -h * 0.5);
       view.addChild(number);
     }
-    const marker = movementMarker(this.state.game, u);
-    if (marker && !this.state.game.setup) {
+    if (marker && marker.state === "ready") {
       const badge = label(
         marker.symbol,
-        Math.max(12, size * 0.2),
+        Math.max(9, Math.min(16, size * 0.23)),
         marker.color,
       );
       badge.anchor.set(0.5);
       badge.position.set(-w * 0.4, -h * 0.48);
       view.addChild(
         new Graphics()
-          .circle(badge.x, badge.y, 11)
-          .fill({ color: 0x091e19, alpha: 0.95 }),
+          .circle(badge.x, badge.y, Math.max(6, Math.min(11, w * 0.16)))
+          .fill({ color: 0x091e19, alpha: 0.95 })
+          .stroke({ color: marker.color, width: 1.5 }),
         badge,
       );
     }
