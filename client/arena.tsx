@@ -4,7 +4,7 @@ import type { Selection } from "./match-interaction.js";
 import { OpeningHand, DiscardChoice } from "./choices.js";
 import { Journal } from "./journal.js";
 import { ElementsGuide } from "./elements-guide.js";
-import { ArenaNotices } from "./arena-notices.js";
+import { ArenaNotices, FieldEvent } from "./arena-notices.js";
 import { useEffect, useRef, useState } from "preact/hooks";
 import type { ComponentChildren } from "preact";
 import { ArenaScene, type Point } from "./arena-scene.js";
@@ -34,6 +34,7 @@ type Props = {
   onClear: () => void;
   onConcede: () => void;
   onPresentationBusy: (busy: boolean) => void;
+  onNoticeBusy: (busy: boolean) => void;
 };
 const elementGlyph: Record<string, string> = {
   agua: "水",
@@ -62,6 +63,7 @@ export function Arena(p: Props) {
     [discardOpen, setDiscardOpen] = useState(false),
     [drawing, setDrawing] = useState(false),
     [presenting, setPresenting] = useState<string | null>(null),
+    [fieldVisible, setFieldVisible] = useState(false),
     [visibleUnits, setVisibleUnits] = useState<UnitView[]>(p.game.units),
     [settledRevision, setSettledRevision] = useState(p.game.revision),
     [log, setLog] = useState(false),
@@ -878,22 +880,16 @@ export function Arena(p: Props) {
           </p>
         </aside>
       )}
-      {presenting && (
-        <div
-          className={`field-event ${presenting.startsWith("Uma maldição") ? "curse-notice" : ""}`}
-          role="status"
-        >
-          <span className="event-pulse" />
-          {presenting}
-        </div>
-      )}
+      <FieldEvent label={presenting} onVisible={setFieldVisible} />
       <ArenaNotices
         game={g}
         seat={p.seat}
         names={p.names}
+        onReading={p.onNoticeBusy}
         waiting={
           !ready ||
           !!presenting ||
+          fieldVisible ||
           drawing ||
           settledRevision !== g.revision ||
           discardOpen ||

@@ -59,6 +59,7 @@ export function App() {
     [toast, setToast] = useState(""),
     [busy, setBusy] = useState(false),
     [sceneBusy, setSceneBusy] = useState(false),
+    [noticeBusy, setNoticeBusy] = useState(false),
     [focus, setFocus] = useState<CardFocus | null>(null);
   const [concede, setConcede] = useState(false);
   const liveRoom = useRoom(code, view === "sala" && !practice);
@@ -110,7 +111,13 @@ export function App() {
     return () => window.removeEventListener("keydown", key);
   }, []);
   useEffect(() => {
-    if (!practice || practice.winner !== null || practice.draw || sceneBusy)
+    if (
+      !practice ||
+      practice.winner !== null ||
+      practice.draw ||
+      sceneBusy ||
+      noticeBusy
+    )
       return;
     if (!(
       (practice.setup && !practice.players[1].ready) ||
@@ -137,7 +144,7 @@ export function App() {
       setPractice(next);
     }, 750);
     return () => clearTimeout(timer);
-  }, [practice, sceneBusy]);
+  }, [practice, sceneBusy, noticeBusy]);
   function playerName(s: number) {
     const id = g?.players?.[s]?.id;
     return room?.members?.find((m) => m.id === id)?.name || `Jogador ${s + 1}`;
@@ -850,6 +857,7 @@ export function App() {
               {...interaction.arena}
               busy={busy || sceneBusy}
               onPresentationBusy={setSceneBusy}
+              onNoticeBusy={setNoticeBusy}
               onExit={() => setView("inicio")}
               onConcede={() => setConcede(true)}
             />

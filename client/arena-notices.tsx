@@ -2,16 +2,21 @@ import { useEffect, useRef, useState } from "preact/hooks";
 import type { GameView } from "../shared/room.js";
 import { phases } from "../shared/game.js";
 
+// Match the exit animation in duel-hud.css; keep the node alive until it ends.
+const exitMs = 450;
+
 export function ArenaNotices({
   game: g,
   seat,
   names,
   waiting,
+  onReading,
 }: {
   game: GameView;
   seat: number;
   names: string[];
   waiting: boolean;
+  onReading: (reading: boolean) => void;
 }) {
   const stage = `${g.turn}:${g.phase}:${g.phaseOwner}:${!!g.setup}:${!!g.centerPending}`;
   const previous = useRef({
@@ -24,6 +29,8 @@ export function ArenaNotices({
     detail: string;
     mana: string;
   } | null>(null);
+  const [displayed, setDisplayed] = useState<typeof notice>(null);
+  const [leaving, setLeaving] = useState(false);
   useEffect(() => {
     const max = g.players[seat < 0 ? 0 : seat].maxPe;
     const changed = previous.current.stage !== stage;
@@ -55,17 +62,77 @@ export function ArenaNotices({
     }));
   }, [stage, g.players[0].maxPe, g.players[1].maxPe, g.winner, g.draw]);
   useEffect(() => {
-    if (!notice || waiting) return;
-    const timer = setTimeout(() => setNotice(null), 2800);
+    if (!displayed) {
+      if (notice && !waiting) {
+        setDisplayed(notice);
+        setLeaving(false);
+      }
+      return;
+    }
+    if (waiting || !notice || displayed.key !== notice.key) {
+      setLeaving(true);
+      return;
+    }
+    const timer = setTimeout(() => setLeaving(true), 2800);
     return () => clearTimeout(timer);
-  }, [notice, waiting]);
-  if (!notice || waiting || g.setup || g.winner !== null || g.draw) return null;
+  }, [notice, displayed, waiting]);
+  useEffect(() => {
+    if (!leaving) return;
+    const timer = setTimeout(() => {
+      setDisplayed(null);
+      setLeaving(false);
+      setNotice((pending) =>
+        pending?.key === displayed?.key ? null : pending,
+      );
+    }, exitMs);
+    return () => clearTimeout(timer);
+  }, [leaving, displayed]);
+  useEffect(
+    () => onReading(!!notice || !!displayed),
+    [notice, displayed, onReading],
+  );
+  useEffect(() => () => onReading(false), [onReading]);
+  if (!displayed) return null;
   return (
-    <div key={notice.key} className="arena-notice" role="status">
-      <small>TURNO {g.turn}</small>
-      <strong>{notice.title}</strong>
-      <p>{notice.detail}</p>
-      {notice.mana && <b className="notice-mana">✦ {notice.mana}</b>}
+    <div
+      key={displayed.key}
+      className={`arena-notice ${leaving ? "leaving" : ""}`}
+      role="status"
+    >
+      <small>TURNO {displayed.key.split(":")[0]}</small>
+      <strong>{displayed.title}</strong>
+      <p>{displayed.detail}</p>
+      {displayed.mana && <b className="notice-mana">✦ {displayed.mana}</b>}
+    </div>
+  );
+}
+
+export function FieldEvent({
+  label,
+  onVisible,
+}: {
+  label: string | null;
+  onVisible: (visible: boolean) => void;
+}) {
+  const [displayed, setDisplayed] = useState(label);
+  useEffect(() => onVisible(!!displayed), [displayed, onVisible]);
+  useEffect(() => () => onVisible(false), [onVisible]);
+  useEffect(() => {
+    if (label) {
+      setDisplayed(label);
+      return;
+    }
+    const timer = setTimeout(() => setDisplayed(null), exitMs);
+    return () => clearTimeout(timer);
+  }, [label]);
+  if (!displayed) return null;
+  return (
+    <div
+      className={`field-event ${displayed.startsWith("Uma maldição") ? "curse-notice" : ""} ${!label ? "leaving" : ""}`}
+      role="status"
+    >
+      <span className="event-pulse" />
+      {displayed}
     </div>
   );
 }

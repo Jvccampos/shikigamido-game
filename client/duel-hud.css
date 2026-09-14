@@ -297,6 +297,18 @@
     translate: 0 0;
   }
 }
+.arena-notice.leaving,
+.field-event.leaving {
+  animation: notice-depart 450ms ease-in forwards;
+}
+@keyframes notice-depart {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
 @media (max-width: 1100px) {
   .arena-top .elements-toggle small {
     display: none;
