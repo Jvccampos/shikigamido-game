@@ -31,7 +31,12 @@ export type ArenaState = {
   startY: number;
   onCell: (x: number, y: number, u?: UnitView) => void;
   onSelect: (u: UnitView) => void;
-  onDrop: (x: number, y: number, u?: UnitView, unitId?: string) => void;
+  onDrop: (
+    x: number,
+    y: number,
+    u?: UnitView,
+    unitId?: string,
+  ) => Promise<boolean>;
   onInspect: (u: UnitView) => void;
   onHover: (u: UnitView | null) => void;
   onPresentation: (label: string | null, units?: UnitView[]) => void;
@@ -84,6 +89,7 @@ export class ArenaScene {
   private queue: GameEvent<UnitView>[] = [];
   private presenting = false;
   private activeViews = new Set<string>();
+  private localDrops = new Map<string, Point>();
   private cancels = new Set<() => void>();
   async init(host: HTMLElement, state: ArenaState) {
     this.state = state;
@@ -169,13 +175,47 @@ export class ArenaScene {
     d.view.alpha = 1;
     if (d.moving) {
       const cell = this.cellAt(x, y);
-      if (cell)
-        this.state.onDrop(
-          cell.x,
-          cell.y,
-          this.state.game.units.find((u) => u.x === cell.x && u.y === cell.y),
-          d.id,
+      if (cell) {
+        const target = this.state.game.units.find(
+          (u) => u.x === cell.x && u.y === cell.y,
         );
+        const item = this.units.get(d.id);
+        const park =
+          !target &&
+          item &&
+          this.state.game.phase === 2 &&
+          !this.state.game.combat &&
+          (!this.state.game.followup ||
+            this.state.game.followup.unitId === d.id);
+        if (park) {
+          this.localDrops.set(d.id, cell);
+          const point = layout(
+            this.app.screen.width,
+            this.app.screen.height,
+          ).point(cell.x, cell.y);
+          item.x = point.x;
+          item.y = point.y;
+        }
+        const restore = () => {
+          if (this.localDrops.get(d.id) !== cell) return;
+          this.localDrops.delete(d.id);
+          const u = this.state.game.units.find((u) => u.id === d.id);
+          if (item && u && !this.destroyed) {
+            const point = layout(
+              this.app.screen.width,
+              this.app.screen.height,
+            ).point(u.x, u.y);
+            item.x = point.x;
+            item.y = point.y;
+          }
+        };
+        void this.state
+          .onDrop(cell.x, cell.y, target, d.id)
+          .then((accepted) => {
+            if (!accepted) restore();
+          })
+          .catch(restore);
+      }
     } else {
       const u = this.state.game.units.find((u) => u.id === d.id);
       if (u) this.state.onCell(u.x, u.y, u);
@@ -248,6 +288,7 @@ export class ArenaScene {
     const alive = new Set(state.game.units.map((u) => u.id));
     for (const [id, item] of this.units)
       if (!alive.has(id)) {
+        this.localDrops.delete(id);
         this.burst(item.view.x, item.view.y, 0xf8a978, 20);
         item.view.destroy({ children: true });
         this.units.delete(id);
@@ -289,9 +330,13 @@ export class ArenaScene {
         this.units.set(u.id, item);
         this.burst(p.x, p.y, colors[u.kind === "curse" ? 2 : u.owner], 12);
       }
-      item.x = p.x;
-      item.y = p.y;
-      if (resized) item.view.position.set(p.x, p.y);
+      const drop = this.localDrops.get(u.id);
+      if (drop && u.x === drop.x && u.y === drop.y)
+        this.localDrops.delete(u.id);
+      const destination = drop ? l.point(drop.x, drop.y) : p;
+      item.x = destination.x;
+      item.y = destination.y;
+      if (resized) item.view.position.set(destination.x, destination.y);
       if (item.image !== stamp) {
         if (item.hp !== null && u.hp !== null && item.hp > u.hp)
           this.damage(item.view.x, item.view.y, item.hp - u.hp);
@@ -575,31 +620,31 @@ export class ArenaScene {
           .roundRect(-w / 2, -h / 2, w, h - 21, 5)
           .fill({ color: 0x03100f, alpha: 0.66 }),
       );
-      const radius = Math.max(4, Math.min(w * 0.21, (h - 26) * 0.3));
+      const radius = Math.max(4, Math.min(w * 0.17, (h - 26) * 0.24));
       const cy = -h * 0.13;
       const emblem = new Graphics()
         .circle(0, cy, radius)
         .fill({ color: 0x0b211b, alpha: 0.94 })
-        .stroke({ color: marker.color, width: 1.8 });
+        .stroke({ color: marker.color, width: 1.5 });
       if (marker.state === "waiting") {
         emblem
           .moveTo(0, cy - radius * 0.6)
           .lineTo(0, cy)
           .lineTo(radius * 0.45, cy + radius * 0.22)
-          .stroke({ color: marker.color, width: 2.3 });
+          .stroke({ color: marker.color, width: 1.8 });
       } else if (marker.state === "moved") {
         emblem
           .moveTo(-radius * 0.5, cy)
           .lineTo(-radius * 0.1, cy + radius * 0.4)
           .lineTo(radius * 0.55, cy - radius * 0.4)
-          .stroke({ color: marker.color, width: 2.5 });
+          .stroke({ color: marker.color, width: 2 });
       } else {
         emblem
           .moveTo(-radius * 0.38, cy - radius * 0.38)
           .lineTo(radius * 0.38, cy + radius * 0.38)
           .moveTo(radius * 0.38, cy - radius * 0.38)
           .lineTo(-radius * 0.38, cy + radius * 0.38)
-          .stroke({ color: marker.color, width: 2.5 });
+          .stroke({ color: marker.color, width: 2 });
       }
       view.addChild(emblem);
       if (w >= 50) {
@@ -692,14 +737,14 @@ export class ArenaScene {
     if (marker && marker.state === "ready") {
       const badge = label(
         marker.symbol,
-        Math.max(9, Math.min(16, size * 0.23)),
+        Math.max(8, Math.min(13, size * 0.19)),
         marker.color,
       );
       badge.anchor.set(0.5);
       badge.position.set(-w * 0.4, -h * 0.48);
       view.addChild(
         new Graphics()
-          .circle(badge.x, badge.y, Math.max(6, Math.min(11, w * 0.16)))
+          .circle(badge.x, badge.y, Math.max(5, Math.min(9, w * 0.13)))
           .fill({ color: 0x091e19, alpha: 0.95 })
           .stroke({ color: marker.color, width: 1.5 }),
         badge,
@@ -757,6 +802,7 @@ export class ArenaScene {
         this.state.onInspect(u);
         return;
       }
+      if (this.localDrops.has(u.id)) return;
       this.state.onSelect(u);
       this.drag = {
         id: u.id,
@@ -900,9 +946,19 @@ export class ArenaScene {
           e.unit?.kind === "curse" ? "A maldição avança" : `${name} se move`,
         );
         this.activeViews.add(e.unitId);
+        const drop = this.localDrops.get(e.unitId);
+        const last = e.path?.at(-1);
+        const localMove =
+          e.type === "move" &&
+          drop &&
+          last?.[0] === drop.x &&
+          last?.[1] === drop.y;
+        if (localMove) this.localDrops.delete(e.unitId);
         const path = [
           { x: item.view.x, y: item.view.y },
-          ...(e.path || []).map(([x, y]: number[]) => l.point(x, y)),
+          ...(localMove ? [last!] : e.path || []).map(([x, y]: number[]) =>
+            l.point(x, y),
+          ),
         ];
         if (path.length < 2) {
           this.activeViews.delete(e.unitId);
@@ -916,17 +972,22 @@ export class ArenaScene {
             y: first.y + (last.y - first.y) * 0.3,
           };
         }
-        await this.animate(Math.min(1100, 360 * (path.length - 1)), (p) => {
-          const f = p * (path.length - 1),
-            i = Math.min(path.length - 2, Math.floor(f)),
-            t = f - i,
-            a = path[i],
-            b = path[i + 1];
-          item.view.position.set(
-            a.x + (b.x - a.x) * t,
-            a.y + (b.y - a.y) * t - Math.sin(t * Math.PI) * 7,
-          );
-        });
+        await this.animate(
+          localMove ? 150 : Math.min(1100, 360 * (path.length - 1)),
+          (p) => {
+            const f = p * (path.length - 1),
+              i = Math.min(path.length - 2, Math.floor(f)),
+              t = f - i,
+              a = path[i],
+              b = path[i + 1];
+            item.view.position.set(
+              a.x + (b.x - a.x) * t,
+              a.y +
+                (b.y - a.y) * t -
+                (localMove ? 0 : Math.sin(t * Math.PI) * 7),
+            );
+          },
+        );
         if (this.destroyed) return;
         item.x = item.view.x;
         item.y = item.view.y;
@@ -1148,6 +1209,7 @@ export class ArenaScene {
   }
   destroy() {
     this.destroyed = true;
+    this.localDrops.clear();
     for (const cancel of this.cancels) cancel();
     this.observer?.disconnect();
     if (this.app.renderer)

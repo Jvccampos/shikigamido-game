@@ -343,7 +343,7 @@ export function previewAction(
   const combat = state.combat || g.combat;
   const forecastsCombat =
     combat &&
-    ((c.type === "pass" && !g.stack.length) ||
+    (c.type === "pass" ||
       ((c.type === "move" || c.type === "attack" || c.type === "ability") &&
         !g.combat));
   const unknown = g.units.some((u) => u.cardId === "hidden");
@@ -368,6 +368,11 @@ export function previewAction(
         resolved: false,
         announced: c.type === "pass",
       };
+  }
+  if (result.combat && g.stack.length) {
+    result.uncertain =
+      "Há magias pendentes: resolva a pilha para prever o combate.";
+    return result;
   }
   if (unknown || randomCombat) {
     result.uncertain = unknown

@@ -42,7 +42,12 @@ type Props = {
   onCell: (x: number, y: number, u?: UnitView) => void;
   onSelect: (u: UnitView) => void;
   onDrag: (data: Selection | null) => void;
-  onDrop: (x: number, y: number, u?: UnitView, data?: Selection | null) => void;
+  onDrop: (
+    x: number,
+    y: number,
+    u?: UnitView,
+    data?: Selection | null,
+  ) => Promise<boolean>;
   onFocus: (card: Card | undefined, unit?: UnitView) => void;
   onStartY: (y: number) => void;
   onMulligan: () => void;
@@ -103,13 +108,11 @@ export function Arena(p: Props) {
     done = g.winner !== null || g.draw,
     card = p.selected?.kind === "hand" ? cards.get(p.selected?.cardId) : null;
   const combatPreview = useMemo(
-    () =>
-      g.combat && !g.stack.length
-        ? previewAction(g, g.priority, { type: "pass" })
-        : null,
+    () => (g.combat ? previewAction(g, g.priority, { type: "pass" }) : null),
     [g.revision],
   );
   const decisionPreview = p.preview || combatPreview;
+  const shownCombat = combatPreview || (p.preview?.combat ? p.preview : null);
   const hover = g.units.find((u) => u.id === hoverId) || null;
   const previousHand = useRef<{
     count: number;
@@ -823,8 +826,8 @@ export function Arena(p: Props) {
               "Disponível · escolha um alvo iluminado"}
           </div>
         )}
-      {!g.setup && !discardOpen && !presenting && decisionPreview?.combat && (
-        <CombatForecast preview={decisionPreview} game={g} />
+      {!g.setup && !discardOpen && !presenting && shownCombat?.combat && (
+        <CombatForecast preview={shownCombat} game={g} />
       )}
       {!g.setup &&
         !discardOpen &&
@@ -926,69 +929,76 @@ export function Arena(p: Props) {
           </small>
         </div>
       )}
-      {response && !decisionPreview?.combat && (
-        <aside className="arena-stack-panel" aria-label="Pilha de respostas">
-          <div className="stack-heading">
-            <b>{g.combat ? "⚔ Combate anunciado" : "✧ Magias em resposta"}</b>
-            <span>
-              {yourTurn
-                ? "VOCÊ TEM A PRIORIDADE"
-                : `PRIORIDADE · ${p.names[g.priority]}`}
-            </span>
-          </div>
-          {g.combat && (
-            <div className="pending-combat">
+      {response &&
+        (!shownCombat ||
+          g.stack.length > 0 ||
+          (p.preview && !p.preview.combat && !p.preview.error)) && (
+          <aside className="arena-stack-panel" aria-label="Pilha de respostas">
+            <div className="stack-heading">
+              <b>
+                {g.stack.length
+                  ? "✧ Magias em resposta"
+                  : "⚔ Combate anunciado"}
+              </b>
               <span>
-                {cards.get(
-                  g.units.find((u) => u.id === g.combat?.attackerId)?.cardId ||
-                    "",
-                )?.name || "Unidade"}
-              </span>
-              <b>→</b>
-              <span>
-                {cards.get(
-                  g.units.find((u) => u.id === g.combat?.defenderId)?.cardId ||
-                    "",
-                )?.name || "Unidade"}
+                {yourTurn
+                  ? "VOCÊ TEM A PRIORIDADE"
+                  : `PRIORIDADE · ${p.names[g.priority]}`}
               </span>
             </div>
-          )}
-          <div className="stack-list">
-            {[...g.stack].reverse().map((entry, i) => {
-              const c = cards.get(entry.cardId)!;
-              return (
-                <button
-                  className="stack-card"
-                  key={`${entry.cardId}-${i}`}
-                  onClick={() => p.onFocus(c)}
-                >
-                  <img src={c.asset} alt={c.name} />
-                  <div>
-                    <small>
-                      {i === 0 ? "PRÓXIMA A RESOLVER" : `NA FILA · ${i + 1}`}
-                    </small>
-                    <b>{c.name}</b>
-                    <span>
-                      {p.names[entry.seat]} ·{" "}
-                      {c.stats.speed === "fast" ? "Rápida" : "Lenta"}
-                    </span>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-          {decisionPreview && !decisionPreview.combat && (
-            <ActionPreview preview={decisionPreview} />
-          )}
-          <p>
-            {g.passes === 1
-              ? "Um passe confirmado. O próximo passe resolve."
-              : g.stack.length
-                ? "Duas respostas passadas resolvem a última magia."
-                : "Os dois jogadores podem responder antes do dano."}
-          </p>
-        </aside>
-      )}
+            {g.combat && !shownCombat && (
+              <div className="pending-combat">
+                <span>
+                  {cards.get(
+                    g.units.find((u) => u.id === g.combat?.attackerId)
+                      ?.cardId || "",
+                  )?.name || "Unidade"}
+                </span>
+                <b>→</b>
+                <span>
+                  {cards.get(
+                    g.units.find((u) => u.id === g.combat?.defenderId)
+                      ?.cardId || "",
+                  )?.name || "Unidade"}
+                </span>
+              </div>
+            )}
+            <div className="stack-list">
+              {[...g.stack].reverse().map((entry, i) => {
+                const c = cards.get(entry.cardId)!;
+                return (
+                  <button
+                    className="stack-card"
+                    key={`${entry.cardId}-${i}`}
+                    onClick={() => p.onFocus(c)}
+                  >
+                    <img src={c.asset} alt={c.name} />
+                    <div>
+                      <small>
+                        {i === 0 ? "PRÓXIMA A RESOLVER" : `NA FILA · ${i + 1}`}
+                      </small>
+                      <b>{c.name}</b>
+                      <span>
+                        {p.names[entry.seat]} ·{" "}
+                        {c.stats.speed === "fast" ? "Rápida" : "Lenta"}
+                      </span>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+            {decisionPreview && !decisionPreview.combat && (
+              <ActionPreview preview={decisionPreview} />
+            )}
+            <p>
+              {g.passes === 1
+                ? "Um passe confirmado. O próximo passe resolve."
+                : g.stack.length
+                  ? "Duas respostas passadas resolvem a última magia."
+                  : "Os dois jogadores podem responder antes do dano."}
+            </p>
+          </aside>
+        )}
       <FieldEvent label={presenting} onVisible={setFieldVisible} />
       <ArenaNotices
         game={g}

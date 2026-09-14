@@ -212,9 +212,11 @@ export function CombatForecast({
         </div>
         <div className="forecast-note">
           {!combat.resolved
-            ? preview.uncertain?.includes("ocultas")
-              ? "Carta oculta · resultado incerto"
-              : "Resultado depende de sorteio ou efeito"
+            ? preview.uncertain?.includes("pilha")
+              ? "Magias pendentes · resultado incerto"
+              : preview.uncertain?.includes("ocultas")
+                ? "Carta oculta · resultado incerto"
+                : "Resultado depende de sorteio ou efeito"
             : "Previsão · respostas podem mudar o resultado"}
         </div>
       </section>

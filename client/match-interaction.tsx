@@ -64,13 +64,15 @@ export function useMatchInteraction(
       selected?.kind === "hand" ? catalog.get(selected.cardId) : null,
     selectedUnit = g?.units?.find((u) => u.id === selected?.unitId);
   async function act(command: Cmd) {
-    if (busy || !g) return;
+    if (busy || !g) return false;
     const error = commandError(g, seat, command);
     if (error) {
       setFeedback(error);
-      return;
+      return false;
     }
-    if (await onAct(command)) clear();
+    const accepted = await onAct(command);
+    if (accepted) clear();
+    return accepted;
   }
   const clear = () => {
     setTargetMode(false);
@@ -266,23 +268,22 @@ export function useMatchInteraction(
         : [...prev.slice(-1), u.id],
     );
   }
-  function dropAt(x: number, y: number, u?: UnitView, data = active) {
+  async function dropAt(x: number, y: number, u?: UnitView, data = active) {
     setDrag(null);
     if (g?.followup?.seat === seat) {
-      void act({ type: "followup", x, y });
-      return;
+      return act({ type: "followup", x, y });
     }
-    if (!data) return;
+    if (!data) return false;
     if (data.kind === "unit") {
-      if (data.unitId === u?.id) return;
+      if (data.unitId === u?.id) return false;
       if (g?.phase === 2 && g.priority === seat)
-        void act({ type: "move", unitId: data.unitId, x, y });
-      return;
+        return act({ type: "move", unitId: data.unitId, x, y });
+      return false;
     }
     const card = catalog.get(data.cardId);
-    if (!card) return;
+    if (!card) return false;
     if (card.kind === "unit") {
-      void act({
+      return act({
         type: "summon",
         cardId: card.id,
         handIndex: data.index,
@@ -292,7 +293,6 @@ export function useMatchInteraction(
         targetId: u?.id || targetIds[0],
         targetId2: targetIds[1],
       });
-      return;
     }
     const spec = spellSpecs[card.id];
     setSelected(data);
@@ -310,7 +310,7 @@ export function useMatchInteraction(
         "none",
       ].includes(spec.target)
     )
-      void act({
+      return act({
         type: "cast",
         cardId: card.id,
         handIndex: data.index,
@@ -318,6 +318,7 @@ export function useMatchInteraction(
         x,
         y,
       });
+    return false;
   }
   function cellClick(x: number, y: number, u?: UnitView) {
     if (g?.followup?.seat === seat) {
