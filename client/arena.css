@@ -1,0 +1,3216 @@
+/* The battlefield owns the viewport; DOM overlays follow the canvas scene. */
+.playing-arena {
+  width: 100%;
+  max-width: none;
+  padding: 0;
+  height: 100dvh;
+  overflow: hidden;
+}
+.playing-arena > header,
+.playing-arena > footer,
+.playing-arena .gamebar {
+  display: none;
+}
+.playing-arena main {
+  margin: 0;
+  padding: 0;
+  max-width: none;
+}
+.arena-shell {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  background: #10251e;
+  color: #f1e2bf;
+  isolation: isolate;
+  font-family: Arial, sans-serif;
+}
+.arena-shell button {
+  font-family: inherit;
+}
+.arena-environment,
+.arena-vignette,
+.arena-dust,
+.arena-canvas {
+  position: absolute;
+  inset: 0;
+}
+.arena-environment {
+  background: url("/assets/arena/shrine.png") center/cover;
+  filter: brightness(0.67) saturate(0.7);
+}
+.arena-vignette {
+  background:
+    radial-gradient(
+      ellipse at 50% 44%,
+      transparent 25%,
+      #07130d88 75%,
+      #020906e8
+    ),
+    linear-gradient(#020b0b99, transparent 23%, transparent 73%, #020906e8);
+  pointer-events: none;
+}
+.arena-dust {
+  pointer-events: none;
+  background-image:
+    radial-gradient(circle, #ffe4a6 1px, transparent 2px),
+    radial-gradient(circle, #c7e4b7 1px, transparent 2px);
+  background-size:
+    283px 217px,
+    389px 331px;
+  opacity: 0.2;
+  animation: arena-drift 36s linear infinite;
+}
+.arena-canvas {
+  touch-action: none;
+}
+.arena-canvas canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.arena-top {
+  position: absolute;
+  top: 20px;
+  left: 24px;
+  right: 24px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  pointer-events: none;
+}
+.arena-top button {
+  pointer-events: auto;
+  background: none;
+  border: 0;
+  padding: 8px;
+  color: #dbc899;
+  font-size: 20px;
+}
+.arena-wordmark {
+  font:
+    12px Georgia,
+    serif;
+  letter-spacing: 3px;
+}
+.arena-room {
+  margin-left: auto;
+  color: #b1bdaa;
+  font-size: 10px;
+  letter-spacing: 2px;
+}
+.duelist {
+  position: absolute;
+  left: 28px;
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  pointer-events: none;
+}
+.duelist-opponent {
+  top: 85px;
+}
+.duelist-self {
+  bottom: 45px;
+}
+.duelist-portrait {
+  position: relative;
+  width: 76px;
+  height: 86px;
+  padding: 0 !important;
+  background: #0b1c16;
+  border: 2px solid #8fb1a0 !important;
+  border-radius: 48% 48% 35% 35%;
+  box-shadow:
+    0 0 0 4px #122b2299,
+    0 6px 24px #000a;
+  pointer-events: auto;
+}
+.side-1 .duelist-portrait {
+  border-color: #d68d75 !important;
+}
+.duelist-portrait img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 20%;
+  border-radius: inherit;
+}
+.duelist-life {
+  position: absolute;
+  bottom: -13px;
+  left: 22px;
+  border: 1px solid #b8ae7d;
+  border-radius: 50%;
+  background: radial-gradient(#374438, #0b1d15);
+  width: 32px;
+  height: 32px;
+  font: bold 22px Georgia;
+  display: grid;
+  place-items: center;
+  box-shadow: 0 3px 8px #000;
+}
+.duelist-info {
+  display: grid;
+  gap: 5px;
+  text-shadow: 0 2px 4px #000;
+}
+.duelist-info > small {
+  font-size: 8px;
+  letter-spacing: 2px;
+  color: #91bba5;
+}
+.duelist-info > b {
+  font: 17px Georgia;
+}
+.duelist-element {
+  font-family: ShikigamidoJP, Georgia, serif;
+  font-size: 10px;
+  color: #b0baa3;
+}
+.arena-phase {
+  position: absolute;
+  top: 28px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 440px;
+  text-align: center;
+  pointer-events: none;
+  text-shadow: 0 2px 8px #000;
+}
+.arena-phase > small {
+  font-size: 9px;
+  letter-spacing: 3px;
+  color: #a8b8a6;
+}
+.arena-phase h1 {
+  font: 30px Georgia;
+  margin: 7px 0 13px;
+  color: #d7dfcc;
+}
+.arena-phase.active h1 {
+  color: #f5e6b3;
+}
+.opponent-hand {
+  position: absolute;
+  left: 50%;
+  top: -69px;
+  display: flex;
+  transform: translateX(-50%);
+  pointer-events: none;
+  opacity: 0.7;
+}
+.opponent-hand > i {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 70px;
+  margin-right: -19px;
+  border-radius: 4px;
+  border: 2px solid #697c57;
+  background: repeating-linear-gradient(45deg, #173428 0 4px, #294835 5px 6px);
+  transform: translateY(30px) rotate(calc((var(--i) - 3) * 3deg));
+  box-shadow: 0 2px 9px #000;
+}
+.opponent-hand span {
+  font:
+    26px ShikigamidoJP,
+    serif;
+  color: #c4b781;
+}
+.arena-deck {
+  position: absolute;
+  bottom: 45px;
+  right: 35px;
+  width: 74px;
+  height: 105px;
+  background: repeating-linear-gradient(45deg, #173428 0 4px, #294835 5px 6px);
+  border: 2px solid #b7ae7f;
+  transform: rotate(9deg);
+  border-radius: 6px;
+  box-shadow:
+    3px 3px #293e2a,
+    5px 5px #8e9170,
+    7px 7px #293e2a,
+    9px 9px #566e50,
+    10px 14px 22px #000a;
+}
+.arena-deck > span {
+  font:
+    40px ShikigamidoJP,
+    serif;
+  color: #cfc192;
+}
+.arena-deck > b {
+  position: absolute;
+  bottom: -13px;
+  right: -10px;
+  border: 1px solid #b8ae7d;
+  background: #173021;
+  border-radius: 50%;
+  padding: 6px 9px;
+}
+.arena-pass {
+  position: absolute;
+  right: 24px;
+  top: 48%;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  border: 0;
+  background: linear-gradient(90deg, transparent, #233e2ee8);
+  color: #a2b099;
+  padding: 16px 12px 16px 28px;
+  clip-path: polygon(12% 0, 100% 0, 100% 100%, 12% 100%, 0 50%);
+  font-size: 11px;
+  letter-spacing: 1px;
+}
+.arena-pass b {
+  font-size: 26px;
+}
+.arena-pass.enabled {
+  background: linear-gradient(90deg, #4e6034, #ad9d57);
+  color: #fff0bd;
+  filter: drop-shadow(0 0 14px #e8d28b33);
+}
+.arena-pass:disabled {
+  opacity: 0.5;
+}
+.arena-hand {
+  position: absolute;
+  bottom: -42px;
+  left: 50%;
+  width: 0;
+  height: 198px;
+  z-index: 20;
+  pointer-events: none;
+}
+.hand-caption {
+  position: absolute;
+  bottom: 216px;
+  left: -220px;
+  width: 440px;
+  text-align: center;
+  font-size: 8px;
+  letter-spacing: 2px;
+  color: #b1bca399;
+  white-space: nowrap;
+  text-shadow: 0 1px 4px #000;
+  pointer-events: none;
+}
+.hand-fan {
+  position: relative;
+  height: 100%;
+}
+.fan-card {
+  position: absolute;
+  left: -70px;
+  top: 0;
+  width: 140px;
+  height: 196px;
+  transform: translate(var(--offset), var(--lift)) rotate(var(--angle));
+  transform-origin: 50% 130%;
+  transition:
+    transform 0.18s ease,
+    filter 0.18s;
+  z-index: var(--order);
+  pointer-events: auto;
+  filter: drop-shadow(0 5px 8px #000b);
+  touch-action: none;
+}
+.fan-card:hover,
+.fan-card:focus-within {
+  transform: translate(var(--offset), -57px) rotate(0deg) scale(1.2);
+  z-index: 30;
+}
+.fan-card.selected {
+  transform: translate(var(--offset), -28px) rotate(var(--angle));
+  filter: drop-shadow(0 0 8px #e8d38a);
+}
+.fan-card.dragged {
+  opacity: 0.15;
+}
+.fan-art {
+  display: block;
+  width: 100%;
+  height: 100%;
+  padding: 0 !important;
+  border: 1px solid #a8b890;
+  background: #15291c;
+  border-radius: 8px;
+  overflow: visible;
+  cursor: grab;
+}
+.fan-art img {
+  width: 100%;
+  height: 100%;
+  border-radius: 7px;
+  display: block;
+  pointer-events: none;
+  user-select: none;
+}
+.fan-cost {
+  position: absolute;
+  top: -7px;
+  left: -7px;
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  background: radial-gradient(#719377, #143a27);
+  color: #f5ebc9;
+  border: 2px solid #ced7a2;
+  border-radius: 50%;
+  font: 20px Georgia;
+  box-shadow: 0 2px 5px #000;
+}
+.fan-cost.unaffordable {
+  background: radial-gradient(#514d4a, #252822);
+  color: #abb09b;
+  border-color: #777c67;
+}
+.fan-zoom {
+  position: absolute;
+  right: 5px;
+  top: 5px;
+  background: #081811df;
+  border: 1px solid #dac78a;
+  color: #ffeabb;
+  border-radius: 4px;
+  width: 25px;
+  height: 25px;
+  padding: 0;
+  font-size: 20px;
+  opacity: 0;
+}
+.fan-card:hover .fan-zoom,
+.fan-card:focus-within .fan-zoom {
+  opacity: 1;
+}
+.fan-exchange {
+  position: absolute;
+  inset: 0;
+  background: #111d16b0;
+  display: grid;
+  place-items: center;
+  font-size: 64px;
+  color: #efd694;
+  border: 3px solid #d4b773;
+  border-radius: 7px;
+}
+.drag-ghost {
+  position: fixed;
+  width: 156px;
+  height: 218px;
+  transform: translate(-50%, -55%) rotate(-4deg);
+  z-index: 100;
+  pointer-events: none;
+  filter: drop-shadow(0 10px 20px #000a);
+}
+.drag-ghost img {
+  width: 100%;
+  border: 2px solid #e6d598;
+  border-radius: 7px;
+}
+.arena-preparation {
+  position: absolute;
+  left: 50%;
+  bottom: 240px;
+  transform: translateX(-50%);
+  text-align: center;
+  width: min(650px, 95vw);
+  background: radial-gradient(
+    ellipse,
+    #081a14ef,
+    #081a14b8 65%,
+    transparent 73%
+  );
+  padding: 28px 15px;
+  color: #d2dac5;
+}
+.arena-preparation p {
+  font-size: 12px;
+}
+.ready-button {
+  background: linear-gradient(#b7ac72, #6f793f);
+  border: 1px solid #d5c891;
+  color: #102219;
+  padding: 11px 18px;
+  font-weight: bold;
+}
+.arena-context {
+  position: absolute;
+  right: 24px;
+  top: calc(48% + 72px);
+  font: 12px Georgia;
+  color: #d4ddc2;
+  background: #132c21dd;
+  border: 1px solid #8c9b6955;
+  padding: 12px 15px;
+  max-width: 210px;
+}
+.arena-context span {
+  display: block;
+  font: 9px Arial;
+  letter-spacing: 1px;
+  margin-top: 5px;
+  color: #bcae7d;
+}
+.arena-drawer,
+.arena-menu-panel {
+  position: absolute;
+  right: 20px;
+  top: 100px;
+  bottom: 180px;
+  width: 310px;
+  padding: 25px 20px;
+  background: linear-gradient(135deg, #142b20fa, #071b14fa);
+  border: 1px solid #a5ad7b66;
+  box-shadow: 0 15px 60px #0009;
+  z-index: 40;
+  overflow-y: auto;
+  border-radius: 4px;
+}
+.drawer-close {
+  position: absolute;
+  right: 8px;
+  top: 7px;
+  border: 0;
+  background: none;
+  color: #d5d6b9;
+  font-size: 23px;
+  padding: 3px 8px;
+  z-index: 2;
+}
+.arena-drawer .selection-panel {
+  background: none;
+  border: 0;
+  padding: 0;
+}
+.arena-drawer .selection-panel > button:first-of-type {
+  float: left;
+  width: 85px;
+  margin: 0 12px 10px 0;
+}
+.arena-drawer .selection-panel h3 {
+  font: 20px Georgia;
+}
+.arena-drawer .selection-panel p {
+  font-size: 12px;
+  line-height: 1.6;
+}
+.arena-drawer .target-controls {
+  clear: both;
+}
+.arena-drawer .card-face {
+  width: 100%;
+}
+.arena-menu-panel {
+  left: 24px;
+  right: auto;
+  top: 68px;
+  bottom: auto;
+  width: 260px;
+  padding: 30px;
+}
+.arena-menu-panel h2 {
+  font: 27px Georgia;
+}
+.arena-menu-panel button {
+  display: block;
+  width: 100%;
+  padding: 13px 0;
+  text-align: left;
+  background: none;
+  border: 0;
+  border-bottom: 1px solid #b2b27b22;
+  color: #dbd9b9;
+}
+.arena-hover {
+  position: absolute;
+  left: 50%;
+  bottom: 219px;
+  transform: translateX(-50%);
+  pointer-events: none;
+  text-shadow: 0 2px 6px #000;
+  text-align: center;
+}
+.arena-hover b {
+  font: 19px Georgia;
+}
+.arena-hover small {
+  display: block;
+  font-size: 9px;
+  color: #b8c6ad;
+  margin-top: 6px;
+}
+.arena-stack {
+  position: absolute;
+  right: 24px;
+  top: 200px;
+  max-width: 230px;
+  padding: 13px;
+  background: #192e24ef;
+  border: 1px solid #bcae7477;
+  text-align: left;
+  color: #e4dab5;
+}
+.arena-stack > * {
+  display: block;
+  margin-bottom: 6px;
+}
+.arena-stack span,
+.arena-stack small {
+  font-size: 9px;
+  letter-spacing: 1px;
+}
+.arena-stack b {
+  font: 16px Georgia;
+}
+.arena-victory {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(#173628ef, #00110def);
+  z-index: 80;
+}
+.arena-victory h1 {
+  font: 90px Georgia;
+  color: #e6d499;
+  margin: 20px;
+}
+.arena-victory small {
+  letter-spacing: 5px;
+}
+.arena-victory p {
+  color: #b0bea8;
+}
+.arena-victory button {
+  margin-top: 30px;
+  background: none;
+  border: 1px solid #cabb80;
+  color: #e5d6a6;
+  padding: 15px 25px;
+}
+.arena-accessibility {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+.arena-accessibility:focus-within {
+  clip-path: none;
+  width: 250px;
+  height: auto;
+  top: 150px;
+  left: 10px;
+  z-index: 100;
+  background: #163021;
+  padding: 12px;
+}
+.arena-error {
+  position: absolute;
+  inset: 40%;
+  background: #182a20;
+  color: #edddae;
+  z-index: 90;
+}
+.login-dialog {
+  position: relative;
+  max-width: 420px;
+  padding: 40px;
+  background: #142a21;
+  border: 1px solid #968f68;
+}
+.login-dialog h2 {
+  font: 30px Georgia;
+}
+.login-dialog input,
+.login-dialog > button.gold {
+  width: 100%;
+  margin-bottom: 12px;
+}
+.login-dialog p:not(.eyebrow) {
+  font-size: 12px;
+  line-height: 1.6;
+  color: #aebfa8;
+}
+.playing-arena .toast {
+  z-index: 110;
+}
+.playing-arena .modal-backdrop {
+  z-index: 120;
+}
+@keyframes arena-drift {
+  to {
+    background-position:
+      90px -217px,
+      -70px -331px;
+  }
+}
+@media (max-width: 1000px) {
+  .duelist {
+    left: 16px;
+    gap: 8px;
+  }
+  .duelist-portrait {
+    width: 56px;
+    height: 65px;
+  }
+  .duelist-life {
+    left: 12px;
+  }
+  .duelist-info > b {
+    font-size: 13px;
+  }
+  .duelist-element {
+    font-size: 9px;
+  }
+  .arena-pass {
+    right: 10px;
+    max-width: 155px;
+    gap: 8px;
+  }
+  .arena-context {
+    right: 10px;
+    max-width: 155px;
+  }
+  .arena-deck {
+    right: 22px;
+    width: 55px;
+    height: 80px;
+  }
+  .arena-wordmark {
+    display: none;
+  }
+  .fan-card {
+    width: 125px;
+    height: 175px;
+    left: -62px;
+  }
+  .arena-hand {
+    height: 177px;
+    bottom: -35px;
+  }
+  .hand-caption {
+    bottom: 192px;
+  }
+  .arena-preparation {
+    bottom: 195px;
+  }
+  .arena-hover {
+    bottom: 194px;
+  }
+}
+@media (max-width: 759px) {
+  .arena-top {
+    top: 7px;
+    left: 7px;
+    right: 7px;
+  }
+  .arena-room {
+    font-size: 8px;
+  }
+  .arena-phase {
+    top: 54px;
+    width: 250px;
+  }
+  .arena-phase h1 {
+    font-size: 21px;
+    margin: 5px 0 9px;
+  }
+  .arena-phase > small {
+    font-size: 7px;
+    letter-spacing: 2px;
+  }
+  .duelist-opponent {
+    top: 122px;
+  }
+  .duelist-self {
+    bottom: 142px;
+  }
+  .duelist-portrait {
+    width: 40px;
+    height: 48px;
+  }
+  .duelist-life {
+    font-size: 17px;
+    width: 25px;
+    height: 25px;
+    left: 7px;
+    bottom: -10px;
+  }
+  .duelist-info {
+    gap: 2px;
+  }
+  .duelist-info > b {
+    font-size: 11px;
+    max-width: 110px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .duelist-info > small {
+    font-size: 6px;
+  }
+  .duelist-element {
+    display: none;
+  }
+  .arena-pass {
+    top: auto;
+    bottom: 148px;
+    right: 10px;
+    padding: 9px 10px 9px 19px;
+    font-size: 9px;
+    max-width: 145px;
+  }
+  .arena-pass b {
+    font-size: 20px;
+  }
+  .arena-deck {
+    right: 16px;
+    bottom: 40px;
+    width: 36px;
+    height: 54px;
+  }
+  .arena-deck > span {
+    font-size: 23px;
+  }
+  .arena-deck > b {
+    font-size: 11px;
+    padding: 4px;
+  }
+  .fan-card {
+    width: 90px;
+    height: 126px;
+    left: -45px;
+  }
+  .arena-hand {
+    height: 126px;
+    bottom: -24px;
+  }
+  .hand-caption {
+    bottom: 131px;
+    font-size: 6px;
+    letter-spacing: 1px;
+  }
+  .fan-cost {
+    width: 21px;
+    height: 21px;
+    font-size: 15px;
+  }
+  .fan-zoom {
+    opacity: 1;
+    width: 22px;
+    height: 22px;
+    font-size: 17px;
+  }
+  .fan-card:hover,
+  .fan-card:focus-within {
+    transform: translate(var(--offset), -33px) rotate(0deg) scale(1.15);
+  }
+  .arena-preparation {
+    bottom: 205px;
+    padding: 15px 8px;
+    width: 96vw;
+  }
+  .arena-preparation p {
+    font-size: 10px;
+    margin: 5px 0 12px;
+  }
+  .arena-context {
+    top: auto;
+    bottom: 202px;
+    right: 10px;
+    padding: 8px;
+    font-size: 10px;
+    max-width: 125px;
+  }
+  .arena-context span {
+    font-size: 8px;
+  }
+  .arena-drawer {
+    top: 110px;
+    bottom: 160px;
+    right: 8px;
+    width: 280px;
+    max-height: none;
+  }
+  .arena-stack {
+    top: 123px;
+    right: 8px;
+    max-width: 160px;
+    padding: 8px;
+  }
+  .arena-stack b {
+    font-size: 12px;
+  }
+  .arena-stack small,
+  .arena-stack span {
+    font-size: 7px;
+  }
+  .arena-hover {
+    bottom: 215px;
+    font-size: 12px;
+    max-width: 180px;
+  }
+  .arena-hover b {
+    font-size: 13px;
+  }
+  .arena-hover small {
+    font-size: 7px;
+  }
+  .arena-victory h1 {
+    font-size: 55px;
+  }
+  .opponent-hand {
+    display: none;
+  }
+  .arena-menu-panel {
+    left: 8px;
+    top: 50px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .arena-dust {
+    animation: none;
+  }
+  .fan-card {
+    transition: none;
+  }
+}
+/* Sanctuary menu */
+.app:has(.home) {
+  max-width: none;
+  min-height: 100dvh;
+  padding: 0 5vw;
+  background:
+    linear-gradient(90deg, #07170df2, #08170bb8 50%, #0a1b10d9),
+    url("/assets/arena/shrine.png") center/cover fixed;
+}
+.app:has(.home) > header {
+  max-width: none;
+  border-color: #b9bc7933;
+  background: none;
+}
+.home {
+  max-width: 1500px;
+  margin: auto;
+  padding-top: 4vh;
+}
+.home .hero {
+  min-height: 360px;
+  position: relative;
+  grid-template-columns: 1fr 360px;
+  background: none;
+  border: 0;
+  padding: 30px 0;
+}
+.home .hero h1 {
+  font:
+    clamp(32px, 4.5vw, 75px) Georgia,
+    serif;
+  letter-spacing: 5px;
+  line-height: 1.2;
+}
+.home .hero h1 em {
+  display: block;
+  font: 18px Georgia;
+  letter-spacing: 4px;
+  margin-top: 16px;
+  color: #aebb9b;
+}
+.home .hero-copy > p:not(.eyebrow) {
+  font-size: 13px;
+  max-width: 430px;
+  color: #a9baa3;
+}
+.home .hero-copy .actions {
+  margin-top: 26px;
+}
+.home .hero-copy .actions button {
+  padding: 15px 25px;
+  border-radius: 2px;
+}
+.home .hero-art {
+  height: 300px;
+  overflow: visible;
+}
+.home .hero-kanji {
+  color: #e1ce9188;
+  font-size: 64px;
+}
+.home .hero-card {
+  width: 150px;
+}
+.home .hero-card.front {
+  left: 120px;
+  top: 38px;
+}
+.home .hero-card.back {
+  left: 40px;
+  top: 18px;
+}
+.home .home-bottom {
+  border: 0;
+  background: linear-gradient(90deg, transparent, #182d1b77);
+  padding: 28px 0;
+  gap: 6vw;
+}
+.home .home-bottom h2 {
+  font: 28px Georgia;
+}
+.home .home-bottom p.muted {
+  font-size: 13px;
+  max-width: 360px;
+}
+.home .roomcard {
+  background: none;
+  border: 0;
+  border-left: 1px solid #a6b38144;
+  padding: 5px 0 5px 35px;
+}
+.home .roomcard label {
+  font-size: 9px;
+  letter-spacing: 2px;
+  color: #b6c2a4;
+}
+.home .roomcard input,
+.home .roomcard select {
+  background: #10281d99;
+  border-color: #83936577;
+  border-radius: 2px;
+}
+.home .recent-rooms {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.home .recent-rooms h3 {
+  width: 100%;
+  font-size: 10px;
+  letter-spacing: 2px;
+  font-weight: normal;
+}
+.home .recent-rooms button {
+  background: #1a3022aa;
+  border-color: #83936555;
+  padding: 10px;
+  font-size: 12px;
+}
+.home .recent-rooms button small {
+  display: block;
+  font-size: 8px;
+  margin-top: 5px;
+}
+@media (max-width: 759px) {
+  .home {
+    padding: 0;
+  }
+  .home .hero {
+    display: block;
+    padding: 35px 0;
+    min-height: 0;
+  }
+  .home .hero h1 {
+    font-size: 34px;
+    letter-spacing: 2px;
+  }
+  .home .hero h1 em {
+    font-size: 13px;
+    letter-spacing: 2px;
+  }
+  .home .hero-art {
+    display: none;
+  }
+  .home .hero-copy {
+    text-align: left;
+  }
+  .home .hero-copy .actions {
+    justify-content: flex-start;
+  }
+  .home .hero-copy .actions button {
+    font-size: 11px;
+    padding: 12px;
+  }
+  .home .home-bottom {
+    display: block;
+    padding: 0 0 30px;
+  }
+  .home .home-bottom > div:first-child > p,
+  .home .home-bottom > div:first-child > h2 {
+    display: none;
+  }
+  .home .roomcard {
+    border: 0;
+    padding: 10px 0;
+  }
+  .home .recent-rooms {
+    margin-bottom: 20px;
+  }
+}
+body:has(.playing-arena) {
+  overflow: hidden;
+  height: 100dvh;
+}
+.playing-arena,
+.arena-shell {
+  overflow: clip;
+}
+.arena-shell {
+  contain: layout paint;
+}
+.arena-drawer {
+  overscroll-behavior: contain;
+}
+.arena-connection {
+  position: fixed;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 130;
+  padding: 8px 18px;
+  background: #704522;
+  color: #ffe7b7;
+  font-size: 12px;
+}
+footer {
+  font-family: ShikigamidoJP, Arial, sans-serif;
+}
+@media (max-height: 559px) and (orientation: landscape) {
+  .arena-top {
+    top: 3px;
+    left: 8px;
+    right: 8px;
+  }
+  .arena-wordmark {
+    display: none;
+  }
+  .arena-phase {
+    top: 10px;
+    width: 310px;
+  }
+  .arena-phase h1 {
+    font-size: 21px;
+    margin: 4px 0 7px;
+  }
+  .arena-phase > small {
+    font-size: 7px;
+    letter-spacing: 2px;
+  }
+  .opponent-hand {
+    display: none;
+  }
+  .duelist {
+    left: 12px;
+    gap: 8px;
+  }
+  .duelist-opponent {
+    top: 70px;
+  }
+  .duelist-self {
+    bottom: 35px;
+  }
+  .duelist-portrait {
+    width: 44px;
+    height: 52px;
+  }
+  .duelist-life {
+    width: 26px;
+    height: 26px;
+    left: 8px;
+    font-size: 17px;
+    bottom: -10px;
+  }
+  .duelist-info > b {
+    font-size: 11px;
+    max-width: 100px;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+  .duelist-info > small {
+    font-size: 6px;
+  }
+  .duelist-element {
+    display: none;
+  }
+  .arena-hand {
+    height: 126px;
+    bottom: -24px;
+  }
+  .fan-card {
+    width: 90px;
+    height: 126px;
+    left: -45px;
+  }
+  .fan-cost {
+    width: 21px;
+    height: 21px;
+    font-size: 15px;
+  }
+  .fan-card:hover,
+  .fan-card:focus-within {
+    transform: translate(var(--offset), -30px) rotate(0deg) scale(1.15);
+  }
+  .hand-caption {
+    bottom: 136px;
+    font-size: 6px;
+  }
+  .arena-preparation {
+    left: auto;
+    right: 8px;
+    top: 68px;
+    bottom: auto;
+    transform: none;
+    width: 155px;
+    background: #0c2119ed;
+    padding: 12px 8px;
+    border: 1px solid #87926766;
+  }
+  .arena-preparation p {
+    font-size: 9px;
+    line-height: 1.4;
+    margin: 6px 0;
+  }
+  .arena-deck {
+    width: 38px;
+    height: 55px;
+    bottom: 33px;
+    right: 30px;
+  }
+  .arena-deck > span {
+    font-size: 24px;
+  }
+  .arena-deck > b {
+    font-size: 11px;
+    padding: 4px;
+  }
+  .arena-pass {
+    top: 42%;
+    right: 7px;
+    max-width: 135px;
+    padding: 10px 8px 10px 20px;
+    font-size: 9px;
+  }
+  .arena-pass b {
+    font-size: 20px;
+  }
+  .arena-context {
+    top: calc(42% + 58px);
+    right: 7px;
+    max-width: 135px;
+    padding: 8px;
+    font-size: 10px;
+  }
+  .arena-drawer {
+    top: 45px;
+    bottom: 20px;
+    right: 8px;
+    width: 275px;
+  }
+  .arena-hover {
+    bottom: 151px;
+  }
+  .arena-hover b {
+    font-size: 12px;
+  }
+  .arena-hover small {
+    font-size: 7px;
+  }
+  .arena-stack {
+    top: 65px;
+    right: 8px;
+    max-width: 155px;
+    padding: 8px;
+  }
+  .arena-stack b {
+    font-size: 11px;
+  }
+  .arena-stack span,
+  .arena-stack small {
+    font-size: 7px;
+  }
+  .arena-victory h1 {
+    font-size: 45px;
+    margin: 10px;
+  }
+  .arena-victory button {
+    margin-top: 10px;
+  }
+  .arena-menu-panel {
+    top: 42px;
+    max-height: calc(100dvh - 55px);
+    padding: 15px 20px;
+  }
+  .arena-menu-panel h2 {
+    margin: 5px 0 8px;
+  }
+  .arena-menu-panel button {
+    padding: 8px 0;
+  }
+}
+/* Clear decision surfaces for the opening hand and optional discard. */
+.card-choice-screen {
+  position: absolute;
+  inset: 0;
+  z-index: 75;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 28px;
+  background: radial-gradient(ellipse, #163026ef, #071710f7);
+  padding: 42px 30px;
+  overflow-y: auto;
+}
+.choice-heading {
+  text-align: center;
+  max-width: 750px;
+}
+.choice-step {
+  font-size: 10px;
+  letter-spacing: 3px;
+  color: #dbc98d;
+}
+.choice-heading h1 {
+  font: 42px Georgia;
+  margin: 12px 0;
+}
+.choice-heading p {
+  font-size: 14px;
+  line-height: 1.7;
+  color: #bacbb7;
+  margin: 8px 0;
+}
+.choice-heading small {
+  font-size: 12px;
+  color: #d9cdad;
+}
+.choice-cards {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  max-width: 100%;
+  flex-wrap: wrap;
+}
+.choice-card {
+  position: relative;
+  width: clamp(90px, 10vw, 165px);
+  transition:
+    transform 0.18s,
+    filter 0.18s;
+}
+.choice-art {
+  width: 100%;
+  padding: 0 !important;
+  border: 2px solid #82977b66;
+  border-radius: 7px;
+  background: #14261c;
+  overflow: hidden;
+}
+.choice-art img {
+  width: 100%;
+  display: block;
+  aspect-ratio: 315/440;
+  object-fit: cover;
+}
+.choice-check {
+  display: block;
+  padding: 9px 3px;
+  font-size: 10px;
+  letter-spacing: 1px;
+  color: #b7c3a8;
+  background: #163020;
+}
+.choice-card.chosen {
+  transform: translateY(-10px);
+  filter: drop-shadow(0 0 12px #d8c37855);
+}
+.choice-card.chosen .choice-art {
+  border-color: #efda96;
+}
+.choice-card.chosen .choice-check {
+  background: #d7c58b;
+  color: #182a1c;
+}
+.choice-zoom {
+  position: absolute;
+  right: 7px;
+  top: 7px;
+  background: #092216ed;
+  border: 1px solid #d2bf84;
+  color: #ebdfb4;
+  font-size: 20px;
+  padding: 2px 6px;
+  border-radius: 3px;
+}
+.choice-footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+.choice-footer > p {
+  flex-basis: 100%;
+  text-align: center;
+  margin: 0;
+  color: #bbcaaf;
+  font-size: 12px;
+}
+.choice-confirm {
+  padding: 14px 24px;
+  border: 1px solid #ead99e;
+  border-radius: 3px;
+  background: linear-gradient(#dbcb92, #b3a565);
+  color: #17251a;
+  font-size: 13px;
+  font-weight: bold;
+  min-width: 210px;
+}
+.choice-confirm span {
+  margin-left: 16px;
+}
+.choice-confirm:disabled {
+  opacity: 0.4;
+}
+.choice-skip,
+.choice-back {
+  background: transparent;
+  color: #d4dcc3;
+  border: 1px solid #8c9a6c77;
+  padding: 13px 20px;
+  border-radius: 3px;
+  font-size: 12px;
+}
+.choice-back {
+  position: absolute;
+  top: 24px;
+  left: 24px;
+}
+.reserve-preview {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  color: #c8d9b7;
+  margin-top: 16px;
+}
+.reserve-preview > b {
+  font-size: 27px;
+}
+.reserve-preview small {
+  font-size: 17px;
+  color: #97ab8c;
+}
+.reserve-preview em {
+  color: #ead17d;
+  font-style: normal;
+}
+.choice-empty {
+  padding: 30px;
+  color: #b4c9a5;
+}
+.position-guide {
+  position: absolute;
+  left: 28px;
+  top: 35%;
+  width: 245px;
+  padding: 20px;
+  background: linear-gradient(110deg, #0b211be8, #173328aa);
+  border-left: 2px solid #d2bc74;
+}
+.position-guide > small {
+  font-size: 8px;
+  letter-spacing: 2px;
+  color: #cfbe85;
+}
+.position-guide h2 {
+  font: 27px Georgia;
+  line-height: 1.2;
+  margin: 10px 0;
+}
+.position-guide p {
+  font-size: 12px;
+  line-height: 1.6;
+  color: #b2c3aa;
+}
+.position-options {
+  display: flex;
+  gap: 6px;
+  margin: 18px 0;
+}
+.position-options button {
+  flex: 1;
+  padding: 10px 5px;
+  background: #1a3226;
+  border: 1px solid #9bab7155;
+  color: #dbdab8;
+  font: bold 19px Georgia;
+}
+.position-options span {
+  display: block;
+  font: 9px Arial;
+  margin-top: 6px;
+}
+.position-options .active {
+  border-color: #e9d58a;
+  background: #596443;
+}
+.position-guide .choice-confirm {
+  width: 100%;
+  min-width: 0;
+  padding: 12px 8px;
+  font-size: 11px;
+}
+.preparation-wait {
+  position: absolute;
+  bottom: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  text-align: center;
+  background: #0b2117dd;
+  padding: 24px 40px;
+  min-width: 300px;
+}
+.preparation-wait b {
+  font: 23px Georgia;
+  display: block;
+}
+.preparation-wait p {
+  font-size: 12px;
+  color: #adbea5;
+}
+.waiting-pulse {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  background: #d7c081;
+  margin-bottom: 12px;
+  animation: wait-pulse 1.5s infinite;
+}
+.preparing-position .arena-hand {
+  display: none;
+}
+.player-resources {
+  display: grid;
+  gap: 6px;
+  margin-top: 7px;
+}
+.player-resources > div {
+  display: grid;
+  grid-template-columns: 65px auto;
+  gap: 0 10px;
+  align-items: baseline;
+}
+.player-resources span {
+  font-size: 10px;
+  color: #c7d4b9;
+}
+.player-resources b {
+  font: 20px Georgia;
+  color: #ecdfb6;
+}
+.player-resources small {
+  font: 12px Arial;
+  color: #9aad92;
+}
+.player-resources em {
+  grid-column: 1/-1;
+  font-size: 8px;
+  font-style: normal;
+  color: #849f85;
+}
+.duelist-life {
+  width: 48px;
+  left: 14px;
+  border-radius: 16px;
+  font-size: 18px;
+}
+.duelist-info {
+  gap: 4px;
+}
+.duelist-opponent {
+  top: 85px;
+}
+.duelist-self {
+  bottom: 28px;
+}
+.open-discard {
+  position: absolute;
+  right: 24px;
+  top: calc(48% + 85px);
+  width: 210px;
+  padding: 20px 15px;
+  background: #1e3b27;
+  border: 1px solid #d3bc77;
+  color: #e4d9aa;
+  text-align: left;
+}
+.open-discard > span {
+  float: left;
+  font-size: 25px;
+  margin-right: 12px;
+}
+.open-discard b {
+  font-size: 13px;
+}
+.open-discard small {
+  display: block;
+  font-size: 9px;
+  color: #b9c79e;
+  margin-top: 7px;
+}
+.draw-flight {
+  position: absolute;
+  width: 105px;
+  height: 147px;
+  z-index: 45;
+  pointer-events: none;
+  animation: draw-to-hand 0.95s cubic-bezier(0.2, 0.6, 0.3, 1) both;
+  filter: drop-shadow(0 7px 16px #000a);
+}
+.draw-flight img {
+  width: 100%;
+  border-radius: 7px;
+  border: 2px solid #e8d89b;
+}
+.drawing .fan-card:last-child {
+  animation: draw-arrive 0.95s both;
+}
+.drawing .arena-canvas {
+  pointer-events: none;
+}
+.drawing .arena-hand {
+  pointer-events: none;
+}
+.drawing .fan-card {
+  pointer-events: none;
+}
+.reserve-gain {
+  position: absolute;
+  bottom: 150px;
+  left: 40px;
+  font: bold 24px Georgia;
+  color: #efd98a;
+  z-index: 90;
+  pointer-events: none;
+  animation: reserve-gain 1.5s both;
+}
+.duel-journal {
+  position: absolute;
+  right: 18px;
+  top: 75px;
+  bottom: 25px;
+  width: 410px;
+  max-width: calc(100vw - 24px);
+  z-index: 70;
+  display: flex;
+  flex-direction: column;
+  background: #0c211bf7;
+  border: 1px solid #9ca77877;
+  border-radius: 5px;
+  box-shadow: 0 18px 60px #0009;
+  overflow: hidden;
+}
+.duel-journal > header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 22px 22px 15px;
+  border: 0;
+  background: none;
+  min-height: 0;
+}
+.duel-journal header small {
+  font-size: 8px;
+  letter-spacing: 2px;
+  color: #9fb293;
+}
+.duel-journal header h2 {
+  font: 28px Georgia;
+  margin: 6px 0 0;
+}
+.duel-journal header button {
+  background: none;
+  border: 0;
+  color: #e1d3aa;
+  font-size: 25px;
+  padding: 5px;
+}
+.duel-journal > nav {
+  display: flex;
+  border-bottom: 1px solid #87976844;
+  padding: 0 20px;
+  gap: 15px;
+}
+.duel-journal nav button {
+  background: none;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  padding: 12px 0;
+  color: #8ca489;
+  font-size: 12px;
+}
+.duel-journal nav button.active {
+  color: #e3d398;
+  border-color: #d2be7f;
+}
+.journal-filters {
+  display: flex;
+  gap: 7px;
+  padding: 15px 20px;
+  align-items: center;
+}
+.journal-filters button,
+.journal-players button {
+  background: #173428;
+  border: 1px solid #91a57244;
+  border-radius: 3px;
+  color: #acc29e;
+  font-size: 10px;
+  padding: 6px 8px;
+}
+.journal-filters .active,
+.journal-players .active {
+  background: #405b37;
+  color: #f0e3b2;
+}
+.journal-filters > span {
+  font-size: 8px;
+  color: #7f987b;
+  margin-left: auto;
+}
+.journal-scroll {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0 20px 24px;
+}
+.journal-turn {
+  font-size: 10px;
+  font-weight: normal;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: #beccaa;
+  padding: 12px 0;
+  border-bottom: 1px solid #8d9b6333;
+  margin: 5px 0 8px;
+}
+.journal-event {
+  display: flex;
+  gap: 12px;
+  padding: 13px 0;
+  border-bottom: 1px solid #85946c22;
+}
+.event-card {
+  padding: 0 !important;
+  border: 1px solid #9bad7f77;
+  border-radius: 3px;
+  width: 39px;
+  flex-shrink: 0;
+  background: none;
+  height: 54px;
+  overflow: hidden;
+}
+.event-card img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.event-icon {
+  width: 39px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  color: #d3c58d;
+  font-size: 22px;
+}
+.event-body strong {
+  display: block;
+  font-size: 12px;
+  color: #e0ddbc;
+  font-weight: 500;
+}
+.event-body p {
+  font-size: 11px;
+  color: #adbea1;
+  line-height: 1.5;
+  margin: 6px 0;
+}
+.event-body small {
+  font-size: 8px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #7c987d;
+}
+.event-body b {
+  color: #e8bda0;
+  font-weight: normal;
+}
+.event-duel {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+.event-duel .event-card {
+  width: 30px;
+  height: 43px;
+}
+.event-duel > span {
+  color: #d7b185;
+  font-size: 12px;
+}
+.journal-players {
+  display: flex;
+  gap: 8px;
+  padding: 15px 20px;
+}
+.journal-players button {
+  flex: 1;
+}
+.journal-players b {
+  margin-left: 6px;
+}
+.discard-gallery {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  align-content: start;
+  gap: 12px;
+}
+.discard-gallery > button {
+  position: relative;
+  padding: 0;
+  background: none;
+  color: #c2d0ae;
+  border: 0;
+  text-align: left;
+}
+.discard-gallery img {
+  width: 100%;
+  border-radius: 4px;
+  border: 1px solid #7e926955;
+}
+.discard-gallery span {
+  display: block;
+  font-size: 9px;
+  line-height: 1.4;
+  margin-top: 6px;
+}
+.discard-gallery b {
+  position: absolute;
+  right: 3px;
+  top: 3px;
+  background: #173124;
+  padding: 3px 5px;
+  font-size: 11px;
+}
+.journal-empty {
+  font-size: 12px;
+  color: #93aa8a;
+  line-height: 1.7;
+  padding: 25px 0;
+  grid-column: 1/-1;
+}
+.arena-drawer {
+  right: auto;
+  left: 24px;
+  top: 240px;
+  bottom: 205px;
+  width: 265px;
+  z-index: 40;
+}
+.arena-pass {
+  z-index: 55;
+}
+.arena-context {
+  left: 24px;
+  right: auto;
+  top: auto;
+  bottom: 185px;
+  max-width: 265px;
+}
+.arena-hover {
+  bottom: 205px;
+}
+.arena-phase {
+  width: 500px;
+}
+.arena-phase h1 {
+  font-size: 27px;
+}
+@keyframes wait-pulse {
+  50% {
+    opacity: 0.3;
+    transform: scale(0.75);
+  }
+}
+@keyframes draw-to-hand {
+  0% {
+    left: calc(100% - 100px);
+    top: calc(100% - 150px);
+    transform: rotate(12deg) scale(0.55);
+    opacity: 0;
+  }
+  15% {
+    opacity: 1;
+  }
+  50% {
+    top: calc(100% - 330px);
+    transform: rotate(-8deg) scale(1);
+  }
+  100% {
+    left: calc(50% + 140px);
+    top: calc(100% - 150px);
+    transform: rotate(8deg) scale(0.8);
+    opacity: 0;
+  }
+}
+@keyframes draw-arrive {
+  0%,
+  70% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+@keyframes reserve-gain {
+  0% {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  25% {
+    opacity: 1;
+  }
+  80%,
+  100% {
+    opacity: 0;
+    transform: translateY(-30px);
+  }
+}
+@media (max-width: 1100px) {
+  .player-resources > div {
+    grid-template-columns: 48px auto;
+    gap: 0 4px;
+  }
+  .player-resources span {
+    font-size: 9px;
+  }
+  .player-resources b {
+    font-size: 16px;
+  }
+  .player-resources em {
+    font-size: 7px;
+  }
+  .duelist-life {
+    left: 5px;
+  }
+  .arena-drawer {
+    width: 230px;
+    left: 12px;
+    top: 220px;
+    bottom: 190px;
+  }
+  .position-guide {
+    left: 12px;
+    width: 215px;
+    padding: 15px;
+  }
+  .arena-context {
+    left: 12px;
+    max-width: 230px;
+  }
+  .open-discard {
+    width: 155px;
+    right: 10px;
+    padding: 14px 10px;
+  }
+  .open-discard b {
+    font-size: 11px;
+  }
+  .open-discard small {
+    font-size: 8px;
+  }
+  .open-discard > span {
+    display: none;
+  }
+  .choice-cards {
+    gap: 10px;
+  }
+  .choice-heading h1 {
+    font-size: 34px;
+  }
+}
+@media (max-width: 759px) {
+  .card-choice-screen {
+    padding: 30px 14px;
+    gap: 18px;
+    justify-content: center;
+  }
+  .choice-heading h1 {
+    font-size: 28px;
+  }
+  .choice-step {
+    font-size: 8px;
+    letter-spacing: 2px;
+  }
+  .choice-heading p {
+    font-size: 11px;
+    line-height: 1.5;
+  }
+  .choice-heading small {
+    font-size: 10px;
+  }
+  .choice-cards {
+    gap: 9px;
+    width: 100%;
+    max-height: 48dvh;
+    overflow-y: auto;
+    padding: 10px 4px;
+  }
+  .choice-card {
+    width: calc((100% - 26px) / 3);
+    max-width: 102px;
+  }
+  .choice-check {
+    font-size: 8px;
+    padding: 6px 2px;
+  }
+  .choice-footer {
+    gap: 10px;
+    width: 100%;
+  }
+  .choice-footer > p {
+    font-size: 10px;
+  }
+  .choice-confirm,
+  .choice-skip {
+    width: 100%;
+    font-size: 11px;
+    padding: 12px;
+  }
+  .choice-back {
+    position: static;
+    align-self: flex-start;
+    font-size: 10px;
+    padding: 8px 10px;
+  }
+  .reserve-preview {
+    margin-top: 7px;
+    font-size: 11px;
+  }
+  .reserve-preview > b {
+    font-size: 21px;
+  }
+  .position-guide {
+    top: auto;
+    bottom: 22px;
+    left: 18px;
+    width: calc(100% - 36px);
+    padding: 16px;
+  }
+  .position-guide h2 {
+    font-size: 22px;
+    margin: 6px 0;
+  }
+  .position-guide p {
+    font-size: 10px;
+    margin: 6px 0;
+  }
+  .position-options {
+    margin: 10px 0;
+  }
+  .position-options button {
+    padding: 6px;
+  }
+  .preparing-position .duelist-self {
+    display: none;
+  }
+  .duelist-opponent {
+    top: 114px;
+  }
+  .duelist-self {
+    bottom: 148px;
+  }
+  .duelist-life {
+    width: 38px;
+    height: 23px;
+    left: 0;
+    font-size: 13px;
+    bottom: -8px;
+  }
+  .player-resources {
+    gap: 2px;
+    margin-top: 4px;
+  }
+  .player-resources > div {
+    grid-template-columns: 40px auto;
+  }
+  .player-resources span {
+    font-size: 8px;
+  }
+  .player-resources b {
+    font-size: 13px;
+  }
+  .player-resources small {
+    font-size: 9px;
+  }
+  .player-resources em {
+    display: none;
+  }
+  .duelist-info > small {
+    font-size: 6px;
+  }
+  .arena-phase {
+    width: calc(100% - 40px);
+    top: 52px;
+  }
+  .arena-phase h1 {
+    font-size: 20px;
+  }
+  .arena-drawer {
+    left: 10px;
+    right: 10px;
+    top: auto;
+    bottom: 225px;
+    max-height: 220px;
+    width: auto;
+    padding: 22px 16px;
+  }
+  .arena-context {
+    left: 10px;
+    bottom: 207px;
+    max-width: 160px;
+    top: auto;
+  }
+  .arena-pass {
+    z-index: 55;
+  }
+  .open-discard {
+    top: auto;
+    bottom: 198px;
+    width: 155px;
+    right: 10px;
+  }
+  .open-discard small {
+    display: none;
+  }
+  .duel-journal {
+    top: 48px;
+    bottom: 14px;
+    right: 12px;
+  }
+  .reserve-gain {
+    left: 20px;
+    bottom: 236px;
+    font-size: 20px;
+  }
+  .preparation-wait {
+    bottom: 75px;
+    max-width: 90%;
+    padding: 20px;
+    min-width: 280px;
+  }
+  .arena-hover {
+    bottom: 255px;
+  }
+  .discard-choice .choice-cards {
+    max-height: 39dvh;
+  }
+  .discard-choice {
+    gap: 12px;
+  }
+  .discard-choice .choice-footer {
+    flex-direction: column-reverse;
+  }
+}
+@media (max-height: 559px) and (orientation: landscape) {
+  .card-choice-screen {
+    padding: 16px 22px;
+    gap: 12px;
+  }
+  .choice-heading h1 {
+    font-size: 24px;
+    margin: 5px 0;
+  }
+  .choice-heading p {
+    font-size: 10px;
+    margin: 4px 0;
+  }
+  .choice-heading small {
+    font-size: 9px;
+  }
+  .choice-step {
+    font-size: 7px;
+    letter-spacing: 2px;
+  }
+  .choice-card {
+    width: 80px;
+  }
+  .choice-check {
+    padding: 5px;
+    font-size: 7px;
+  }
+  .choice-cards {
+    gap: 12px;
+    max-height: 48dvh;
+    overflow-y: auto;
+    padding: 6px;
+  }
+  .choice-footer {
+    gap: 10px;
+  }
+  .choice-footer > p {
+    font-size: 9px;
+  }
+  .choice-confirm,
+  .choice-skip {
+    padding: 9px 15px;
+    font-size: 10px;
+    min-width: 180px;
+  }
+  .choice-back {
+    top: 12px;
+    left: 12px;
+    padding: 8px;
+    font-size: 9px;
+  }
+  .reserve-preview {
+    margin-top: 4px;
+    font-size: 10px;
+  }
+  .reserve-preview > b {
+    font-size: 18px;
+  }
+  .position-guide {
+    left: 10px;
+    top: 140px;
+    bottom: auto;
+    width: 145px;
+    padding: 10px;
+  }
+  .position-guide > small {
+    font-size: 6px;
+  }
+  .position-guide h2 {
+    font-size: 19px;
+    margin: 5px 0;
+  }
+  .position-guide p {
+    font-size: 9px;
+  }
+  .position-options {
+    margin: 9px 0;
+  }
+  .position-options span {
+    font-size: 7px;
+  }
+  .position-options button {
+    padding: 6px 3px;
+    font-size: 14px;
+  }
+  .position-guide .choice-confirm {
+    padding: 8px 4px;
+    font-size: 9px;
+    min-width: 0;
+  }
+  .player-resources em {
+    display: none;
+  }
+  .player-resources {
+    gap: 2px;
+  }
+  .player-resources span {
+    font-size: 8px;
+  }
+  .player-resources b {
+    font-size: 13px;
+  }
+  .player-resources > div {
+    grid-template-columns: 42px auto;
+  }
+  .duelist-opponent {
+    top: 65px;
+  }
+  .duelist-self {
+    bottom: 28px;
+  }
+  .duelist-life {
+    font-size: 13px;
+    width: 37px;
+    left: 2px;
+    height: 23px;
+  }
+  .arena-drawer {
+    left: 10px;
+    right: auto;
+    top: 148px;
+    bottom: 20px;
+    width: 230px;
+    max-height: none;
+  }
+  .arena-context {
+    bottom: 130px;
+    left: 10px;
+    top: auto;
+    font-size: 9px;
+    max-width: 150px;
+  }
+  .arena-phase {
+    top: 8px;
+    width: 330px;
+  }
+  .arena-phase h1 {
+    font-size: 19px;
+  }
+  .arena-hover {
+    bottom: 126px;
+  }
+  .open-discard {
+    top: calc(42% + 65px);
+    bottom: auto;
+    right: 8px;
+    width: 130px;
+    padding: 10px;
+  }
+  .preparation-wait {
+    bottom: 25px;
+    padding: 15px;
+  }
+  .duel-journal {
+    top: 12px;
+    bottom: 12px;
+  }
+  .duel-journal > header {
+    padding: 12px 20px;
+  }
+  .duel-journal header h2 {
+    font-size: 22px;
+  }
+  .reserve-gain {
+    left: 20px;
+    bottom: 125px;
+    font-size: 18px;
+  }
+}
+/* Response windows occupy a reserved side of the square arena. */
+.phase-steps {
+  display: flex;
+  justify-content: center;
+  gap: 17px;
+  margin-top: 12px;
+}
+.phase-steps span {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #718d79;
+  padding-bottom: 7px;
+  border-bottom: 2px solid transparent;
+}
+.phase-steps .current {
+  color: #ead69b;
+  border-color: #c8b573;
+}
+.phase-instruction {
+  font-size: 11px;
+  color: #becdb4;
+  line-height: 1.5;
+  margin: 9px auto 0;
+  max-width: 450px;
+  letter-spacing: 0.1px;
+}
+.arena-phase {
+  top: 19px;
+}
+.arena-phase h1 {
+  margin: 7px 0;
+}
+.response-mode .arena-phase {
+  background: linear-gradient(90deg, transparent, #482c1bd9, transparent);
+  padding: 8px 20px;
+}
+.response-mode .phase-steps .current {
+  color: #ffd0a1;
+  border-color: #e4a675;
+}
+.response-mode .arena-phase h1 {
+  color: #ffd5af;
+}
+.arena-pass {
+  top: auto;
+  bottom: 205px;
+  right: 24px;
+  width: 245px;
+  justify-content: space-between;
+  font-size: 12px;
+  padding: 18px 16px 18px 27px;
+}
+.arena-context {
+  bottom: 185px;
+}
+.arena-stack-panel {
+  position: absolute;
+  right: 24px;
+  top: 175px;
+  bottom: 295px;
+  width: 245px;
+  display: flex;
+  flex-direction: column;
+  padding: 15px;
+  background: linear-gradient(#162d22ed, #0d211ae8);
+  border: 1px solid #a0a77a66;
+  border-radius: 3px;
+  z-index: 30;
+}
+.stack-heading > b {
+  font: 17px Georgia;
+  color: #e9d3a2;
+  display: block;
+}
+.stack-heading > span {
+  font-size: 8px;
+  line-height: 1.5;
+  letter-spacing: 1px;
+  color: #d4b889;
+  display: block;
+  margin-top: 8px;
+}
+.pending-combat {
+  display: flex;
+  gap: 7px;
+  align-items: center;
+  font-size: 10px;
+  line-height: 1.5;
+  color: #c5d2b5;
+  border-top: 1px solid #a7ab7333;
+  margin-top: 12px;
+  padding-top: 12px;
+}
+.pending-combat span {
+  flex: 1;
+}
+.pending-combat b {
+  color: #e4b48b;
+}
+.stack-list {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  margin-top: 13px;
+  flex: 1;
+  min-height: 0;
+}
+.stack-card {
+  display: flex;
+  gap: 9px;
+  padding: 9px 0;
+  background: none;
+  border: 0;
+  border-bottom: 1px solid #8e9a692f;
+  width: 100%;
+  text-align: left;
+  color: #cbd5bb;
+}
+.stack-card img {
+  width: 44px;
+  height: 62px;
+  object-fit: cover;
+  border: 1px solid #aaa77455;
+  border-radius: 3px;
+}
+.stack-card > div {
+  min-width: 0;
+}
+.stack-card small {
+  font-size: 7px;
+  letter-spacing: 1px;
+  color: #c9b47c;
+}
+.stack-card b {
+  font-size: 11px;
+  line-height: 1.4;
+  display: block;
+  margin-top: 4px;
+  font-weight: 500;
+}
+.stack-card span {
+  display: block;
+  font-size: 8px;
+  line-height: 1.5;
+  color: #89a282;
+  margin-top: 5px;
+}
+.arena-stack-panel > p {
+  font-size: 9px;
+  line-height: 1.5;
+  color: #9eb395;
+  border-top: 1px solid #8e9a6944;
+  padding-top: 10px;
+  margin: 12px 0 0;
+}
+.field-event {
+  position: absolute;
+  left: 50%;
+  top: 132px;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 12px;
+  color: #f0dfad;
+  background: #0c2017e8;
+  border: 1px solid #b6b17455;
+  padding: 10px 19px;
+  border-radius: 3px;
+  z-index: 45;
+  pointer-events: none;
+  max-width: 90%;
+  white-space: nowrap;
+}
+.event-pulse {
+  display: block;
+  width: 6px;
+  height: 6px;
+  background: #e4d193;
+  border-radius: 50%;
+  box-shadow: 0 0 10px #e4d193;
+  animation: wait-pulse 0.7s infinite;
+}
+.presenting .arena-canvas,
+.presenting .fan-card {
+  pointer-events: none;
+}
+.drawer-aim {
+  display: block;
+  width: 100%;
+  background: #263c29;
+  border: 1px solid #9aad7455;
+  color: #dcd5aa;
+  font-size: 10px;
+  padding: 9px;
+  margin-bottom: 13px;
+}
+.open-discard {
+  top: auto;
+  bottom: 285px;
+  width: 245px;
+}
+.preparing-position .phase-steps {
+  display: none;
+}
+.preparing-position .arena-phase {
+  top: 32px;
+}
+.choice-heading .choice-step {
+  display: block;
+}
+.duelist-portrait {
+  pointer-events: auto;
+}
+.duel-journal .event-cast {
+  display: none;
+}
+@media (max-width: 1100px) {
+  .arena-pass {
+    width: 205px;
+    right: 12px;
+    font-size: 10px;
+    padding: 15px 12px 15px 23px;
+  }
+  .arena-stack-panel {
+    width: 205px;
+    right: 12px;
+    padding: 12px;
+  }
+  .arena-stack-panel .stack-heading > b {
+    font-size: 15px;
+  }
+  .open-discard {
+    width: 205px;
+    right: 12px;
+  }
+  .phase-instruction {
+    font-size: 10px;
+  }
+  .field-event {
+    font-size: 10px;
+    top: 132px;
+  }
+}
+@media (max-width: 759px) {
+  .arena-phase {
+    top: 48px;
+  }
+  .phase-steps {
+    gap: 12px;
+    margin-top: 8px;
+  }
+  .phase-steps span {
+    font-size: 7px;
+    letter-spacing: 0.4px;
+    padding-bottom: 4px;
+  }
+  .phase-instruction {
+    font-size: 9px;
+    max-width: 290px;
+    margin-top: 6px;
+  }
+  .arena-phase h1 {
+    font-size: 18px;
+  }
+  .arena-phase > small {
+    font-size: 7px;
+  }
+  .duelist-opponent {
+    top: 155px;
+  }
+  .response-mode .duelist-opponent {
+    top: 157px;
+  }
+  .arena-stack-panel {
+    top: 156px;
+    bottom: auto;
+    right: 10px;
+    width: 185px;
+    max-height: 145px;
+    padding: 8px;
+  }
+  .stack-heading > b {
+    font-size: 12px !important;
+  }
+  .stack-heading > span {
+    font-size: 6px;
+    margin-top: 4px;
+  }
+  .pending-combat {
+    font-size: 8px;
+    margin-top: 6px;
+    padding-top: 6px;
+  }
+  .stack-list {
+    display: flex;
+    overflow-x: auto;
+    overflow-y: hidden;
+    gap: 8px;
+    margin-top: 5px;
+    flex: none;
+  }
+  .stack-card {
+    min-width: 150px;
+    width: 150px;
+    padding: 3px 0;
+    gap: 5px;
+    border-bottom: 0;
+  }
+  .stack-card img {
+    width: 30px;
+    height: 42px;
+  }
+  .stack-card small {
+    font-size: 5px;
+  }
+  .stack-card b {
+    font-size: 8px;
+    margin-top: 2px;
+  }
+  .stack-card span {
+    font-size: 6px;
+    margin-top: 2px;
+  }
+  .arena-stack-panel > p {
+    font-size: 6px;
+    padding-top: 5px;
+    margin-top: 5px;
+  }
+  .arena-pass {
+    bottom: 148px;
+    right: 10px;
+    width: 170px;
+    max-width: 170px;
+    font-size: 9px;
+    padding: 12px 9px 12px 20px;
+  }
+  .open-discard {
+    bottom: 205px;
+    width: 170px;
+    right: 10px;
+  }
+  .arena-context {
+    bottom: 218px;
+    left: 10px;
+  }
+  .field-event {
+    top: auto;
+    bottom: 275px;
+    font-size: 9px;
+    padding: 8px 12px;
+    max-width: 95%;
+    white-space: normal;
+    text-align: center;
+  }
+  .response-mode .arena-phase {
+    padding: 2px 5px;
+  }
+  .arena-drawer {
+    bottom: 270px;
+    max-height: 220px;
+  }
+  .drawer-aim {
+    font-size: 9px;
+    padding: 7px;
+  }
+  .duelist-self {
+    bottom: 148px;
+  }
+  .preparing-position .arena-phase {
+    top: 50px;
+  }
+}
+@media (max-height: 559px) and (orientation: landscape) {
+  .arena-phase {
+    top: 5px;
+    width: 360px;
+  }
+  .arena-phase h1 {
+    font-size: 17px;
+    margin: 4px 0;
+  }
+  .phase-steps {
+    display: none;
+  }
+  .phase-instruction {
+    font-size: 8px;
+    margin-top: 4px;
+    max-width: 330px;
+  }
+  .arena-pass {
+    bottom: 130px;
+    right: 8px;
+    width: 145px;
+    max-width: 145px;
+    font-size: 9px;
+    padding: 12px 8px 12px 19px;
+  }
+  .arena-stack-panel {
+    top: 65px;
+    bottom: 190px;
+    right: 8px;
+    width: 170px;
+    padding: 8px;
+  }
+  .stack-heading > b {
+    font-size: 12px !important;
+  }
+  .stack-heading > span {
+    font-size: 6px;
+  }
+  .stack-card img {
+    width: 28px;
+    height: 40px;
+  }
+  .stack-card b {
+    font-size: 8px;
+  }
+  .stack-card small,
+  .stack-card span {
+    font-size: 6px;
+  }
+  .stack-list {
+    margin-top: 5px;
+  }
+  .pending-combat {
+    font-size: 8px;
+    margin-top: 5px;
+    padding-top: 5px;
+  }
+  .arena-stack-panel > p {
+    display: none;
+  }
+  .field-event {
+    top: 65px;
+    bottom: auto;
+    font-size: 9px;
+    padding: 6px 10px;
+  }
+  .open-discard {
+    right: 8px;
+    bottom: 190px;
+    top: auto;
+    width: 145px;
+    font-size: 9px;
+  }
+  .arena-context {
+    bottom: 128px;
+  }
+  .preparing-position .arena-phase {
+    top: 8px;
+  }
+  .arena-drawer {
+    top: 150px;
+    bottom: 18px;
+    width: 215px;
+    padding: 18px 12px;
+    max-height: none;
+  }
+  .duelist-opponent {
+    top: 66px;
+  }
+}
+.arena-context:has(+ .arena-drawer) {
+  visibility: hidden;
+}
+@media (max-width: 759px) {
+  .arena-drawer .selection-panel > p:not(.eyebrow) {
+    display: none;
+  }
+  .arena-drawer .selection-panel > button:first-of-type {
+    width: 44px;
+    margin: 0 10px 7px 0;
+  }
+  .arena-drawer .selection-panel h3 {
+    font-size: 16px;
+    line-height: 1.3;
+    margin: 6px 0 12px;
+  }
+  .arena-drawer .selection-panel .eyebrow {
+    display: none;
+  }
+  .arena-drawer .target-controls p {
+    font-size: 10px;
+    line-height: 1.4;
+    margin: 7px 0;
+  }
+  .arena-drawer .target-controls button.gold {
+    position: sticky;
+    bottom: 0;
+    z-index: 1;
+    margin: 8px 0;
+  }
+  .drawer-aim {
+    width: calc(100% - 28px);
+    margin: 0 28px 12px 0;
+  }
+}
+@media (min-width: 760px) and (min-height: 560px) {
+  .arena-stack-panel {
+    bottom: auto;
+    max-height: calc(100dvh - 440px);
+  }
+  .stack-list {
+    flex: none;
+  }
+  .stack-card img {
+    width: 54px;
+    height: 76px;
+  }
+  .stack-card b {
+    font-size: 12px;
+  }
+  .stack-card span,
+  .arena-stack-panel > p {
+    font-size: 10px;
+  }
+  .arena-drawer {
+    bottom: auto;
+    max-height: calc(100dvh - 445px);
+  }
+}
+@media (max-width: 759px) {
+  .arena-stack-panel {
+    top: 150px;
+    max-height: 95px;
+    padding: 6px;
+  }
+  .arena-stack-panel > p {
+    display: none;
+  }
+  .stack-heading > b {
+    font-size: 11px !important;
+    line-height: 14px;
+  }
+  .stack-heading > span {
+    margin-top: 2px;
+    font-size: 6px;
+  }
+  .stack-card b {
+    font-size: 9px;
+  }
+}
+.duel-journal > header {
+  height: auto;
+  flex: 0 0 auto;
+}
+.duel-journal > nav {
+  flex: 0 0 auto;
+}
+.journal-filters,
+.journal-players {
+  flex: 0 0 auto;
+}
+@media (max-width: 759px) {
+  .stack-card span {
+    display: none;
+  }
+}
+.journal-scroll {
+  flex: 1;
+  min-height: 0;
+}
+/* Reading controls live outside the printed card, leaving types and stats visible. */
+.choice-check {
+  height: 36px;
+  padding: 9px 38px 9px 3px;
+  font-size: 12px;
+  letter-spacing: 0;
+  box-sizing: border-box;
+}
+.choice-zoom {
+  top: auto;
+  bottom: 4px;
+  right: 4px;
+  width: 30px;
+  height: 28px;
+  padding: 0;
+  font-size: 21px;
+  background: #213e2d;
+  border-color: #a8b57a66;
+}
+.fan-zoom {
+  top: -34px;
+  right: 0;
+  width: auto;
+  min-width: 58px;
+  height: 28px;
+  padding: 0 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  font-size: 12px;
+  border-radius: 14px;
+  pointer-events: none;
+  opacity: 0;
+}
+.fan-zoom span {
+  font-size: 19px;
+}
+.fan-card:hover .fan-zoom,
+.fan-card:focus-within .fan-zoom,
+.fan-card.selected .fan-zoom {
+  opacity: 1;
+  pointer-events: auto;
+}
+.fan-card:hover::before,
+.fan-card:focus-within::before,
+.fan-card.selected::before {
+  content: "";
+  position: absolute;
+  inset: -38px 0 auto;
+  height: 40px;
+}
+.arena-hand:has(.fan-card:hover) .hand-caption,
+.arena-hand:has(.fan-card:focus-within) .hand-caption {
+  opacity: 0;
+}
+/* The HUD is read continuously during play, so its labels use body-sized text. */
+.player-resources {
+  gap: 8px;
+  margin-top: 10px;
+}
+.player-resources > div {
+  grid-template-columns: 76px auto;
+  gap: 1px 12px;
+}
+.player-resources span {
+  font-size: 14px;
+  color: #d5e0c8;
+}
+.player-resources b {
+  font-size: 27px;
+}
+.player-resources small {
+  font-size: 15px;
+  color: #b6c7a9;
+}
+.player-resources em {
+  font-size: 11px;
+  color: #a5b99f;
+}
+.duelist-info > small {
+  font-size: 10px;
+  letter-spacing: 1.5px;
+}
+.duelist-info > b {
+  font-size: 20px;
+}
+.duelist-element {
+  font-size: 14px;
+  color: #c2cbb6;
+}
+.arena-phase {
+  width: min(580px, calc(100vw - 48px));
+  top: 15px;
+}
+.arena-phase > small {
+  font-size: 11px;
+  letter-spacing: 2px;
+}
+.phase-steps {
+  gap: 22px;
+  margin-top: 10px;
+}
+.phase-steps span {
+  font-size: 13px;
+  letter-spacing: 0.65px;
+  color: #acbca3;
+  padding-bottom: 6px;
+}
+.phase-instruction {
+  font-size: 15px;
+  max-width: 560px;
+  line-height: 1.4;
+  color: #d0dcc3;
+  margin-top: 8px;
+}
+@media (min-width: 760px) and (min-height: 560px) {
+  .duelist-opponent {
+    top: 76px;
+  }
+  .arena-drawer {
+    top: 278px;
+    max-height: calc(100dvh - 475px);
+  }
+  .arena-phase h1 {
+    font-size: 34px;
+  }
+  .field-event {
+    top: 150px;
+  }
+}
+@media (max-width: 1100px) and (min-width: 760px) and (min-height: 560px) {
+  .player-resources > div {
+    grid-template-columns: 67px auto;
+    gap: 0 7px;
+  }
+  .player-resources span {
+    font-size: 13px;
+  }
+  .player-resources b {
+    font-size: 24px;
+  }
+  .player-resources em {
+    font-size: 10px;
+  }
+  .duelist-info > b {
+    font-size: 18px;
+  }
+  .duelist-element {
+    font-size: 13px;
+  }
+}
+@media (max-width: 759px) {
+  .choice-check {
+    font-size: 11px;
+  }
+  .player-resources {
+    gap: 1px;
+    margin-top: 4px;
+  }
+  .player-resources > div {
+    grid-template-columns: 49px auto;
+    gap: 0 5px;
+  }
+  .player-resources span {
+    font-size: 11px;
+  }
+  .player-resources b {
+    font-size: 18px;
+  }
+  .player-resources small {
+    font-size: 11px;
+  }
+  .duelist-info > small {
+    font-size: 8px;
+  }
+  .duelist-info > b {
+    font-size: 14px;
+    max-width: 140px;
+  }
+  .duelist-element {
+    font-size: 11px;
+  }
+  .arena-phase {
+    top: 48px;
+    width: calc(100vw - 28px);
+  }
+  .arena-phase > small {
+    font-size: 9px;
+    letter-spacing: 1.4px;
+  }
+  .arena-phase h1 {
+    font-size: 24px;
+    margin: 6px 0;
+  }
+  .phase-steps {
+    gap: 12px;
+    margin-top: 7px;
+  }
+  .phase-steps span {
+    font-size: 10px;
+    letter-spacing: 0.25px;
+    padding-bottom: 4px;
+  }
+  .phase-instruction {
+    font-size: 13px;
+    max-width: 345px;
+    line-height: 1.35;
+    margin-top: 6px;
+  }
+  .duelist-opponent {
+    top: 176px;
+  }
+  .response-mode .duelist-opponent {
+    top: 180px;
+  }
+  .arena-stack-panel {
+    top: 175px;
+    max-height: 95px;
+  }
+  .duelist-self {
+    bottom: 148px;
+  }
+}
+@media (max-height: 559px) and (orientation: landscape) {
+  .player-resources {
+    gap: 1px;
+    margin-top: 3px;
+  }
+  .player-resources > div {
+    grid-template-columns: 55px auto;
+    gap: 0 6px;
+  }
+  .player-resources span {
+    font-size: 12px;
+  }
+  .player-resources b {
+    font-size: 20px;
+  }
+  .player-resources small {
+    font-size: 12px;
+  }
+  .duelist-info > small {
+    font-size: 9px;
+  }
+  .duelist-info > b {
+    font-size: 15px;
+  }
+  .duelist-element {
+    font-size: 12px;
+  }
+  .arena-phase {
+    top: 6px;
+    width: 390px;
+  }
+  .arena-phase > small {
+    font-size: 10px;
+  }
+  .arena-phase h1 {
+    font-size: 21px;
+    margin: 3px 0;
+  }
+  .phase-instruction {
+    font-size: 12px;
+    max-width: 380px;
+  }
+  .choice-check {
+    height: 27px;
+    padding: 6px 27px 6px 2px;
+    font-size: 9px;
+  }
+  .choice-zoom {
+    width: 23px;
+    height: 22px;
+    font-size: 17px;
+    bottom: 3px;
+    right: 3px;
+  }
+}
+@media (min-width: 760px) and (min-height: 560px) {
+  .opponent-hand {
+    left: auto;
+    right: 250px;
+    transform: none;
+    top: -65px;
+  }
+}
+@media (min-width: 760px) and (max-width: 1100px) {
+  .arena-hand {
+    left: calc(50% + 35px);
+  }
+  .opponent-hand {
+    right: 170px;
+  }
+}
+@media (max-width: 759px) {
+  .fan-card:hover,
+  .fan-card:focus-within {
+    transform: translate(var(--offset), -70px) rotate(0deg) scale(1.15);
+  }
+  .duelist-self,
+  .arena-pass {
+    bottom: 130px;
+  }
+  .arena-stack-panel {
+    max-height: 75px;
+    padding: 5px;
+  }
+  .stack-heading > span,
+  .stack-card small {
+    display: none;
+  }
+  .stack-list {
+    margin-top: 4px;
+  }
+  .stack-card img {
+    width: 26px;
+    height: 36px;
+  }
+  .stack-card b {
+    font-size: 10px;
+    line-height: 1.3;
+    margin-top: 0;
+  }
+}
+@media (max-width: 759px) {
+  .arena-pass {
+    bottom: 216px;
+    min-height: 36px;
+    padding: 9px 10px 9px 20px;
+  }
+  .open-discard {
+    bottom: 130px;
+  }
+  .fan-zoom {
+    top: auto;
+    bottom: -31px;
+    height: 26px;
+  }
+  .fan-card:hover::before,
+  .fan-card:focus-within::before,
+  .fan-card.selected::before {
+    inset: auto 0 -34px;
+    height: 36px;
+  }
+  .duelist-info > b {
+    max-width: 126px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}

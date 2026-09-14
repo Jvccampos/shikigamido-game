@@ -1,0 +1,28 @@
+// Only printed, intrinsic keywords belong here. Keywords granted to a killer
+// or to a target are resolved by their card effect, not text matching.
+export const baseKeywords: Record<string, Record<string, number>> = {
+  "a-gula": { Amaldiçoado: 1, Devolver: 3 },
+  "aguia-cacadora": { "Quick Attack": 1 },
+  "anubis-o-gato-da-morte": { Shikigami: 2, Ressurgir: 1 },
+  "assombracao-afogada": { Amaldiçoado: 1, Lifesteal: 3 },
+  "broto-amaldicoado": { Amaldiçoado: 1 },
+  "comedor-de-sonhos": { Amaldiçoado: 1 },
+  "ichi-o-oni-chefe-do-sul": { Alimentar: 1 },
+  "goblin-explosivo": { Range: 1 },
+  "kaze-o-gato-alado": { Pular: 1 },
+  "kuma-no-tsuno": { Construir: 1 },
+  "kuro-usagi": { Pular: 1 },
+  lamento: { Amaldiçoado: 1, Alimentar: 1 },
+  "neko-o-gato-eletrico": { "Quick Attack": 1, Burn: 1 },
+  "o-arconte": { Amaldiçoado: 1, "Slow Defense": 1 },
+  "oni-vermelho": { Alimentar: 1 },
+  potaru: { Amaldiçoado: 1, Engolir: 1 },
+  "shidaro-o-samurai-do-profundo": { Devolver: 2 },
+  "suineko-o-gato-aquatico": { "Quick Attack": 1 },
+  "taodu-corrupto": { Amaldiçoado: 1 },
+  "taodu-katana": { Pular: 1 },
+  "tsuchi-o-gato-da-terra": { Ressurgir: 2 },
+  "usagi-selvagem": { Pular: 1 },
+  "yaksha-o-guardiao": { Ressurgir: 2 },
+  "omionji-vento": { "Quick Attack": 1 },
+};

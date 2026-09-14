@@ -1,21 +1,19 @@
 {
   "compilerOptions": {
     "target": "ES2022",
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext",
-    "lib": [
-      "ES2022",
-      "DOM"
-    ],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "lib": ["ES2022", "DOM"],
     "jsx": "react-jsx",
     "jsxImportSource": "preact",
     "strict": true,
     "noEmit": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "allowImportingTsExtensions": true,
+    "types": ["node"],
+    "noUnusedLocals": true,
+    "noUnusedParameters": true
   },
-  "include": [
-    "client",
-    "server",
-    "shared"
-  ]
+  "include": ["client", "server", "shared", "vite.config.ts"]
 }

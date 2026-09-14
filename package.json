@@ -2,14 +2,38 @@
   "name": "shikigamido-game",
   "private": true,
   "scripts": {
-    "build": "npm run typecheck && sited build .",
-    "dev": "sited dev . --slug shikigamido-game",
-    "deploy": "sited deploy . --slug shikigamido-game",
-    "typecheck": "tsc --noEmit"
+    "build": "npm run typecheck && node scripts/assets.mjs && vite build && esbuild server/start.ts --bundle --platform=node --format=esm --packages=external --outfile=dist/server.mjs",
+    "dev": "node scripts/dev.mjs",
+    "deploy": "railway up",
+    "typecheck": "tsc --noEmit",
+    "test": "node scripts/test.mjs",
+    "test:browser": "node scripts/arena-smoke.mjs",
+    "start": "node dist/server.mjs",
+    "test:multiplayer": "node --import tsx scripts/arena-multiplayer.mjs"
   },
   "type": "module",
   "devDependencies": {
-    "sited": "npm:@lucaspll/sited@^0.8.0",
-    "typescript": "^5.9.3"
+    "@playwright/test": "^1.63.0",
+    "@preact/preset-vite": "^2.10.6",
+    "@types/better-sqlite3": "^9.6.0",
+    "@types/node": "^26.5.1",
+    "@types/ws": "^8.18.1",
+    "esbuild": "^0.28.2",
+    "prettier": "^3.9.6",
+    "railway": "^3.11.0",
+    "tsx": "^4.23.13",
+    "typescript": "^5.9.3",
+    "vite": "^8.3.0"
+  },
+  "dependencies": {
+    "@fastify/cookie": "^11.1.2",
+    "@fastify/rate-limit": "^11.2.0",
+    "@fastify/static": "^10.1.3",
+    "@fastify/websocket": "^11.3.0",
+    "better-sqlite3": "^13.0.3",
+    "fastify": "^5.12.4",
+    "google-auth-library": "^11.0.2",
+    "pixi.js": "^8.20.1",
+    "preact": "^10.29.8"
   }
 }
