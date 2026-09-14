@@ -544,7 +544,7 @@ export class ArenaScene {
     stats.forEach((value, i) => {
       const tint = [0xf57b62, 0x68c5ef, 0x8cd8b6][i];
       const x = (i - 1) * w * 0.32;
-      const stacked = w < 62;
+      const stacked = w < 62 || stats.some((n) => n !== null && n >= 10);
       view.addChild(
         new Graphics()
           .roundRect(x - w * 0.155, h / 2 - 20, w * 0.31, 22, 3)
@@ -566,6 +566,8 @@ export class ArenaScene {
               : 0xf2e4c0,
       );
       t.anchor.set(0.5);
+      const maxWidth = w * (stacked ? 0.29 : 0.18);
+      if (t.width > maxWidth) t.scale.x = maxWidth / t.width;
       t.position.set(stacked ? x : x + w * 0.035, h / 2 - (stacked ? 4 : 7));
       view.addChild(t);
       if (value !== null && bases[i] !== null && value !== bases[i]) {
