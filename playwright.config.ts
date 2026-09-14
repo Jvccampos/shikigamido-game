@@ -2,7 +2,8 @@ import { defineConfig } from "@playwright/test";
 const baseURL = process.env.TEST_URL || "http://127.0.0.1:3187";
 export default defineConfig({
   testDir: "tests/browser",
-  timeout: 90000,
+  // Three PixiJS views render in software on hosted CI runners.
+  timeout: process.env.CI ? 180000 : 90000,
   expect: { timeout: 10000 },
   workers: 1,
   forbidOnly: !!process.env.CI,
@@ -15,7 +16,7 @@ export default defineConfig({
   use: {
     baseURL,
     viewport: { width: 1440, height: 1000 },
-    trace: "retain-on-failure",
+    trace: { mode: "retain-on-failure", screenshots: false, snapshots: true },
     screenshot: "only-on-failure",
     launchOptions: { args: ["--no-sandbox"] },
   },
