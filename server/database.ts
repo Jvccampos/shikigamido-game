@@ -1,8 +1,13 @@
+import type { Deck, SavedRoom, StoredRow } from "../shared/room.js";
+type WithoutMetadata<T> = T extends StoredRow
+  ? Omit<T, keyof StoredRow>
+  : never;
+type Patch<T> = T extends StoredRow ? Partial<Omit<T, keyof StoredRow>> : never;
 import Database from "better-sqlite3";
 import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 const TABLES = new Set(["decks", "rooms"]);
-export class Repository {
+export class Repository<T extends StoredRow> {
   private filters: [string, unknown][] = [];
   private order: [string, string] | null = null;
   constructor(
@@ -11,14 +16,14 @@ export class Repository {
   ) {
     if (!TABLES.has(table)) throw Error("Unknown table");
   }
-  where(key: string, value: unknown) {
-    const q = new Repository(this.db, this.table);
+  where(key: keyof T & string, value: unknown) {
+    const q = new Repository<T>(this.db, this.table);
     q.filters = [...this.filters, [key, value]];
     q.order = this.order;
     return q;
   }
-  orderBy(key: string, direction: string) {
-    const q = new Repository(this.db, this.table);
+  orderBy(key: keyof T & string, direction: string) {
+    const q = new Repository<T>(this.db, this.table);
     q.filters = this.filters;
     q.order = [key, direction];
     return q;
@@ -34,39 +39,39 @@ export class Repository {
             .join(" AND ")
       : "";
   }
-  all(): any[] {
+  all(): T[] {
     const values = this.filters.map(([, v]) => v);
     const rows = this.db
       .prepare(`SELECT body FROM ${this.table}${this.clause()}`)
       .all(...values)
-      .map((r: any) => JSON.parse(r.body));
+      .map((r) => JSON.parse((r as { body: string }).body) as T);
     if (this.order) {
       const [key, dir] = this.order;
       rows.sort(
         (a, b) =>
-          String(a[key]).localeCompare(String(b[key])) *
+          String(a[key as keyof T]).localeCompare(String(b[key as keyof T])) *
           (dir === "desc" ? -1 : 1),
       );
     }
     return rows;
   }
-  get(id: string): any {
+  get(id: string): T | null {
     return this.where("id", id).all()[0] || null;
   }
-  insert(value: any) {
+  insert(value: WithoutMetadata<T>): T {
     const now = new Date().toISOString(),
       row = {
         ...value,
         id: crypto.randomUUID(),
         createdAt: now,
         updatedAt: now,
-      };
+      } as unknown as T;
     this.db
       .prepare(`INSERT INTO ${this.table}(id,body) VALUES (?,?)`)
       .run(row.id, JSON.stringify(row));
     return row;
   }
-  update(id: string, patch: any) {
+  update(id: string, patch: Patch<T>): T {
     const row = this.get(id);
     if (!row) throw Error("Registro não encontrado.");
     Object.assign(row, patch, { updatedAt: new Date().toISOString() });
@@ -94,11 +99,13 @@ export function openDatabase(path: string) {
   );
   return {
     raw: db,
-    transaction<T>(fn: (tx: { decks: Repository; rooms: Repository }) => T): T {
+    transaction<T>(
+      fn: (tx: { decks: Repository<Deck>; rooms: Repository<SavedRoom> }) => T,
+    ): T {
       return db.transaction(() =>
         fn({
-          decks: new Repository(db, "decks"),
-          rooms: new Repository(db, "rooms"),
+          decks: new Repository<Deck>(db, "decks"),
+          rooms: new Repository<SavedRoom>(db, "rooms"),
         }),
       )();
     },

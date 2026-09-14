@@ -17,8 +17,9 @@ Abra http://localhost:5175. Vite encaminha API e WebSocket ao servidor na porta 
 
 ## Organização do código
 
-- `shared/game.ts` aplica comandos e regras. Servidor e treino usam o mesmo motor; a arena apenas apresenta o resultado. `shared/model.ts` define estado, comandos e eventos; `shared/cards.ts` tipa e valida o catálogo ao carregar.
-- `shared/visibility.ts` prepara a visão de cada jogador ou espectador, ocultando mãos, baralhos e peças secretas antes da transmissão.
+- `shared/game.ts` é a entrada dos comandos. As regras ficam em `shared/rules/`: `board.ts` para caminhos e movimentos, `combat.ts` para combate, `spells.ts` para magias e habilidades, `turns.ts` para fases, `units.ts` para cura, invocação e morte, `setup.ts` para criação da partida e `core.ts` para operações compartilhadas. Servidor e treino usam o mesmo motor.
+- `shared/model.ts` define o estado completo, comandos, eventos e efeitos nas unidades. `shared/room.ts` distingue lobby, partida salva e visão pública; `shared/protocol.ts` define os contratos HTTP e WebSocket. `shared/cards.ts` tipa e valida o catálogo ao carregar.
+- `shared/visibility.ts` prepara a visão de cada jogador ou espectador, ocultando mãos, baralhos e peças secretas antes da transmissão. A arena recebe `GameView`; somente o motor recebe `Game`. Uma peça oculta tem atributos `null`, inclusive nas cópias históricas dos eventos.
 - `client/index.tsx` reúne navegação, baralhos, lobby e treino. `client/match-interaction.tsx` concentra seleção, arraste, alvos e controles contextuais. `client/card.tsx` apresenta cartas e leitura ampliada.
 - `client/arena.tsx` controla a interface da partida; `client/arena-scene.ts` desenha e anima o tabuleiro PixiJS. `client/network.ts` mantém a conexão da sala e aplica a mesma verificação de revisão às respostas HTTP e WebSocket.
 - `server/index.ts` trata salas e baralhos. `server/main.ts` fornece HTTP, sessões e WebSocket; `server/database.ts` concentra a persistência SQLite.
@@ -77,6 +78,8 @@ node scripts/readability-smoke.mjs
 
 O comando `check` verifica formatação, lint e tipos, depois executa os testes de regras, catálogo, privacidade, salas, SQLite, HTTP e WebSocket. O CI executa o mesmo comando.
 
+`tests/interactions.test.ts` cobre mortes simultâneas, ressurreição, respostas na pilha, alvos removidos, efeitos temporários e privacidade dos eventos. `tests/recovery.test.ts` inicia um servidor em outro processo, joga um movimento, encerra o processo com `SIGKILL`, reabre o mesmo SQLite e verifica sessões, visão do espectador, rejeição de comandos antigos e continuação da partida. Usa um diretório temporário e remove os dados ao terminar.
+
 ```sh
 npm run format       # Aplica Prettier ao código, estilos e documentação
 npm run format:check # Verifica sem alterar arquivos
@@ -84,9 +87,9 @@ npm run lint         # ESLint para JavaScript e TypeScript
 npm run lint:fix     # Aplica as correções automáticas disponíveis
 ```
 
-As configurações ficam em `.prettierrc.json` e `eslint.config.mjs`. O Prettier cuida da formatação; o ESLint usa as regras recomendadas para detectar erros e código desnecessário. Campos dinâmicos de estados e visões de sala ainda podem usar `any`. Assets, catálogo original, arquivos gerados e dados locais ficam fora da formatação. Não há hooks de commit ou ferramentas adicionais para executar esses comandos.
+As configurações ficam em `.prettierrc.json` e `eslint.config.mjs`. O Prettier cuida da formatação; o ESLint usa as regras recomendadas para detectar erros e código desnecessário. O lint proíbe `any` no cliente, servidor e motor; fixtures de teste podem representar entradas malformadas. Assets, catálogo original, arquivos gerados e dados locais ficam fora da formatação. Não há hooks de commit ou ferramentas adicionais para executar esses comandos.
 
-`test:browser` compila a aplicação e inicia um servidor isolado na porta 3187 com SQLite em memória. Exercita a preparação em quatro tamanhos de tela e uma partida com dois jogadores e espectador, incluindo resposta HTTP atrasada, reconexão, invocação e movimento por arraste. `test:multiplayer` executa apenas essa segunda parte. Falhas deixam capturas e traces em `.sited/playwright-results/` e um relatório em `.sited/playwright-report/`. O GitHub Actions executa essas verificações a cada push e pull request.
+`test:browser` compila a aplicação e inicia um servidor isolado na porta 3187 com SQLite em memória. Exercita a preparação e a leitura em quatro tamanhos de tela. O multiplayer tem cenários separados para organizar o lobby, receber uma resposta HTTP atrasada, reconectar um espectador e arrastar cartas e peças. Cada cenário renderiza uma única arena; os demais participantes usam a API real. `test:multiplayer` executa somente esses cenários. Falhas deixam capturas e traces em `.sited/playwright-results/` e um relatório em `.sited/playwright-report/`. Os testes de navegador são executados localmente ou contra um deploy com `TEST_URL`; não rodam no CI. O GitHub Actions executa apenas `npm run check` a cada push e pull request.
 
 Os scripts adicionais de magia, combate e revisão visual usam o servidor de desenvolvimento já aberto e salvam capturas em `.sited/qa/`. `TEST_URL` permite direcionar os testes de navegador e esses scripts a outro servidor, inclusive ao deploy. Eles criam perfis e salas de QA nesse servidor.
 

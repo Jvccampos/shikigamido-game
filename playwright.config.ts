@@ -2,8 +2,7 @@ import { defineConfig } from "@playwright/test";
 const baseURL = process.env.TEST_URL || "http://127.0.0.1:3187";
 export default defineConfig({
   testDir: "tests/browser",
-  // Three PixiJS views render in software on hosted CI runners.
-  timeout: process.env.CI ? 180000 : 90000,
+  timeout: 90000,
   expect: { timeout: 10000 },
   workers: 1,
   forbidOnly: !!process.env.CI,

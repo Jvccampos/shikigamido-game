@@ -1,3 +1,5 @@
+import type { GameView, UnitView } from "../shared/room.js";
+import type { GameEvent } from "../shared/model.js";
 import { layout } from "../shared/arena-layout.js";
 export { layout } from "../shared/arena-layout.js";
 import {
@@ -9,28 +11,23 @@ import {
   Assets,
   Texture,
   Rectangle,
+  type Ticker,
 } from "pixi.js";
-import {
-  connected,
-  cards as catalog,
-  type Game,
-  type GameEvent,
-  type Unit,
-} from "../shared/game.js";
+import { connected, cards as catalog } from "../shared/game.js";
 export type Point = { x: number; y: number };
 export type ArenaState = {
-  game: Game;
+  game: GameView;
   seat: number;
   highlights: Point[];
   selectedId?: string;
   targets: string[];
   startY: number;
-  onCell: (x: number, y: number, u?: Unit) => void;
-  onSelect: (u: Unit) => void;
-  onDrop: (x: number, y: number, u?: Unit, unitId?: string) => void;
-  onInspect: (u: Unit) => void;
-  onHover: (u: Unit | null) => void;
-  onPresentation: (label: string | null, units?: Unit[]) => void;
+  onCell: (x: number, y: number, u?: UnitView) => void;
+  onSelect: (u: UnitView) => void;
+  onDrop: (x: number, y: number, u?: UnitView, unitId?: string) => void;
+  onInspect: (u: UnitView) => void;
+  onHover: (u: UnitView | null) => void;
+  onPresentation: (label: string | null, units?: UnitView[]) => void;
 };
 const nodes = [
   ...Array.from({ length: 49 }, (_, i) => ({ x: i % 7, y: Math.floor(i / 7) })),
@@ -58,7 +55,7 @@ export class ArenaScene {
   private fx = new Container();
   private units = new Map<
     string,
-    { view: Container; x: number; y: number; hp: number; image: string }
+    { view: Container; x: number; y: number; hp: number | null; image: string }
   >();
   private sparks: { view: Graphics; vx: number; vy: number; life: number }[] =
     [];
@@ -77,7 +74,7 @@ export class ArenaScene {
   private unitLayout = "";
   private eventIds = new Set<string>();
   private eventBaseline = false;
-  private queue: GameEvent[] = [];
+  private queue: GameEvent<UnitView>[] = [];
   private presenting = false;
   private activeViews = new Set<string>();
   private cancels = new Set<() => void>();
@@ -279,7 +276,7 @@ export class ArenaScene {
       item.y = p.y;
       if (resized) item.view.position.set(p.x, p.y);
       if (item.image !== stamp) {
-        if (item.hp > u.hp)
+        if (item.hp !== null && u.hp !== null && item.hp > u.hp)
           this.damage(item.view.x, item.view.y, item.hp - u.hp);
         item.hp = u.hp;
         item.image = stamp;
@@ -435,7 +432,7 @@ export class ArenaScene {
       this.board.addChild(node);
     }
   }
-  private drawUnit(view: Container, u: Unit, size: number) {
+  private drawUnit(view: Container, u: UnitView, size: number) {
     this.clear(view);
     view.eventMode = "static";
     view.cursor = u.owner === this.state.seat ? "grab" : "pointer";
@@ -548,7 +545,13 @@ export class ArenaScene {
       const t = label(
         value === null ? "?" : String(value),
         Math.max(10, size * 0.23),
-        value < bases[i] ? 0xff9285 : value > bases[i] ? 0x93edaf : 0xf2e4c0,
+        value === null || bases[i] === null
+          ? 0xf2e4c0
+          : value < bases[i]
+            ? 0xff9285
+            : value > bases[i]
+              ? 0x93edaf
+              : 0xf2e4c0,
       );
       t.anchor.set(0.5);
       t.position.set((i - 1) * w * 0.31, h / 2 - 7);
@@ -621,7 +624,7 @@ export class ArenaScene {
         this.cancels.delete(finish);
         resolve();
       };
-      const step = (t: any) => {
+      const step = (t: Ticker) => {
         elapsed += t.deltaMS;
         frame(Math.min(1, elapsed / ms));
         if (elapsed >= ms) finish();
@@ -630,7 +633,7 @@ export class ArenaScene {
       this.app.ticker.add(step);
     });
   }
-  private ensureUnit(u: Unit) {
+  private ensureUnit(u: UnitView) {
     let item = this.units.get(u.id);
     const l = layout(this.app.screen.width, this.app.screen.height),
       p = l.point(u.x, u.y);
@@ -817,25 +820,29 @@ export class ArenaScene {
             .stroke({ color, width: 4, alpha: impact * 0.85 });
           if (p > 0.27 && !hitA) {
             hitA = true;
-            di.hp = Math.max(0, d.hp - e.attackDamage);
+            di.hp = d.hp === null ? null : Math.max(0, d.hp - e.attackDamage);
             if (e.attackDamage > 0) this.damage(dp.x, dp.y, e.attackDamage);
             this.burst(dp.x, dp.y, color, 22);
             this.drawUnit(
               di.view,
-              { ...d, hp: Math.max(0, d.hp - e.attackDamage) },
+              d.hp === null
+                ? d
+                : { ...d, hp: Math.max(0, d.hp - e.attackDamage) },
               Math.min(l.dx * 0.76, l.dy * 0.9),
             );
           }
           if (p > (quick ? 0.65 : 0.27) && !hitD) {
             hitD = true;
-            ai.hp = Math.max(0, a.hp - e.defenseDamage);
+            ai.hp = a.hp === null ? null : Math.max(0, a.hp - e.defenseDamage);
             if (e.defenseDamage > 0) {
               this.damage(ap.x, ap.y, e.defenseDamage);
               this.burst(ap.x, ap.y, color, 15);
             }
             this.drawUnit(
               ai.view,
-              { ...a, hp: Math.max(0, a.hp - e.defenseDamage) },
+              a.hp === null
+                ? a
+                : { ...a, hp: Math.max(0, a.hp - e.defenseDamage) },
               Math.min(l.dx * 0.76, l.dy * 0.9),
             );
           }
@@ -885,7 +892,13 @@ export class ArenaScene {
         });
         if (this.destroyed) return;
         ring.destroy();
-        if (target && e.afterTarget && e.beforeTarget) {
+        if (
+          target &&
+          e.afterTarget &&
+          e.beforeTarget &&
+          e.afterTarget.hp !== null &&
+          e.beforeTarget.hp !== null
+        ) {
           const diff = e.afterTarget.hp - e.beforeTarget.hp;
           if (diff !== 0) this.damage(point.x, point.y, -diff);
           target.hp = e.afterTarget.hp;
@@ -934,7 +947,7 @@ export class ArenaScene {
     t.position.set(x, y - 20);
     this.fx.addChild(t);
     let life = 70;
-    const update = (dt: any) => {
+    const update = (dt: Ticker) => {
       life -= dt.deltaTime;
       t.y -= dt.deltaTime * 0.5;
       t.alpha = Math.min(1, life / 25);

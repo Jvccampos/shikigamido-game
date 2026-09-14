@@ -1,4 +1,13 @@
-function hiddenUnit(u: any) {
+import type { Game, GameEvent, Player, Seat, Unit } from "./model.js";
+import type {
+  GameView,
+  HiddenUnit,
+  PublicRoom,
+  Room,
+  UnitView,
+} from "./room.js";
+
+function hiddenUnit(u: Unit): HiddenUnit {
   return {
     id: u.id,
     owner: u.owner,
@@ -6,43 +15,44 @@ function hiddenUnit(u: any) {
     y: u.y,
     kind: "unit",
     cardId: "hidden",
+    hp: null,
+    maxHp: null,
+    attack: null,
+    speed: null,
     statuses: { hidden: true },
   };
 }
-export function publicRoom(room: any, userId: string | null) {
-  if (!room) return null;
-  const r = structuredClone(room),
-    g = r.state;
-  r.members = (Array.isArray(r.spectators) ? r.spectators : [])
-    .filter((m: any) => m && typeof m === "object")
-    .map((m: any) => ({
-      id: m.id,
-      name: m.name,
-      deckName: m.deckName,
-      element: m.element,
-      hasDeck: !!m.deckId,
-    }));
-  delete r.spectators;
-  delete r.hostDeckId;
-  delete r.guestDeckId;
-  r.seat = Array.isArray(g?.players)
-    ? g.players.findIndex((p: any) => p.id === userId)
-    : -1;
-  if (!Array.isArray(g?.players)) return r;
-  // Random state can reveal future draws; it never belongs in a player response.
+export function publicGame(game: Game, viewer: Seat | -1): GameView {
+  // Clone before redaction so no public view can mutate authoritative state.
+  const g = structuredClone(game);
   delete g.random;
-  const viewer = r.seat;
-  g.players = g.players.map((p: any, i: number) => {
-    const value = {
-      ...p,
-      handCount: p.hand.length,
-      libraryCount: p.library.length,
-    };
-    value.summonableDeck =
+  const conceal = (u: Unit): UnitView =>
+    u.statuses?.hidden && u.owner !== viewer ? hiddenUnit(u) : u;
+  const event = (e: GameEvent): GameEvent<UnitView> => {
+    if (e.type === "combat")
+      return {
+        ...e,
+        attacker: conceal(e.attacker),
+        defender: conceal(e.defender),
+      };
+    if (e.type === "spell")
+      return {
+        ...e,
+        beforeTarget: e.beforeTarget && conceal(e.beforeTarget),
+        afterTarget: e.afterTarget && conceal(e.afterTarget),
+      };
+    if ("unit" in e) return { ...e, unit: conceal(e.unit) };
+    return e;
+  };
+  const player = (p: Player, i: number) => ({
+    ...p,
+    handCount: p.hand.length,
+    libraryCount: p.library.length,
+    summonableDeck:
       i === viewer
         ? [
             ...new Set(
-              p.library.filter((id: string) =>
+              p.library.filter((id) =>
                 [
                   "kabuto-o-shikigami-besouro",
                   "anubis-o-gato-da-morte",
@@ -50,62 +60,73 @@ export function publicRoom(room: any, userId: string | null) {
               ),
             ),
           ]
-        : [];
-    value.library = [];
-    if (i !== viewer) value.hand = [];
-    return value;
+        : [],
+    library: [],
+    hand: i === viewer ? p.hand : [],
   });
-  const hidden = new Set(
-    g.units
-      .filter((u: any) => u.statuses?.hidden && u.owner !== viewer)
-      .map((u: any) => u.id),
-  );
-  const conceal = (u: any) =>
-    hidden.has(u.id)
-      ? {
-          ...hiddenUnit(u),
-          hp: null,
-          maxHp: null,
-          attack: null,
-          speed: null,
-        }
-      : u;
-  g.units = g.units.map((u: any) =>
-    g.setup && u.kind === "omionji" && u.owner !== viewer
-      ? { ...u, y: u.owner ? 4 : 2 }
-      : conceal(u),
-  );
-  g.pending = (g.pending || []).map((p: any) =>
-    p.unit.owner === viewer
-      ? p
-      : {
-          returnTurn: p.returnTurn,
-          unit: { owner: p.unit.owner, cardId: "hidden" },
-        },
-  );
-  const concealSnapshot = (u: any) =>
-    u?.statuses?.hidden && u.owner !== viewer ? hiddenUnit(u) : u;
-  g.events = (g.events || [])
-    .map((e: any) => ({
-      ...e,
-      beforeTarget: concealSnapshot(e.beforeTarget),
-      afterTarget: concealSnapshot(e.afterTarget),
-    }))
-    .map((e: any) =>
-      e.unit?.statuses?.hidden && e.unit.owner !== viewer
-        ? {
-            ...e,
-            unit: hiddenUnit(e.unit),
-            cardId: undefined,
-          }
-        : e,
-    );
-  if (g.centerPending)
-    g.centerChoices = Object.fromEntries(
-      Object.entries(g.centerChoices || {}).map(([key, value]) => [
-        key,
-        Number(key) === viewer ? value : !!value,
-      ]),
-    );
-  return r;
+  const players: GameView["players"] = [
+    player(g.players[0], 0),
+    player(g.players[1], 1),
+  ];
+  return {
+    ...g,
+    players,
+    units: g.units.map((u) =>
+      g.setup && u.kind === "omionji" && u.owner !== viewer
+        ? { ...u, y: u.owner ? 4 : 2 }
+        : conceal(u),
+    ),
+    pending: g.pending.map((p) =>
+      p.unit.owner === viewer
+        ? p
+        : {
+            returnTurn: p.returnTurn,
+            unit: { owner: p.unit.owner, cardId: "hidden" },
+          },
+    ),
+    events: (g.events || []).map(event),
+    centerChoices: g.centerPending
+      ? Object.fromEntries(
+          Object.entries(g.centerChoices || {}).map(([key, value]) => [
+            key,
+            Number(key) === viewer ? value : !!value,
+          ]),
+        )
+      : g.centerChoices,
+  };
+}
+export function publicRoom(
+  room: Room | null | undefined,
+  userId: string | null,
+): PublicRoom | null {
+  if (!room) return null;
+  const info = {
+    code: room.code,
+    hostId: room.hostId,
+    guestId: room.guestId,
+    members: room.spectators
+      .filter((m) => m && typeof m === "object")
+      .map((m) => ({
+        id: m.id,
+        name: m.name,
+        deckName: m.deckName,
+        element: m.element,
+        hasDeck: !!m.deckId,
+      })),
+  };
+  if (room.status === "waiting")
+    return {
+      ...info,
+      status: "waiting",
+      state: structuredClone(room.state),
+      seat: -1,
+    };
+  const seat = room.state.players.findIndex((p) => p.id === userId) as
+    Seat | -1;
+  return {
+    ...info,
+    status: room.status,
+    state: publicGame(room.state, seat),
+    seat,
+  };
 }

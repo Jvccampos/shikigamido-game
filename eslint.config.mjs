@@ -14,13 +14,17 @@ export default defineConfig(
     files: ["**/*.{ts,tsx}"],
     extends: [tseslint.configs.recommended],
     rules: {
-      // Persisted room views and card statuses still have dynamic fields.
+      // Existing test fixtures deliberately construct malformed payloads.
       "@typescript-eslint/no-explicit-any": "off",
       "@typescript-eslint/no-unused-vars": [
         "error",
         { argsIgnorePattern: "^_" },
       ],
     },
+  },
+  {
+    files: ["client/**/*.{ts,tsx}", "server/**/*.ts", "shared/**/*.ts"],
+    rules: { "@typescript-eslint/no-explicit-any": "error" },
   },
   {
     files: [

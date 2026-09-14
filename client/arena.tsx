@@ -1,18 +1,14 @@
+import type { Card } from "../shared/cards.js";
+import type { GameView, UnitView } from "../shared/room.js";
 import type { Selection } from "./match-interaction.js";
 import { OpeningHand, DiscardChoice } from "./choices.js";
 import { Journal } from "./journal.js";
 import { useEffect, useRef, useState } from "preact/hooks";
 import type { ComponentChildren } from "preact";
 import { ArenaScene, type Point } from "./arena-scene.js";
-import {
-  cards,
-  phases,
-  type Game,
-  type Unit,
-  type Cmd,
-} from "../shared/game.js";
+import { cards, phases, type Cmd } from "../shared/game.js";
 type Props = {
-  game: Game;
+  game: GameView;
   seat: number;
   code: string;
   names: string[];
@@ -26,11 +22,11 @@ type Props = {
   onExit: () => void;
   onAct: (c: Cmd) => void;
   onHand: (index: number) => void;
-  onCell: (x: number, y: number, u?: Unit) => void;
-  onSelect: (u: Unit) => void;
+  onCell: (x: number, y: number, u?: UnitView) => void;
+  onSelect: (u: UnitView) => void;
   onDrag: (data: Selection | null) => void;
-  onDrop: (x: number, y: number, u?: Unit, data?: Selection | null) => void;
-  onFocus: (card: any, unit?: Unit) => void;
+  onDrop: (x: number, y: number, u?: UnitView, data?: Selection | null) => void;
+  onFocus: (card: Card | undefined, unit?: UnitView) => void;
   onStartY: (y: number) => void;
   onMulligan: () => void;
   onClear: () => void;
@@ -56,14 +52,14 @@ export function Arena(p: Props) {
     latest = useRef(p);
   latest.current = p;
   const [ready, setReady] = useState(false),
-    [hover, setHover] = useState<Unit | null>(null),
+    [hover, setHover] = useState<UnitView | null>(null),
     [handHover, setHandHover] = useState<number | null>(null),
     [drawer, setDrawer] = useState(false),
     [menu, setMenu] = useState(false),
     [discardOpen, setDiscardOpen] = useState(false),
     [drawing, setDrawing] = useState(false),
     [presenting, setPresenting] = useState<string | null>(null),
-    [visibleUnits, setVisibleUnits] = useState<Unit[]>(p.game.units),
+    [visibleUnits, setVisibleUnits] = useState<UnitView[]>(p.game.units),
     [settledRevision, setSettledRevision] = useState(p.game.revision),
     [log, setLog] = useState(false),
     [sound, setSound] = useState(
@@ -76,7 +72,7 @@ export function Arena(p: Props) {
       moving: boolean;
     } | null>(null),
     [canvasError, setCanvasError] = useState("");
-  const hoveredRef = useRef<Unit | null>(null),
+  const hoveredRef = useRef<UnitView | null>(null),
     handHoverRef = useRef<number | null>(null);
   const dragRef = useRef(dragging);
   dragRef.current = dragging;
@@ -96,7 +92,7 @@ export function Arena(p: Props) {
   useEffect(() => {
     if (!me) return;
     const before = previousHand.current,
-      library = (me as any).libraryCount ?? me.library.length;
+      library = me.libraryCount ?? me.library.length;
     previousHand.current = { count: me.hand.length, library, turn: g.turn };
     if (
       before &&
@@ -143,19 +139,19 @@ export function Arena(p: Props) {
       selectedId: v.selected?.unitId,
       targets: v.targets,
       startY: v.startY,
-      onCell: (x: number, y: number, u?: Unit) => v.onCell(x, y, u),
-      onSelect: (u: Unit) => v.onSelect(u),
-      onDrop: (x: number, y: number, u?: Unit, id?: string) =>
+      onCell: (x: number, y: number, u?: UnitView) => v.onCell(x, y, u),
+      onSelect: (u: UnitView) => v.onSelect(u),
+      onDrop: (x: number, y: number, u?: UnitView, id?: string) =>
         v.onDrop(x, y, u, id ? { kind: "unit", unitId: id } : undefined),
-      onPresentation: (label: string | null, units?: Unit[]) => {
+      onPresentation: (label: string | null, units?: UnitView[]) => {
         setPresenting(label);
         if (units) {
           setVisibleUnits(units);
           setSettledRevision(latest.current.game.revision);
         }
       },
-      onInspect: (u: Unit) => v.onFocus(cards.get(u.cardId), u),
-      onHover: (u: Unit | null) => {
+      onInspect: (u: UnitView) => v.onFocus(cards.get(u.cardId), u),
+      onHover: (u: UnitView | null) => {
         hoveredRef.current = u;
         if (u) handHoverRef.current = null;
         setHover(u);
@@ -302,7 +298,7 @@ export function Arena(p: Props) {
         (u) => u.kind === "omionji" && u.owner === s,
       ),
       leader = cards.get(`omionji-${g.players[s].element}`),
-      v = g.players[s] as any;
+      v = g.players[s];
     return (
       <div className={`duelist ${position} side-${s}`}>
         <button
@@ -505,13 +501,12 @@ export function Arena(p: Props) {
       </div>
       <div
         className="opponent-hand"
-        aria-label={`${(g.players[opponent] as any).handCount ?? g.players[opponent].hand.length} cartas na mão do oponente`}
+        aria-label={`${g.players[opponent].handCount ?? g.players[opponent].hand.length} cartas na mão do oponente`}
       >
         {Array.from(
           {
             length: Math.min(
-              (g.players[opponent] as any).handCount ??
-                g.players[opponent].hand.length,
+              g.players[opponent].handCount ?? g.players[opponent].hand.length,
               12,
             ),
           },
@@ -525,7 +520,7 @@ export function Arena(p: Props) {
       <button
         className="arena-deck"
         onClick={() =>
-          (me as any)?.summonableDeck?.length && g.phase === 1
+          me?.summonableDeck?.length && g.phase === 1
             ? setDrawer(true)
             : setLog(!log)
         }
@@ -534,7 +529,7 @@ export function Arena(p: Props) {
         <i />
         <i />
         <span>式</span>
-        <b>{me ? ((me as any).libraryCount ?? me.library.length) : "▤"}</b>
+        <b>{me ? (me.libraryCount ?? me.library.length) : "▤"}</b>
       </button>
       {!g.setup && !g.centerPending && !done && (
         <button

@@ -1,19 +1,22 @@
+import type { Card } from "../shared/cards.js";
+import type { GameView, UnitView } from "../shared/room.js";
+import type { GameEvent } from "../shared/model.js";
 import { useState } from "preact/hooks";
-import { cards, phases, type Game, type GameEvent } from "../shared/game.js";
-const cell = (u: any) =>
-  !u
+import { cards, phases } from "../shared/game.js";
+const cell = (u: { x?: number; y?: number } | undefined) =>
+  !u || u.x === undefined || u.y === undefined
     ? ""
     : u.x < 0 || u.y > 6
       ? "Portal sul"
       : u.x > 6 || u.y < 0
         ? "Portal norte"
-        : `${String.fromCharCode(65 + u.x)}${u.y + 1}`;
+        : `${String.fromCharCode(65 + u.x)}${(u.y ?? 0) + 1}`;
 export function Journal(p: {
-  game: Game;
+  game: GameView;
   names: string[];
   seat: number;
   onClose: () => void;
-  onFocus: (c: any) => void;
+  onFocus: (c: Card | undefined) => void;
 }) {
   const [tab, setTab] = useState("actions"),
     [filter, setFilter] = useState("all"),
@@ -52,7 +55,7 @@ export function Journal(p: {
       <span className="event-icon">{id === "hidden" ? "?" : "✦"}</span>
     );
   }
-  function event(e: GameEvent) {
+  function event(e: GameEvent<UnitView>) {
     const unit = "unit" in e ? e.unit : undefined,
       cardId = "cardId" in e ? e.cardId : unit?.cardId,
       seat = "seat" in e ? e.seat : unit?.owner;

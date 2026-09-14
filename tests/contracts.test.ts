@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { apply, freshGame, type Cmd } from "../shared/game.js";
 import { botCommand, starterDeck } from "../shared/practice.js";
 import { isCommand } from "../shared/model.js";
-import { publicRoom } from "../shared/visibility.js";
+import { publicGame } from "../shared/visibility.js";
 
 const game = (seed = 1729) =>
   freshGame("a", "b", starterDeck("agua"), starterDeck("fogo"), seed);
@@ -63,9 +63,9 @@ test("seeded matches reproduce draws, combat, curse paths and event IDs", () => 
 
 test("seeded randomness is private, and live matches have no predictable test seed", () => {
   const g = game();
-  for (const viewer of ["a", "b", null]) {
-    const visible = publicRoom({ state: g, spectators: [] }, viewer);
-    assert.equal(visible.state.random, undefined);
+  for (const viewer of [0, 1, -1] as const) {
+    const visible = publicGame(g, viewer);
+    assert.equal(Object.hasOwn(visible, "random"), false);
   }
   assert(g.random);
   assert.equal(

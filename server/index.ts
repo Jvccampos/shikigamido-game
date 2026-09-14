@@ -1,20 +1,31 @@
+import type { Queries, Mutations } from "../shared/protocol.js";
+import type { Room, MutationResponse } from "../shared/room.js";
+import type { DeckInput } from "../shared/model.js";
 import { isCommand } from "../shared/model.js";
 import type { Context } from "./database.js";
-import {
-  validateDeck,
-  freshGame,
-  apply,
-  type Game,
-  type Seat,
-} from "../shared/game.js";
+import { validateDeck, freshGame, apply, type Seat } from "../shared/game.js";
 import { publicRoom } from "../shared/visibility.js";
 const clean = (v: unknown, n = 80) =>
   typeof v === "string" ? v.trim().slice(0, n) : "";
-const members = (r: any): any[] =>
+const members = (r: Room) =>
   Array.isArray(r.spectators)
-    ? r.spectators.filter((m: any) => m && typeof m === "object")
+    ? r.spectators.filter((m) => m && typeof m === "object")
     : [];
-const name = (ctx: any) => clean(ctx.auth.displayName) || "Jogador";
+type Service = {
+  queries: {
+    [K in keyof Queries]: (
+      ctx: Context,
+      ...args: Parameters<Queries[K]>
+    ) => ReturnType<Queries[K]>;
+  };
+  mutations: {
+    [K in keyof Mutations]: (
+      ctx: Context,
+      ...args: Parameters<Mutations[K]>
+    ) => ReturnType<Mutations[K]>;
+  };
+};
+const name = (ctx: Context) => clean(ctx.auth.displayName) || "Jogador";
 export default {
   queries: {
     myDecks: (ctx: Context) =>
@@ -33,12 +44,12 @@ export default {
               .orderBy("updatedAt", "desc")
               .all()
               .filter(
-                (r: any) =>
+                (r) =>
                   r.hostId === ctx.auth.userId ||
                   members(r).some((m) => m.id === ctx.auth.userId),
               )
               .slice(0, 12)
-              .map((r: any) => ({ code: r.code, status: r.status })),
+              .map((r) => ({ code: r.code, status: r.status })),
           )
         : [],
     room: (ctx: Context, c: unknown) => {
@@ -51,12 +62,15 @@ export default {
     },
   },
   mutations: {
-    saveDeck: (ctx: Context, input: any) => {
+    saveDeck: (ctx: Context, raw: unknown): MutationResponse => {
       const id = ctx.auth.userId;
       if (!id)
         return { error: "Entre na sua conta para salvar seus baralhos." };
-      const error = validateDeck(input);
+      const error = validateDeck(raw);
       if (error) return { error };
+      const input = raw as DeckInput & { id?: unknown };
+      if (input.id !== undefined && typeof input.id !== "string")
+        return { error: "Baralho inválido." };
       return ctx.db.transaction((tx) => {
         const values = {
           ownerId: id,
@@ -65,7 +79,7 @@ export default {
           omionji: `omionji-${input.element}`,
           cardIds: input.cardIds,
         };
-        if (input.id) {
+        if (typeof input.id === "string" && input.id) {
           if (!tx.decks.where("ownerId", id).get(input.id))
             return { error: "Baralho não encontrado." };
           return { deck: tx.decks.update(input.id, values) };
@@ -132,7 +146,7 @@ export default {
       if (!id && spectator !== true)
         return { error: "Entre na sua conta para jogar." };
       return ctx.db.transaction((tx) => {
-        const r: any = tx.rooms.where("code", k).all()[0];
+        const r = tx.rooms.where("code", k).all()[0];
         if (!r) return { error: "Sala não encontrada." };
         if (!id) return { room: publicRoom(r, null) };
         const list = members(r),
@@ -143,10 +157,10 @@ export default {
           typeof deckId === "string"
             ? tx.decks.where("ownerId", id).get(deckId)
             : null;
-        if (spectator !== true && (!deck || validateDeck(deck)))
-          return {
-            error: deck ? validateDeck(deck) : "Selecione um baralho válido.",
-          };
+        const deckError = deck
+          ? validateDeck(deck)
+          : "Selecione um baralho válido.";
+        if (spectator !== true && deckError) return { error: deckError };
         const member = {
           id,
           name: name(ctx),
@@ -164,15 +178,22 @@ export default {
         };
       });
     },
-    lobbyCommand: (ctx: Context, c: unknown, raw: any) => {
+    lobbyCommand: (
+      ctx: Context,
+      c: unknown,
+      value: unknown,
+    ): MutationResponse => {
+      const raw = value as {
+        type?: unknown;
+        seat?: unknown;
+        userId?: unknown;
+      } | null;
       const id = ctx.auth.userId;
       if (!id) return { error: "Entre na sua conta para continuar." };
       if (!raw || typeof raw !== "object")
         return { error: "Comando inválido." };
       return ctx.db.transaction((tx) => {
-        const r: any = tx.rooms
-          .where("code", clean(c, 6).toUpperCase())
-          .all()[0];
+        const r = tx.rooms.where("code", clean(c, 6).toUpperCase()).all()[0];
         if (!r) return { error: "Sala não encontrada." };
         if (r.status !== "waiting") return { error: "A batalha já começou." };
         if (r.hostId !== id)
@@ -181,9 +202,10 @@ export default {
         const state = structuredClone(r.state);
         if (raw.type === "seat") {
           if (
-            ![0, 1].includes(raw.seat) ||
+            (raw.seat !== 0 && raw.seat !== 1) ||
             (raw.userId !== null &&
-              !list.some((m) => m.id === raw.userId && m.deckId))
+              (typeof raw.userId !== "string" ||
+                !list.some((m) => m.id === raw.userId && m.deckId)))
           )
             return { error: "Escolha alguém com um baralho." };
           const seats = state.seats || [id, null];
@@ -199,17 +221,19 @@ export default {
           return { error: "Escolha dois jogadores diferentes." };
         const a = list.find((m) => m.id === seats[0]),
           b = list.find((m) => m.id === seats[1]);
-        const da = a ? tx.decks.where("ownerId", a.id).get(a.deckId) : null,
-          db = b ? tx.decks.where("ownerId", b.id).get(b.deckId) : null;
+        const da = a?.deckId
+            ? tx.decks.where("ownerId", a.id).get(a.deckId)
+            : null,
+          db = b?.deckId ? tx.decks.where("ownerId", b.id).get(b.deckId) : null;
         if (!da || !db)
           return { error: "Os dois jogadores precisam selecionar baralhos." };
         const error = validateDeck(da) || validateDeck(db);
         if (error) return { error };
-        const game = freshGame(a.id, b.id, da, db);
+        const game = freshGame(seats[0], seats[1], da, db);
         return {
           room: publicRoom(
             tx.rooms.update(r.id, {
-              guestId: b.id,
+              guestId: seats[1],
               guestDeckId: db.id,
               status: "playing",
               state: game,
@@ -224,18 +248,16 @@ export default {
       c: unknown,
       raw: unknown,
       revision: unknown,
-    ) => {
+    ): MutationResponse => {
       const id = ctx.auth.userId;
       if (!id) return { error: "Entre na sua conta para jogar." };
       if (!isCommand(raw)) return { error: "Comando inválido." };
       return ctx.db.transaction((tx) => {
-        const r: any = tx.rooms
-          .where("code", clean(c, 6).toUpperCase())
-          .all()[0];
+        const r = tx.rooms.where("code", clean(c, 6).toUpperCase()).all()[0];
         if (!r) return { error: "Sala não encontrada." };
         if (r.status !== "playing")
           return { error: "Essa sala não está em batalha." };
-        const g = structuredClone(r.state) as Game;
+        const g = structuredClone(r.state);
         const seat = g.players.findIndex((p) => p.id === id);
         if (seat < 0) return { error: "Espectadores não enviam comandos." };
         const cmd = raw;
@@ -275,4 +297,4 @@ export default {
       });
     },
   },
-};
+} satisfies Service;

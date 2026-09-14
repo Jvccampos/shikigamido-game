@@ -105,5 +105,7 @@ test("simultaneous setup confirmations do not require a second click", (t) => {
   f.call("a", "lobbyCommand", f.code, { type: "start" });
   assert(!f.call("a", "gameCommand", f.code, { type: "ready", y: 2 }, 0).error);
   assert(!f.call("b", "gameCommand", f.code, { type: "ready", y: 4 }, 0).error);
-  assert.equal(f.snapshot().rooms[0].state.setup, false);
+  const room = f.snapshot().rooms[0];
+  assert.equal(room.status, "playing");
+  assert.equal(room.state.setup, false);
 });

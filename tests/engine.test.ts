@@ -13,7 +13,7 @@ import {
   type Unit,
   type Seat,
 } from "../shared/game.js";
-import { publicRoom } from "../shared/visibility.js";
+import { publicGame } from "../shared/visibility.js";
 import { starterDeck, botCommand } from "../shared/practice.js";
 const game = (element = "agua") => {
   const g = freshGame("a", "b", starterDeck(element), starterDeck("fogo"));
@@ -303,7 +303,7 @@ test("copy index discards only chosen duplicate", () => {
 test("room projection hides libraries and opponents hands on every seat", () => {
   const g = game();
   for (const id of ["a", "b", null]) {
-    const r = publicRoom({ state: g, spectators: [], hostId: "a" }, id);
+    const r = { state: publicGame(g, id === "a" ? 0 : id === "b" ? 1 : -1) };
     for (const [s, p] of r.state.players.entries()) {
       assert.deepEqual(p.library, []);
       assert.equal(p.libraryCount, 24);
@@ -326,8 +326,9 @@ test("spectator receives no private summon identity through event history", () =
       unit: structuredClone(u),
     },
   ];
-  const r = publicRoom({ state: g, spectators: [] }, null);
-  assert.equal(r.state.units.at(-1).cardId, "hidden");
+  const r = { state: publicGame(g, -1) };
+  assert.equal(r.state.units.at(-1)!.cardId, "hidden");
+  assert(r.state.events[0].type === "summon");
   assert.equal(r.state.events[0].unit.cardId, "hidden");
 });
 test("concession is allowed without priority", () => {
@@ -378,7 +379,8 @@ test("a hidden summon stays hidden in history even after removal", () => {
   g.events = [
     { id: "e", turn: g.turn, phase: g.phase, type: "summon", unit: u },
   ];
-  const r = publicRoom({ state: g, spectators: [] }, null);
+  const r = { state: publicGame(g, -1) };
+  assert(r.state.events[0].type === "summon");
   assert.equal(r.state.events[0].unit.cardId, "hidden");
 });
 test("Chifre de Fogo offers an optional post-combat step", () => {
@@ -524,11 +526,14 @@ test("hidden cards stay private in movement, destruction and spell snapshots", (
     beforeTarget: structuredClone(u),
     afterTarget: structuredClone(u),
   });
-  const visible = publicRoom({ state: g, spectators: [] }, null).state.events;
+  const visible = publicGame(g, -1).events;
+  assert(
+    "unit" in visible[0] && "unit" in visible[1] && visible[2].type === "spell",
+  );
   assert.equal(visible[0].unit.cardId, "hidden");
   assert.equal(visible[1].unit.cardId, "hidden");
-  assert.equal(visible[2].beforeTarget.cardId, "hidden");
-  assert.equal(visible[2].afterTarget.cardId, "hidden");
+  assert.equal(visible[2].beforeTarget?.cardId, "hidden");
+  assert.equal(visible[2].afterTarget?.cardId, "hidden");
 });
 
 test("curse that defeats Ice Serpent at zero dexterity stays still next turn", () => {

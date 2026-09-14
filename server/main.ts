@@ -1,4 +1,6 @@
-import Fastify from "fastify";
+import Fastify, { type FastifyRequest, type FastifyReply } from "fastify";
+import type { Queries } from "../shared/protocol.js";
+import type { MutationResponse } from "../shared/room.js";
 import cookie from "@fastify/cookie";
 import websocket from "@fastify/websocket";
 import staticFiles from "@fastify/static";
@@ -47,20 +49,23 @@ export async function createServer(
     maxAge: 60 * 60 * 24 * 30,
   };
   const hash = (s: string) => createHash("sha256").update(s).digest("hex");
-  const getAuth = (request: any) => {
+  const getAuth = (request: FastifyRequest) => {
     const token = request.cookies.shiki_session;
     if (!token) return { userId: null, displayName: "" };
     const u = db.raw
       .prepare(
         "SELECT u.id,u.name FROM sessions s JOIN users u ON s.user_id=u.id WHERE s.hash=? AND s.expires>?",
       )
-      .get(hash(token), Date.now()) as any;
+      .get(hash(token), Date.now()) as { id: string; name: string } | undefined;
     return u
       ? { userId: u.id, displayName: u.name }
       : { userId: null, displayName: "" };
   };
-  const context = (request: any): Context => ({ auth: getAuth(request), db });
-  const newSession = (reply: any, id: string) => {
+  const context = (request: FastifyRequest): Context => ({
+    auth: getAuth(request),
+    db,
+  });
+  const newSession = (reply: FastifyReply, id: string) => {
     const token = randomBytes(32).toString("base64url");
     db.raw
       .prepare("INSERT INTO sessions(hash,user_id,expires) VALUES (?,?,?)")
@@ -113,7 +118,7 @@ export async function createServer(
     "/api/auth/guest",
     { config: { rateLimit: { max: 12, timeWindow: "1 minute" } } },
     async (request, reply) => {
-      const name = (request.body as any)?.name;
+      const name = (request.body as { name?: unknown } | null)?.name;
       if (typeof name !== "string" || !name.trim() || name.length > 40)
         return reply
           .code(400)
@@ -159,7 +164,7 @@ export async function createServer(
     );
   });
   app.get("/auth/google/callback", async (request, reply) => {
-    const q = request.query as any;
+    const q = request.query as { code?: unknown; state?: unknown };
     if (
       !google ||
       typeof q.code !== "string" ||
@@ -180,7 +185,7 @@ export async function createServer(
         .send({ error: "Não foi possível validar o Google." });
     const existing = db.raw
       .prepare("SELECT id FROM users WHERE google_sub=?")
-      .get(profile.sub) as any;
+      .get(profile.sub) as { id: string } | undefined;
     let id = existing?.id;
     if (!id) {
       id = getAuth(request).userId || `google:${profile.sub}`;
@@ -205,12 +210,22 @@ export async function createServer(
             : null;
       if (!handlers || !Object.hasOwn(handlers, name))
         return reply.code(404).send({ error: "Ação desconhecida." });
-      const args = (request.body as any)?.args;
+      const args = (request.body as { args?: unknown } | null)?.args;
       if (!Array.isArray(args) || args.length > 8)
         return reply.code(400).send({ error: "Argumentos inválidos." });
       const ctx = context(request);
-      const result = (handlers as any)[name](ctx, ...args);
-      if (kind === "mutation" && result?.room?.code)
+      // The route accepts unknown arguments; each handler validates its own input.
+      const handler = handlers[name as keyof typeof handlers] as (
+        ctx: Context,
+        ...args: unknown[]
+      ) => MutationResponse | ReturnType<Queries[keyof Queries]>;
+      const result = handler(ctx, ...args);
+      if (
+        kind === "mutation" &&
+        result &&
+        "room" in result &&
+        result.room?.code
+      )
         broadcast(result.room.code);
       return { result };
     },

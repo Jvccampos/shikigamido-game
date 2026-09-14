@@ -1,3 +1,5 @@
+import type { MutationResponse, PublicRoom } from "../shared/room.js";
+import type { CardFocus } from "./card.js";
 import { E, SPEED, CardFace, Focus } from "./card.js";
 import { useMatchInteraction } from "./match-interaction.js";
 import { Arena } from "./arena.js";
@@ -31,16 +33,14 @@ export function App() {
     return () => window.removeEventListener("shiki:login", open);
   }, []);
   const auth = useAuth(),
-    decks = useQuery<any[]>("myDecks"),
-    myRooms = useQuery<any[]>("myRooms");
-  const saveDeck = useMutation<[any], any>("saveDeck"),
-    deleteDeck = useMutation<[string], any>("deleteDeck"),
-    createRoom = useMutation<[string], any>("createRoom"),
-    joinRoom = useMutation<[string, string | undefined, boolean], any>(
-      "joinRoom",
-    ),
-    command = useMutation<[string, Cmd, number], any>("gameCommand"),
-    lobbyCommand = useMutation<[string, any], any>("lobbyCommand");
+    decks = useQuery("myDecks"),
+    myRooms = useQuery("myRooms");
+  const saveDeck = useMutation("saveDeck"),
+    deleteDeck = useMutation("deleteDeck"),
+    createRoom = useMutation("createRoom"),
+    joinRoom = useMutation("joinRoom"),
+    command = useMutation("gameCommand"),
+    lobbyCommand = useMutation("lobbyCommand");
   const [view, setView] = useState("inicio"),
     [element, setElement] = useState("agua"),
     [deckName, setDeckName] = useState("Maré ancestral"),
@@ -59,19 +59,18 @@ export function App() {
     [toast, setToast] = useState(""),
     [busy, setBusy] = useState(false),
     [sceneBusy, setSceneBusy] = useState(false),
-    [focus, setFocus] = useState<any>(null);
+    [focus, setFocus] = useState<CardFocus | null>(null);
   const [concede, setConcede] = useState(false);
   const liveRoom = useRoom(code, view === "sala" && !practice);
   const room = useMemo(
     () => (practice ? practiceRoom(practice) : liveRoom.data),
     [practice, liveRoom.data],
   );
-  const toastTimer = useRef<any>(null),
-    hovered = useRef<any>(null),
+  const toastTimer = useRef<ReturnType<typeof setTimeout>>(),
+    hovered = useRef<CardFocus | null>(null),
     localRef = useRef(practice);
   localRef.current = practice;
-  const g = (Array.isArray(room?.state?.players) ? room.state : undefined) as
-      Game | undefined,
+  const g = room && room.status !== "waiting" ? room.state : undefined,
     seat = room?.seat ?? -1,
     myTurn = !!g && seat === g.priority && !g.setup && !g.centerPending;
   const interaction = useMatchInteraction(
@@ -141,11 +140,9 @@ export function App() {
   }, [practice, sceneBusy]);
   function playerName(s: number) {
     const id = g?.players?.[s]?.id;
-    return (
-      room?.members?.find((m: any) => m.id === id)?.name || `Jogador ${s + 1}`
-    );
+    return room?.members?.find((m) => m.id === id)?.name || `Jogador ${s + 1}`;
   }
-  function practiceRoom(game: Game) {
+  function practiceRoom(game: Game): PublicRoom | null {
     return publicRoom(
       {
         code: "TREINO",
@@ -160,7 +157,7 @@ export function App() {
       "practice-player",
     );
   }
-  async function request(fn: () => Promise<any>) {
+  async function request(fn: () => Promise<MutationResponse>) {
     if (busy) return;
     setBusy(true);
     try {
@@ -770,7 +767,7 @@ export function App() {
                 jogadores; os demais acompanham como espectadores.
               </p>
               <div className="lobby-seats">
-                {[0, 1].map((s) => (
+                {([0, 1] as const).map((s) => (
                   <article key={s}>
                     <span className={`seat-orb owner-${s}`}>{s + 1}</span>
                     <p className="eyebrow">JOGADOR {s + 1}</p>
@@ -791,8 +788,8 @@ export function App() {
                       >
                         <option value="">Escolha um participante</option>
                         {room.members
-                          .filter((m: any) => m.hasDeck)
-                          .map((m: any) => (
+                          .filter((m) => m.hasDeck)
+                          .map((m) => (
                             <option key={m.id} value={m.id}>
                               {m.name} · {m.deckName}
                             </option>
@@ -801,7 +798,7 @@ export function App() {
                     ) : (
                       <h2>
                         {room.members.find(
-                          (m: any) => m.id === room.state.seats?.[s],
+                          (m) => m.id === room.state.seats?.[s],
                         )?.name || "Vaga aberta"}
                       </h2>
                     )}
@@ -810,7 +807,7 @@ export function App() {
               </div>
               <div className="lobby-members">
                 <h3>Na sala · {room.members.length}</h3>
-                {room.members.map((m: any) => (
+                {room.members.map((m) => (
                   <div key={m.id}>
                     <span>
                       {m.name}

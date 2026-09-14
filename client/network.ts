@@ -1,3 +1,5 @@
+import type { Queries, Mutations, RoomMessage } from "../shared/protocol.js";
+import type { PublicRoom } from "../shared/room.js";
 import { useCallback, useEffect, useRef, useState } from "preact/hooks";
 type Auth = {
   userId: string | null;
@@ -14,7 +16,11 @@ let auth: Auth = {
 };
 const authListeners = new Set<() => void>(),
   invalidators = new Set<() => void>();
-async function request(url: string, body?: unknown, signal?: AbortSignal) {
+async function request<T>(
+  url: string,
+  body?: unknown,
+  signal?: AbortSignal,
+): Promise<T> {
   const r = await fetch(url, {
     method: body === undefined ? "GET" : "POST",
     headers: body === undefined ? {} : { "Content-Type": "application/json" },
@@ -27,7 +33,7 @@ async function request(url: string, body?: unknown, signal?: AbortSignal) {
   return value;
 }
 async function refreshAuth() {
-  auth = await request("/api/auth");
+  auth = await request<Auth>("/api/auth");
   for (const listener of authListeners) listener();
   for (const invalidate of invalidators) invalidate();
 }
@@ -56,9 +62,12 @@ export async function enterAsGuest(name: string) {
   await request("/api/auth/guest", { name });
   await refreshAuth();
 }
-export function useQuery<T>(name: string, args: unknown[] = []) {
+export function useQuery<K extends keyof Queries>(
+  name: K,
+  ...args: Parameters<Queries[K]>
+) {
   const key = JSON.stringify(args);
-  const [data, setData] = useState<T>(),
+  const [data, setData] = useState<ReturnType<Queries[K]>>(),
     [error, setError] = useState(""),
     [isLoading, setLoading] = useState(true);
   const pending = useRef<AbortController>();
@@ -68,7 +77,7 @@ export function useQuery<T>(name: string, args: unknown[] = []) {
     pending.current = controller;
     setLoading(true);
     try {
-      const result = await request(
+      const result = await request<{ result: ReturnType<Queries[K]> }>(
         `/api/query/${name}`,
         { args: JSON.parse(key) },
         controller.signal,
@@ -103,7 +112,7 @@ export function useQuery<T>(name: string, args: unknown[] = []) {
 export function useRoom(code: string, active: boolean) {
   const [snapshot, setSnapshot] = useState<{
       identity: string;
-      room: any;
+      room: PublicRoom;
     } | null>(null),
     [error, setError] = useState("");
   const userId = useAuth().userId;
@@ -111,12 +120,15 @@ export function useRoom(code: string, active: boolean) {
   const current = useRef(identity);
   current.current = identity;
   const receive = useCallback(
-    (room: any) => {
+    (room: PublicRoom | null) => {
       if (current.current !== identity || room?.code !== code) return;
       setSnapshot((previous) => {
         if (
           previous?.identity === identity &&
-          (previous.room.state?.revision ?? -1) > (room.state?.revision ?? -1)
+          (previous.room.status === "waiting"
+            ? -1
+            : (previous.room.state.revision ?? -1)) >
+            (room.status === "waiting" ? -1 : (room.state.revision ?? -1))
         )
           return previous;
         return { identity, room };
@@ -133,7 +145,11 @@ export function useRoom(code: string, active: boolean) {
       closed = false,
       delay = 500;
     const controller = new AbortController();
-    void request("/api/query/room", { args: [code] }, controller.signal)
+    void request<{ result: PublicRoom | null }>(
+      "/api/query/room",
+      { args: [code] },
+      controller.signal,
+    )
       .then((result) => {
         if (!closed) receive(result.result);
       })
@@ -152,7 +168,7 @@ export function useRoom(code: string, active: boolean) {
       connection.onmessage = (e) => {
         if (closed) return;
         try {
-          const message = JSON.parse(e.data);
+          const message: RoomMessage = JSON.parse(e.data);
           if (message.type === "room") receive(message.room);
         } catch {
           setError("Resposta inválida. Reconectando…");
@@ -183,14 +199,19 @@ export function useRoom(code: string, active: boolean) {
     refetch: () => setRetry((n) => n + 1),
   };
 }
-export function useMutation<A extends any[], R>(name: string) {
+export function useMutation<K extends keyof Mutations>(name: K) {
   const [isLoading, setLoading] = useState(false),
     [error, setError] = useState("");
   const mutate = useCallback(
-    async (...args: A): Promise<R> => {
+    async (
+      ...args: Parameters<Mutations[K]>
+    ): Promise<ReturnType<Mutations[K]>> => {
       setLoading(true);
       try {
-        const data = await request(`/api/mutation/${name}`, { args });
+        const data = await request<{ result: ReturnType<Mutations[K]> }>(
+          `/api/mutation/${name}`,
+          { args },
+        );
         setError("");
         return data.result;
       } catch (e) {

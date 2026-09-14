@@ -21,6 +21,57 @@ export type Player = {
   costTaxUntil?: number;
   concealTurn?: number;
 };
+export type StatusValue = number | boolean | string | string[] | undefined;
+export type UnitStatuses = {
+  [key: string]: StatusValue;
+  [expiry: `${string}Until`]: number | undefined;
+  abilityTurn?: number;
+  auraHp?: number;
+  auraSpeed?: number;
+  block?: number;
+  burn?: number;
+  burnAttack?: number;
+  combatAttack?: number;
+  construir?: boolean;
+  deathDrawTurn?: number;
+  devolver?: number;
+  dualAttack?: number;
+  dualMaxHp?: number;
+  dualSpeed?: number;
+  fedSpeed?: boolean;
+  fisherBoost?: number;
+  healDrawTurn?: number;
+  lifesteal?: number;
+  once?: boolean;
+  oniKills?: number;
+  primordialBoost?: number;
+  range?: number;
+  redirectAmount?: number;
+  ressurgir?: number;
+  shidaroBoost?: number;
+  temporaryAttack?: number;
+  controlTurn?: number;
+  sacrificeTurn?: number;
+  centerBonus?: boolean;
+  copy?: boolean;
+  fireball?: boolean;
+  forged?: boolean;
+  healSplash?: boolean;
+  hidden?: boolean;
+  intangivel?: boolean;
+  primordial?: boolean;
+  resurrected?: boolean;
+  shield?: boolean;
+  softStun?: number;
+  stun?: boolean;
+  bond?: string;
+  borrowed?: string;
+  chosenElement?: string;
+  redirect?: string;
+  stolenKeyword?: string;
+  extraTypes?: string[];
+  controlOwner?: Seat;
+};
 export type Unit = {
   id: string;
   cardId: string;
@@ -34,7 +85,7 @@ export type Unit = {
   summonedTurn: number;
   kind: "unit" | "omionji" | "curse" | "crystal" | "wall";
   level?: number;
-  statuses?: Record<string, any>;
+  statuses?: UnitStatuses;
   captured?: Unit[];
   equipment?: Unit[];
 };
@@ -127,15 +178,15 @@ export type Cmd = {
 };
 
 /** Events describe completed commands. Unit snapshots must never share mutable state. */
-export type EventPayload =
+export type EventPayload<U = Unit> =
   | { type: "turn"; phase: number }
-  | { type: "summon"; unit: Unit }
-  | { type: "ability"; unit: Unit }
-  | { type: "destroy"; unitId: string; unit: Unit }
+  | { type: "summon"; unit: U }
+  | { type: "ability"; unit: U }
+  | { type: "destroy"; unitId: string; unit: U }
   | {
       type: "move" | "approach";
       unitId: string;
-      unit: Unit;
+      unit: U;
       path: [number, number][];
     }
   | { type: "heal"; unitId: string; amount: number }
@@ -158,19 +209,19 @@ export type EventPayload =
       x?: number;
       y?: number;
       element: string;
-      beforeTarget?: Unit;
-      afterTarget?: Unit;
+      beforeTarget?: U;
+      afterTarget?: U;
     }
   | {
       type: "combat";
-      attacker: Unit;
-      defender: Unit;
+      attacker: U;
+      defender: U;
       attackDamage: number;
       defenseDamage: number;
       keyword: string;
       element?: string;
     };
-export type GameEvent = EventPayload & {
+export type GameEvent<U = Unit> = EventPayload<U> & {
   id: string;
   turn: number;
   phase: number;

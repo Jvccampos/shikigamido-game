@@ -1,3 +1,6 @@
+import type { Card } from "../shared/cards.js";
+import type { CardFocus } from "./card.js";
+import type { GameView, UnitView } from "../shared/room.js";
 import { useEffect, useMemo, useState } from "preact/hooks";
 import { abilities } from "../shared/abilities.js";
 import { spellSpecs, transferableKeywords } from "../shared/spells.js";
@@ -7,8 +10,6 @@ import {
   moveOptions,
   route,
   kw,
-  type Game,
-  type Unit,
   type Cmd,
   type Seat,
 } from "../shared/game.js";
@@ -32,11 +33,11 @@ export type Selection =
 
 /** Owns hand selection, targeting and the command controls for one match. */
 export function useMatchInteraction(
-  g: Game | undefined,
+  g: GameView | undefined,
   seat: number,
   busy: boolean,
   onAct: (command: Cmd) => Promise<boolean>,
-  setFocus: (focus: any) => void,
+  setFocus: (focus: CardFocus) => void,
   code: string,
 ) {
   const [selected, setSelected] = useState<Selection | null>(null),
@@ -110,14 +111,14 @@ export function useMatchInteraction(
       return moveOptions(g, activeUnit);
     return [];
   }, [g?.revision, active?.unitId, active?.cardId, myTurn, finished]);
-  function chooseTarget(u: Unit) {
+  function chooseTarget(u: UnitView) {
     setTargetIds((prev) =>
       prev.includes(u.id)
         ? prev.filter((id) => id !== u.id)
         : [...prev.slice(-1), u.id],
     );
   }
-  function dropAt(x: number, y: number, u?: Unit, data = active) {
+  function dropAt(x: number, y: number, u?: UnitView, data = active) {
     setDrag(null);
     if (g?.followup?.seat === seat) {
       void act({ type: "followup", x, y });
@@ -170,7 +171,7 @@ export function useMatchInteraction(
         y,
       });
   }
-  function cellClick(x: number, y: number, u?: Unit) {
+  function cellClick(x: number, y: number, u?: UnitView) {
     if (g?.followup?.seat === seat) {
       void act({ type: "followup", x, y });
       return;
@@ -245,7 +246,7 @@ export function useMatchInteraction(
       onAct: act,
       onHand: pickHand,
       onCell: cellClick,
-      onSelect: (u: Unit) => {
+      onSelect: (u: UnitView) => {
         if (u.owner === seat && !targetMode && selected?.kind !== "hand") {
           clear();
           setSelected({ kind: "unit", unitId: u.id });
@@ -253,7 +254,8 @@ export function useMatchInteraction(
       },
       onDrag: setDrag,
       onDrop: dropAt,
-      onFocus: (card: any, unit?: Unit) => setFocus({ card, unit }),
+      onFocus: (card: Card | undefined, unit?: UnitView) =>
+        setFocus({ card, unit }),
       onStartY: setStartY,
       onMulligan: () => {
         void act({ type: "mulligan", handIndices: mulligan });
@@ -482,8 +484,9 @@ export function useMatchInteraction(
                       {abilitySpec.label}
                     </button>
                   )}
-                  {(kw(selectedUnit, "Range") || selectedUnit.statuses?.range) >
-                    0 && (
+                  {(kw(selectedUnit, "Range") ||
+                    selectedUnit.statuses?.range ||
+                    0) > 0 && (
                     <button
                       className="outline"
                       disabled={!canPlay || !targetIds[0]}
@@ -566,10 +569,10 @@ export function useMatchInteraction(
               </button>
             )}
           </div>
-          {!!(me as any)?.summonableDeck?.length && g.phase === 1 && myTurn && (
+          {!!me?.summonableDeck?.length && g.phase === 1 && myTurn && (
             <div className="stack-panel">
               <p className="eyebrow">INVOCAÇÃO DO BARALHO</p>
-              {(me as any).summonableDeck.map((id: string) => (
+              {me.summonableDeck.map((id: string) => (
                 <button
                   key={id}
                   onClick={() => {

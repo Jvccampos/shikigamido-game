@@ -1,3 +1,6 @@
+import type { Card } from "../shared/cards.js";
+import type { UnitView } from "../shared/room.js";
+export type CardFocus = { card: Card | undefined; unit?: UnitView };
 import { useEffect, useRef } from "preact/hooks";
 import { yokaiIds, masculineIds } from "../shared/traits.js";
 import { cards as catalog } from "../shared/game.js";
@@ -13,9 +16,9 @@ export const SPEED: Record<string, string> = {
   fast: "Rápida",
   instant: "Instantânea",
 };
-export function unitName(u: any) {
+export function unitName(u: UnitView | null | undefined) {
   return (
-    catalog.get(u?.cardId)?.name ||
+    catalog.get(u?.cardId || "")?.name ||
     (u?.kind === "crystal"
       ? "Cristal de invocação"
       : u?.kind === "curse"
@@ -49,7 +52,7 @@ function Stat({
     </span>
   );
 }
-function Stats({ unit, card }: { unit?: any; card: any }) {
+function Stats({ unit, card }: { unit?: UnitView; card: Card | undefined }) {
   return card?.kind === "spell" ? (
     <span className="spell-speed">
       {SPEED[card.stats.speed]} · {card.stats.cost} PE
@@ -82,8 +85,8 @@ export function CardFace({
   unit,
   compact = false,
 }: {
-  card: any;
-  unit?: any;
+  card: Card | undefined;
+  unit?: UnitView;
   compact?: boolean;
 }) {
   return (
@@ -119,8 +122,8 @@ export function Focus({
   unit,
   onClose,
 }: {
-  card: any;
-  unit?: any;
+  card: Card | undefined;
+  unit?: UnitView;
   onClose: () => void;
 }) {
   const close = useRef<HTMLButtonElement>(null);
@@ -179,12 +182,13 @@ export function Focus({
               <span className="down">vermelho ↓ abaixo</span> do valor original.
             </p>
           )}
-          {(yokaiIds.has(card?.id) || masculineIds.has(card?.id)) && (
+          {(yokaiIds.has(card?.id || "") ||
+            masculineIds.has(card?.id || "")) && (
             <p className="muted">
               Para efeitos de combate:{" "}
               {[
-                yokaiIds.has(card?.id) && "Yokai",
-                masculineIds.has(card?.id) && "masculino",
+                yokaiIds.has(card?.id || "") && "Yokai",
+                masculineIds.has(card?.id || "") && "masculino",
               ]
                 .filter(Boolean)
                 .join(" · ")}
@@ -203,8 +207,8 @@ export function Focus({
     </div>
   );
 }
-export function statusLabels(u: any) {
-  const s = u.statuses || {};
+export function statusLabels(u: UnitView | null | undefined) {
+  const s = u?.statuses || {};
   return [
     s.shield && "Escudo",
     s.burn && `Burn ${s.burn}`,
@@ -214,6 +218,6 @@ export function statusLabels(u: any) {
     s.hidden && "Oculto",
     s.block && `Block ${s.block}`,
     s.range && `Range ${s.range}`,
-    u.equipment?.length && `${u.equipment.length} equipamento(s)`,
+    u?.equipment?.length && `${u?.equipment.length} equipamento(s)`,
   ].filter(Boolean) as string[];
 }

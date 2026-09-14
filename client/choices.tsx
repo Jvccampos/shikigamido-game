@@ -1,10 +1,13 @@
+import type { Cmd } from "../shared/model.js";
+import type { Card } from "../shared/cards.js";
+import type { GameView } from "../shared/room.js";
 import { useEffect, useState } from "preact/hooks";
-import { cards, type Game } from "../shared/game.js";
+import { cards } from "../shared/game.js";
 type ChoiceProps = {
   hand: string[];
   selected: number[];
   onSelect: (i: number) => void;
-  onFocus: (c: any) => void;
+  onFocus: (c: Card | undefined) => void;
   disabled?: boolean;
   label: string;
 };
@@ -87,12 +90,12 @@ export function OpeningHand(
   );
 }
 export function DiscardChoice(p: {
-  game: Game;
+  game: GameView;
   seat: number;
   busy: boolean;
-  onAct: (c: any) => void;
+  onAct: (c: Cmd) => void;
   onClose: () => void;
-  onFocus: (c: any) => void;
+  onFocus: (c: Card | undefined) => void;
 }) {
   const [chosen, setChosen] = useState<number[]>([]),
     me = p.game.players[p.seat],
