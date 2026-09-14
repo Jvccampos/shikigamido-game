@@ -70,10 +70,37 @@ test("practice opponent notices allow reading and fade before removal", async ({
     );
   await expect.poll(finished, { timeout: 20000 }).toBeTruthy();
   const notice = (await finished())!;
-  expect(notice.duration, notice.title).toBeGreaterThanOrEqual(2600);
+  expect(notice.duration, notice.title).toBeGreaterThanOrEqual(4900);
   expect(notice.fadeOpacity).toBeGreaterThan(0);
   expect(notice.fadeOpacity).toBeLessThan(1);
   expect(notice.faded, "Notice should fade out before it leaves the DOM").toBe(
     true,
   );
+});
+
+test.describe("dismissible phase notices", () => {
+  test.use({ hasTouch: true });
+  for (const gesture of ["click", "touch"] as const) {
+    test(`${gesture} dismisses a notice immediately through its fade animation`, async ({
+      page,
+    }) => {
+      await page.goto("/");
+      await page.getByRole("button", { name: "Jogar treino local" }).click();
+      await page.getByRole("button", { name: "Manter estas cartas" }).click();
+      await page.getByRole("button", { name: "Começar neste selo" }).click();
+      const notice = page.locator(".arena-notice");
+      await expect(notice).toBeVisible();
+      await expect(notice).toContainText("Clique ou toque para dispensar");
+      // Use empty space outside the banner to verify screen-wide dismissal.
+      if (gesture === "touch") await page.touchscreen.tap(5, 500);
+      else await page.mouse.click(5, 500);
+      await expect(notice).toHaveClass(/leaving/);
+      await expect
+        .poll(() =>
+          notice.evaluate((el) => parseFloat(getComputedStyle(el).opacity)),
+        )
+        .toBeLessThan(1);
+      await expect(notice).toHaveCount(0, { timeout: 1200 });
+    });
+  }
 });

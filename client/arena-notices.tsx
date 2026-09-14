@@ -31,6 +31,16 @@ export function ArenaNotices({
   } | null>(null);
   const [displayed, setDisplayed] = useState<typeof notice>(null);
   const [leaving, setLeaving] = useState(false);
+  const banner = useRef<HTMLDivElement>(null);
+  function startExit() {
+    if (leaving) return;
+    if (banner.current)
+      banner.current.style.setProperty(
+        "--notice-exit-opacity",
+        getComputedStyle(banner.current).opacity,
+      );
+    setLeaving(true);
+  }
   useEffect(() => {
     const max = g.players[seat < 0 ? 0 : seat].maxPe;
     const changed = previous.current.stage !== stage;
@@ -69,13 +79,33 @@ export function ArenaNotices({
       }
       return;
     }
+    if (leaving) return;
     if (waiting || !notice || displayed.key !== notice.key) {
-      setLeaving(true);
+      startExit();
       return;
     }
-    const timer = setTimeout(() => setLeaving(true), 2800);
+    const timer = setTimeout(startExit, 5000);
     return () => clearTimeout(timer);
-  }, [notice, displayed, waiting]);
+  }, [notice, displayed, waiting, leaving]);
+  useEffect(() => {
+    if (!displayed || leaving || waiting) return;
+    const dismiss = (e: PointerEvent) => {
+      if (e.button === 0) startExit();
+    };
+    const key = (e: KeyboardEvent) => {
+      if (e.key === "Escape") startExit();
+    };
+    // Observe the gesture without swallowing card drags or button actions.
+    window.addEventListener("pointerdown", dismiss, {
+      capture: true,
+      passive: true,
+    });
+    window.addEventListener("keydown", key);
+    return () => {
+      window.removeEventListener("pointerdown", dismiss, true);
+      window.removeEventListener("keydown", key);
+    };
+  }, [displayed, leaving, waiting]);
   useEffect(() => {
     if (!leaving) return;
     const timer = setTimeout(() => {
@@ -95,6 +125,7 @@ export function ArenaNotices({
   if (!displayed) return null;
   return (
     <div
+      ref={banner}
       key={displayed.key}
       className={`arena-notice ${leaving ? "leaving" : ""}`}
       role="status"
@@ -103,6 +134,9 @@ export function ArenaNotices({
       <strong>{displayed.title}</strong>
       <p>{displayed.detail}</p>
       {displayed.mana && <b className="notice-mana">✦ {displayed.mana}</b>}
+      <span className="notice-dismiss-hint">
+        Clique ou toque para dispensar
+      </span>
     </div>
   );
 }

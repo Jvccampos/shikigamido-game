@@ -105,6 +105,12 @@
   font-size: 18px;
   color: #c7f4a6;
 }
+.notice-dismiss-hint {
+  display: block;
+  margin-top: 14px;
+  color: #b7c6aa;
+  font-size: 12px;
+}
 .field-event.curse-notice {
   color: #e2bcff;
   font-size: 23px;
@@ -303,7 +309,7 @@
 }
 @keyframes notice-depart {
   from {
-    opacity: 1;
+    opacity: var(--notice-exit-opacity, 1);
   }
   to {
     opacity: 0;
