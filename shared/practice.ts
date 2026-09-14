@@ -89,10 +89,13 @@ export function botCommand(g: Game, seat: Seat): Cmd {
     }
   }
   if (g.phase === 4 && p.permanentPe < 3 && p.hand.length > 2) {
-    const i = p.hand.findIndex(
-      (id) => allCards.find((c) => c.id === id)?.kind === "spell",
-    );
-    if (i >= 0) return { type: "discard", cardId: p.hand[i], handIndex: i };
+    const handIndices = p.hand
+      .map((id, i) =>
+        allCards.find((c) => c.id === id)?.kind === "spell" ? i : -1,
+      )
+      .filter((i) => i >= 0)
+      .slice(0, Math.min(3 - p.permanentPe, p.hand.length - 2));
+    if (handIndices.length) return { type: "discardMany", handIndices };
   }
   return { type: "pass" };
 }

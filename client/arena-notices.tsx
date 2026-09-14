@@ -46,7 +46,11 @@ export function ArenaNotices({
     const changed = previous.current.stage !== stage;
     const gain = max > previous.current.max;
     previous.current = { stage, max };
-    if (g.setup || g.winner !== null || g.draw) {
+    // The discard dialog already announces this step. Queuing another banner
+    // behind it would announce the phase again when returning to the board.
+    const discardChoice =
+      g.phase === 4 && g.phaseOwner === seat && !g.centerPending;
+    if (g.setup || g.winner !== null || g.draw || discardChoice) {
       setNotice(null);
       return;
     }
@@ -67,7 +71,9 @@ export function ArenaNotices({
               "Conjure magias ou use as habilidades das suas unidades.",
               "Converta cartas em reserva ou mantenha sua mão.",
             ][g.phase]
-          : "Acompanhe as ações no tabuleiro.",
+          : g.phase === 4
+            ? `${names[g.phaseOwner ?? g.priority]} está escolhendo quais cartas converter em reserva.`
+            : "Acompanhe as ações no tabuleiro.",
       mana: gain ? `Mana máxima aumentou para ${max} PE!` : pending?.mana || "",
     }));
   }, [stage, g.players[0].maxPe, g.players[1].maxPe, g.winner, g.draw]);
@@ -84,7 +90,7 @@ export function ArenaNotices({
       startExit();
       return;
     }
-    const timer = setTimeout(startExit, 5000);
+    const timer = setTimeout(startExit, 4000);
     return () => clearTimeout(timer);
   }, [notice, displayed, waiting, leaving]);
   useEffect(() => {

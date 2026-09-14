@@ -336,6 +336,33 @@ test("concession is allowed without priority", () => {
   play(g, 1, { type: "concede" });
   assert.equal(g.winner, 0);
 });
+test("practice converts spells together while respecting reserve and keeping two cards", () => {
+  const spell = "kogeki-n-1-fireball";
+  const creature = "taodu-katana";
+  for (const [hand, reserve, remaining, gain] of [
+    [[spell, creature, spell, spell, creature], 0, [creature, creature], 3],
+    [
+      [spell, creature, spell, spell, creature],
+      2,
+      [creature, spell, spell, creature],
+      1,
+    ],
+    [[spell, creature, spell], 0, [creature, spell], 1],
+    [[spell, spell], 0, [spell, spell], 0],
+    [[spell, spell, creature], 3, [spell, spell, creature], 0],
+  ] as const) {
+    const g = game();
+    g.phase = 4;
+    const player = g.players[0];
+    player.hand = [...hand];
+    player.permanentPe = reserve;
+    const cmd = botCommand(g, 0);
+    assert.equal(cmd.type, gain ? "discardMany" : "pass");
+    play(g, 0, cmd);
+    assert.deepEqual(player.hand, remaining);
+    assert.equal(player.permanentPe, reserve + gain);
+  }
+});
 test("automated full match reaches a result without invalid state", () => {
   const g = game();
   for (let step = 0; step < 1500 && g.winner === null && !g.draw; step++) {

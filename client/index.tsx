@@ -140,6 +140,9 @@ export function App() {
         }
         return;
       }
+      // Conversion is a single choice. Hand over the phase without another
+      // thinking pause after every discarded card and the final pass.
+      if (cmd.type === "discardMany") apply(next, 1, { type: "pass" });
       next.revision = (next.revision || 0) + 1;
       setPractice(next);
     }, 750);

@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { idle } from "./fixtures.js";
+import { random, randomState } from "../../shared/random.js";
 
 test("practice opponent notices allow reading and fade before removal", async ({
   page,
@@ -70,12 +71,60 @@ test("practice opponent notices allow reading and fade before removal", async ({
     );
   await expect.poll(finished, { timeout: 20000 }).toBeTruthy();
   const notice = (await finished())!;
-  expect(notice.duration, notice.title).toBeGreaterThanOrEqual(4900);
+  expect(notice.duration, notice.title).toBeGreaterThanOrEqual(3900);
+  expect(notice.duration, notice.title).toBeLessThan(5000);
   expect(notice.fadeOpacity).toBeGreaterThan(0);
   expect(notice.fadeOpacity).toBeLessThan(1);
   expect(notice.faded, "Notice should fade out before it leaves the DOM").toBe(
     true,
   );
+});
+
+test("discard choices follow the opponent notice without an extra pause or a deferred player notice", async ({
+  page,
+}) => {
+  await page.goto("/");
+  // Seed 2 puts the bot first with three spells to convert on turn one.
+  const source = randomState(2);
+  await page.evaluate(
+    (values) => {
+      const original = crypto.getRandomValues.bind(crypto);
+      crypto.getRandomValues = (array) => {
+        if (
+          array instanceof Uint32Array &&
+          array.length === 1 &&
+          values.length
+        ) {
+          array[0] = values.shift()!;
+          return array;
+        }
+        return original(array);
+      };
+    },
+    Array.from({ length: 100 }, () => random(source) * 0x100000000),
+  );
+  await page.getByRole("button", { name: "Jogar treino local" }).click();
+  await page.getByRole("button", { name: "Manter estas cartas" }).click();
+  await page.getByRole("button", { name: "Começar neste selo" }).click();
+  for (const phase of ["invocações", "movimentos", "magias"])
+    await page
+      .getByRole("button", { name: `Concluir ${phase}` })
+      .click({ timeout: 20000 });
+  const notice = page.locator(".arena-notice");
+  await expect(notice).toContainText("Guardião do santuário · Descarte");
+  await page.mouse.click(5, 500);
+  await expect(notice).toHaveCount(0, { timeout: 1200 });
+  await expect(
+    page.getByRole("heading", { name: "Transforme cartas em energia" }),
+  ).toBeVisible({ timeout: 1000 });
+  await page.getByRole("button", { name: "Ver tabuleiro" }).click();
+  // Returning to the board must not replay an announcement hidden by the dialog.
+  await page.waitForTimeout(700);
+  expect(await notice.count()).toBe(0);
+  await page.getByRole("button", { name: "Converter cartas" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Transforme cartas em energia" }),
+  ).toBeVisible();
 });
 
 test.describe("dismissible phase notices", () => {
