@@ -85,7 +85,9 @@ test("Curador search is private, inspectable, responsive and puts the chosen car
   await expect(
     dialog.getByRole("button", { name: "Escolha uma carta", exact: true }),
   ).toBeDisabled();
-  await dialog.getByRole("button", { name: "Ler Taodu Katana" }).click();
+  await dialog
+    .getByRole("button", { name: /Escolher Taodu Katana/ })
+    .click({ button: "right" });
   await expect(
     page.getByRole("dialog", { name: "Taodu Katana", exact: true }),
   ).toContainText("Pular");
@@ -115,10 +117,10 @@ test("Curador search is private, inspectable, responsive and puts the chosen car
     ).toBe(true);
     const heading = (await dialog.getByRole("heading").boundingBox())!;
     expect(heading.y).toBeGreaterThanOrEqual(0);
-    const zoom = (await dialog
-      .getByRole("button", { name: "Ler Taodu Katana" })
+    const art = (await dialog
+      .getByRole("button", { name: /Escolher Taodu Katana/ })
       .boundingBox())!;
-    expect(zoom.y + zoom.height).toBeLessThan(bounds.y);
+    expect(art.y + art.height).toBeLessThan(bounds.y);
     await page.screenshot({ path: `.sited/qa-search/choice-${width}.png` });
   }
   await page.setViewportSize({ width: 1440, height: 1000 });
@@ -167,5 +169,40 @@ test("Curador search is private, inspectable, responsive and puts the chosen car
   await page.keyboard.press("f");
   await expect(page.locator(".card-focus")).toContainText("Maldição · Nível 2");
   await page.screenshot({ path: ".sited/qa-search/curse.png" });
+  await page.keyboard.press("Escape");
+  g.phase = 4;
+  g.priority = g.phaseOwner = 0;
+  g.players[0].hand = [
+    "suineko-o-gato-aquatico",
+    "serpente-de-gelo",
+    "gishikido-n-7-cura-da-agua",
+    "besouro-pescador",
+    "cabra-dos-alpes",
+    "mamoru-n-5-transferencia-espiritual",
+  ];
+  g.revision!++;
+  send();
+  const discard = page.getByRole("dialog", {
+    name: "Converter cartas em reserva",
+  });
+  await expect(discard).toBeVisible();
+  const choice = discard.locator(".choice-art").first();
+  await choice.click();
+  await choice.click({ button: "right" });
+  await expect(page.locator(".card-focus")).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(choice).toHaveAttribute("aria-pressed", "true");
+  for (const [width, height] of [
+    [1440, 1000],
+    [390, 844],
+    [844, 390],
+  ]) {
+    await page.setViewportSize({ width, height });
+    await expect(discard.locator(".choice-zoom, .choice-check")).toHaveCount(0);
+    await page.screenshot({ path: `.sited/qa-search/discard-${width}.png` });
+  }
+  await discard.getByRole("button", { name: /Descartar 1 carta/ }).click();
+  expect(g.players[0].permanentPe).toBe(1);
+  expect(g.players[0].hand).not.toContain("suineko-o-gato-aquatico");
   expect(errors).toEqual([]);
 });

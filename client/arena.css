@@ -1245,6 +1245,7 @@ footer {
   justify-content: center;
   gap: 28px;
   background: radial-gradient(ellipse, #163026ef, #071710f7);
+  backdrop-filter: blur(6px);
   padding: 42px 30px;
   overflow-y: auto;
 }
@@ -1274,9 +1275,10 @@ footer {
 .choice-cards {
   display: flex;
   justify-content: center;
-  gap: 16px;
+  gap: 20px;
   max-width: 100%;
   flex-wrap: wrap;
+  padding: 14px 8px;
 }
 .choice-card {
   position: relative;
@@ -1288,10 +1290,14 @@ footer {
 .choice-art {
   width: 100%;
   padding: 0 !important;
+  display: block;
   border: 2px solid #82977b66;
   border-radius: 7px;
   background: #14261c;
+  box-shadow: 0 8px 16px #0005;
   overflow: hidden;
+  user-select: none;
+  -webkit-touch-callout: none;
 }
 .choice-art img {
   width: 100%;
@@ -1299,35 +1305,31 @@ footer {
   aspect-ratio: 315/440;
   object-fit: cover;
 }
-.choice-check {
-  display: block;
-  padding: 9px 3px;
-  font-size: 10px;
-  letter-spacing: 1px;
-  color: #b7c3a8;
-  background: #163020;
-}
 .choice-card.chosen {
-  transform: translateY(-10px);
-  filter: drop-shadow(0 0 12px #d8c37855);
+  transform: translateY(-6px);
+  filter: drop-shadow(0 0 12px #d8c37888);
 }
 .choice-card.chosen .choice-art {
   border-color: #efda96;
+  outline: 1px solid #efda96;
+  outline-offset: 3px;
 }
-.choice-card.chosen .choice-check {
-  background: #d7c58b;
-  color: #182a1c;
+.choice-art:focus-visible {
+  outline: 2px dashed #fff5d8;
+  outline-offset: 4px;
 }
-.choice-zoom {
-  position: absolute;
-  right: 7px;
-  top: 7px;
-  background: #092216ed;
-  border: 1px solid #d2bf84;
-  color: #ebdfb4;
-  font-size: 20px;
-  padding: 2px 6px;
-  border-radius: 3px;
+@media (hover: hover) {
+  .choice-card:not(.chosen):hover {
+    transform: translateY(-3px);
+  }
+  .choice-art:hover {
+    border-color: #d9d3a4;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .choice-card {
+    transition: none;
+  }
 }
 .choice-footer {
   display: flex;
@@ -1957,10 +1959,6 @@ footer {
     width: calc((100% - 26px) / 3);
     max-width: 102px;
   }
-  .choice-check {
-    font-size: 8px;
-    padding: 6px 2px;
-  }
   .choice-footer {
     gap: 10px;
     width: 100%;
@@ -2124,10 +2122,6 @@ footer {
   }
   .choice-card {
     width: 80px;
-  }
-  .choice-check {
-    padding: 5px;
-    font-size: 7px;
   }
   .choice-cards {
     gap: 12px;
@@ -2821,25 +2815,7 @@ footer {
   flex: 1;
   min-height: 0;
 }
-/* Reading controls live outside the printed card, leaving types and stats visible. */
-.choice-check {
-  height: 36px;
-  padding: 9px 38px 9px 3px;
-  font-size: 12px;
-  letter-spacing: 0;
-  box-sizing: border-box;
-}
-.choice-zoom {
-  top: auto;
-  bottom: 4px;
-  right: 4px;
-  width: 30px;
-  height: 28px;
-  padding: 0;
-  font-size: 21px;
-  background: #213e2d;
-  border-color: #a8b57a66;
-}
+/* Hand reading controls stay outside the printed card. */
 .fan-zoom {
   top: -34px;
   right: 0;
@@ -2974,9 +2950,6 @@ footer {
   }
 }
 @media (max-width: 759px) {
-  .choice-check {
-    font-size: 11px;
-  }
   .player-resources {
     gap: 1px;
     margin-top: 4px;
@@ -3086,18 +3059,6 @@ footer {
   .phase-instruction {
     font-size: 12px;
     max-width: 380px;
-  }
-  .choice-check {
-    height: 27px;
-    padding: 6px 27px 6px 2px;
-    font-size: 9px;
-  }
-  .choice-zoom {
-    width: 23px;
-    height: 22px;
-    font-size: 17px;
-    bottom: 3px;
-    right: 3px;
   }
 }
 @media (min-width: 760px) and (min-height: 560px) {

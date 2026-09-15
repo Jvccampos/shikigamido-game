@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { mkdir } from "node:fs/promises";
 import { idle } from "./fixtures.js";
 
 test("opening, card reading and arena controls fit desktop and mobile", async ({
@@ -13,6 +14,7 @@ test("opening, card reading and arena controls fit desktop and mobile", async ({
   await expect(page.locator(".login-dialog")).toHaveCount(0);
   await page.getByRole("button", { name: "Jogar treino local" }).click();
   await expect(page.locator("canvas")).toBeVisible();
+  await mkdir(".sited/qa-choice-clean", { recursive: true });
   for (const [width, height] of [
     [1440, 1000],
     [1024, 768],
@@ -20,20 +22,26 @@ test("opening, card reading and arena controls fit desktop and mobile", async ({
     [844, 390],
   ]) {
     await page.setViewportSize({ width, height });
-    await expect(page.locator(".choice-zoom").first()).toBeVisible();
+    await expect(page.locator(".choice-art").first()).toBeVisible();
+    await expect(page.locator(".choice-zoom, .choice-check")).toHaveCount(0);
     for (const card of await page.locator(".choice-card").all()) {
       const image = await card.locator("img").boundingBox(),
-        read = await card.locator(".choice-zoom").boundingBox();
-      expect(read!.y).toBeGreaterThanOrEqual(image!.y + image!.height - 1);
+        button = await card.locator(".choice-art").boundingBox();
+      expect(button!.height - image!.height).toBeLessThanOrEqual(5);
     }
     expect(
       await page.evaluate(
         () => document.documentElement.scrollWidth <= innerWidth,
       ),
     ).toBeTruthy();
+    await page.screenshot({
+      path: `.sited/qa-choice-clean/opening-${width}.png`,
+    });
   }
   await page.setViewportSize({ width: 1440, height: 1000 });
-  await page.locator(".choice-zoom").first().click();
+  const firstChoice = page.locator(".choice-art").first();
+  await firstChoice.click({ button: "right" });
+  await expect(firstChoice).toHaveAttribute("aria-pressed", "false");
   await expect(page.locator(".card-focus")).toBeVisible();
   await page.getByRole("button", { name: "Fechar carta", exact: true }).click();
   await page.getByRole("button", { name: "Manter estas cartas" }).click();

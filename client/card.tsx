@@ -154,7 +154,11 @@ export function Focus({
     };
   }, []);
   return (
-    <div className="modal-scrim" onClick={onClose}>
+    <div
+      className="modal-scrim"
+      onClick={onClose}
+      onContextMenu={(e) => e.preventDefault()}
+    >
       <section
         className="card-focus"
         role="dialog"

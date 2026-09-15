@@ -1,7 +1,7 @@
 import type { Cmd } from "../shared/model.js";
 import type { Card } from "../shared/cards.js";
 import type { GameView } from "../shared/room.js";
-import { useEffect, useState } from "preact/hooks";
+import { useEffect, useRef, useState } from "preact/hooks";
 import { cards } from "../shared/game.js";
 type ChoiceProps = {
   hand: string[];
@@ -11,38 +11,83 @@ type ChoiceProps = {
   disabled?: boolean;
   label: string;
 };
+function ChoiceCard({
+  cardId,
+  index,
+  ...p
+}: ChoiceProps & { cardId: string; index: number }) {
+  const c = cards.get(cardId)!;
+  const hold = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const origin = useRef({ x: 0, y: 0 });
+  const held = useRef(false);
+  const cancelHold = () => clearTimeout(hold.current);
+  useEffect(() => cancelHold, []);
+  return (
+    <div
+      className={`choice-card ${p.selected.includes(index) ? "chosen" : ""}`}
+    >
+      <button
+        className="choice-art"
+        aria-label={`${p.label} ${c.name}, cópia ${index + 1}`}
+        aria-description="Botão direito ou Shift+F10 para ler. No celular, toque e segure."
+        aria-pressed={p.selected.includes(index)}
+        disabled={p.disabled}
+        onClick={() => {
+          if (held.current) {
+            held.current = false;
+            return;
+          }
+          p.onSelect(index);
+        }}
+        onContextMenu={(e) => {
+          e.preventDefault();
+          cancelHold();
+          p.onFocus(c);
+        }}
+        onKeyDown={(e) => {
+          if (
+            e.key.toLowerCase() === "f" ||
+            e.key === "ContextMenu" ||
+            (e.shiftKey && e.key === "F10")
+          ) {
+            e.preventDefault();
+            e.stopPropagation();
+            p.onFocus(c);
+          }
+        }}
+        onPointerDown={(e) => {
+          cancelHold();
+          held.current = false;
+          if (e.pointerType !== "touch") return;
+          origin.current = { x: e.clientX, y: e.clientY };
+          hold.current = setTimeout(() => {
+            held.current = true;
+            p.onFocus(c);
+          }, 500);
+        }}
+        onPointerMove={(e) => {
+          if (
+            Math.hypot(
+              e.clientX - origin.current.x,
+              e.clientY - origin.current.y,
+            ) > 10
+          )
+            cancelHold();
+        }}
+        onPointerUp={cancelHold}
+        onPointerCancel={cancelHold}
+      >
+        <img src={c.asset} alt={c.name} draggable={false} />
+      </button>
+    </div>
+  );
+}
 export function ChoiceCards(p: ChoiceProps) {
   return (
     <div className="choice-cards">
-      {p.hand.map((id, i) => {
-        const c = cards.get(id)!;
-        return (
-          <div
-            className={`choice-card ${p.selected.includes(i) ? "chosen" : ""}`}
-            key={`${i}-${id}`}
-          >
-            <button
-              className="choice-art"
-              aria-label={`${p.label} ${c.name}, cópia ${i + 1}`}
-              aria-pressed={p.selected.includes(i)}
-              disabled={p.disabled}
-              onClick={() => p.onSelect(i)}
-            >
-              <img src={c.asset} alt={c.name} draggable={false} />
-              <span className="choice-check">
-                {p.selected.includes(i) ? "✓" : p.label}
-              </span>
-            </button>
-            <button
-              className="choice-zoom"
-              aria-label={`Ler ${c.name}`}
-              onClick={() => p.onFocus(c)}
-            >
-              ⤢
-            </button>
-          </div>
-        );
-      })}
+      {p.hand.map((id, i) => (
+        <ChoiceCard {...p} key={`${i}-${id}`} cardId={id} index={i} />
+      ))}
     </div>
   );
 }

@@ -770,6 +770,10 @@ export function Arena(p: Props) {
                 >
                   <button
                     className="fan-art"
+                    onContextMenu={(e) => {
+                      e.preventDefault();
+                      p.onFocus(c);
+                    }}
                     onPointerDown={(e) => {
                       if (e.button !== 0 || p.busy || done) return;
                       if (
