@@ -96,3 +96,31 @@ test("a newer rules version is rejected without changing its saved state", () =>
   );
   assert.deepEqual(g, before);
 });
+
+test("submitted commands require their fields while drafts can remain incomplete", () => {
+  for (const draft of [
+    { type: "move", unitId: "u", x: 2 },
+    { type: "attack", unitId: "u" },
+    { type: "cast" },
+    { type: "summon", cardId: "lobo-branco" },
+    { type: "search" },
+    { type: "discardMany" },
+  ]) {
+    const g = game(),
+      before = structuredClone(g);
+    assert.equal(isCommand(draft), false);
+    assert.equal(apply(g, 0, draft), "Comando inválido.");
+    assert.deepEqual(g, before);
+  }
+  // @ts-expect-error A move cannot be submitted without its destination.
+  const incomplete: Cmd = { type: "move", unitId: "u" };
+  assert.equal(isCommand(incomplete), false);
+  assert(
+    isCommand({
+      type: "summon",
+      cardId: "anubis-o-gato-da-morte",
+      targetId: "cat",
+    }),
+  );
+  assert(isCommand({ type: "summon", cardId: "lobo-branco", x: 0, y: 0 }));
+});

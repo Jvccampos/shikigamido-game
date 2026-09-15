@@ -99,13 +99,6 @@ test("movement forecasts agree with the resolved rules including Quick Attack, s
       preview.combat?.defender.after?.hp,
       resolved.units.find((u) => u.id === d.id)?.hp,
     );
-    assert(
-      preview.lines.some((s) =>
-        s.includes(
-          `${event.attackDamage} de dano · ${event.defenseDamage} de contra-ataque`,
-        ),
-      ),
-    );
     assert.deepEqual(
       g,
       original,
@@ -121,7 +114,6 @@ test("movement costs and immobilization are explained before committing", () => 
   const c = { type: "move" as const, unitId: a.id, x: 3, y: 2 };
   const preview = previewAction(publicGame(g, 0), 0, c);
   assert.equal(preview.cost, 1);
-  assert.equal(preview.energy, 1);
   g.players[0].pe = 0;
   g.players[0].permanentPe = 0;
   assert.match(commandError(publicGame(g, 0), 0, c)!, /1 PE/);
@@ -138,15 +130,14 @@ test("hidden cards and random combat never produce a falsely exact forecast", ()
   const a = add(g, "cachorro-do-mato", 0, 2, 2),
     d = add(g, "lobo-branco", 1, 3, 2);
   const c = { type: "move" as const, unitId: a.id, x: d.x, y: d.y };
-  assert.match(previewAction(publicGame(g, 0), 0, c).uncertain!, /sorteio/);
+  assert.equal(previewAction(publicGame(g, 0), 0, c).uncertainty, "random");
   (d.statuses ??= {}).hidden = true;
   const preview = previewAction(publicGame(g, 0), 0, c);
-  assert.match(preview.uncertain!, /ocultas/);
+  assert.equal(preview.uncertainty, "hidden");
   assert.equal(preview.combat?.resolved, false);
   assert.equal(preview.combat?.defender.before.cardId, "hidden");
   assert.equal(preview.combat?.defender.damage, undefined);
   assert(!JSON.stringify(preview).includes("Lobo Branco"));
-  assert(!preview.lines.some((s) => s.includes("será derrotado")));
 });
 test("spell area forecasts identify affected pieces and journal snapshots stay private", () => {
   const g = game();
@@ -160,7 +151,6 @@ test("spell area forecasts identify affected pieces and journal snapshots stay p
     targetId: a.id,
   };
   const preview = previewAction(publicGame(g, 0), 0, c);
-  assert(preview.lines.some((s) => s.includes("Vida 1 → 2")));
   assert(preview.affected.includes(a.id));
   assert.equal(apply(g, 0, c), undefined);
   const spell = [...g.events!].reverse().find((e) => e.type === "spell")!;

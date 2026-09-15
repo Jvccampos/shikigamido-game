@@ -1,7 +1,7 @@
 import { test, expect } from "@playwright/test";
 import { random, randomState } from "../../shared/random.js";
 import { layout } from "../../shared/arena-layout.js";
-import { idle } from "./fixtures.js";
+import { idle, scenario } from "./fixtures.js";
 import { mkdir } from "node:fs/promises";
 
 test("legal actions and movement remain clear without redundant panels across viewports", async ({
@@ -131,7 +131,6 @@ test("spell outcomes, pending combat and status sources are readable in a contro
   const { freshGame, apply } = await import("../../shared/game.js");
   const { makeUnit } = await import("../../shared/rules/core.js");
   const { starterDeck } = await import("../../shared/practice.js");
-  const { publicRoom } = await import("../../shared/visibility.js");
   const g = freshGame("a", "b", starterDeck("agua"), starterDeck("fogo"), 42);
   g.setup = false;
   g.turn = 2;
@@ -149,51 +148,7 @@ test("spell outcomes, pending combat and status sources are readable in a contro
   enemy.maxHp = 9;
   enemy.speed = 1;
   g.units.push(snake, enemy);
-  const snapshot = () =>
-    publicRoom(
-      {
-        code: "UXTEST",
-        hostId: "a",
-        status: "playing",
-        state: g,
-        spectators: [
-          { id: "a", name: "Você" },
-          { id: "b", name: "Oponente" },
-        ],
-      },
-      "a",
-    );
-  let send = () => {};
-  await page.routeWebSocket("**/socket", (socket) => {
-    send = () =>
-      socket.send(JSON.stringify({ type: "room", room: snapshot() }));
-    socket.onMessage(send);
-  });
-  await page.route("**/api/**", async (route) => {
-    const url = new URL(route.request().url());
-    if (url.pathname === "/api/auth")
-      return route.fulfill({
-        json: {
-          userId: "a",
-          displayName: "Você",
-          isAuthenticated: true,
-          isLoading: false,
-        },
-      });
-    if (url.pathname.endsWith("/myRooms"))
-      return route.fulfill({
-        json: { result: [{ code: "UXTEST", status: "playing" }] },
-      });
-    if (url.pathname.endsWith("/room"))
-      return route.fulfill({ json: { result: snapshot() } });
-    if (url.pathname.endsWith("/gameCommand")) {
-      const [, cmd] = route.request().postDataJSON().args;
-      const error = apply(g, 0, cmd);
-      if (!error) g.revision = (g.revision || 0) + 1;
-      return route.fulfill({ json: { result: { error, room: snapshot() } } });
-    }
-    return route.fulfill({ json: { result: [] } });
-  });
+  const send = await scenario(page, g, "UXTEST");
   await page.goto("/");
   await page.getByRole("button", { name: /UXTEST/ }).click();
   await idle(page);

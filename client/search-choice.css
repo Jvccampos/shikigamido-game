@@ -45,21 +45,6 @@
   font: 15px/1.5 Arial;
   margin: 20px 0;
 }
-.search-choice .choice-cards {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 18px;
-  max-height: 48dvh;
-  overflow: auto;
-  width: 100%;
-  margin: 16px 0;
-  padding: 14px 8px;
-}
-.search-choice .choice-card {
-  width: 154px;
-  flex: 0 0 154px;
-}
 .search-actions {
   display: flex;
   justify-content: flex-end;
@@ -89,13 +74,6 @@
   .search-choice h2 {
     font-size: 24px;
   }
-  .search-choice .choice-card {
-    width: 125px;
-    flex-basis: 125px;
-  }
-  .search-choice .choice-cards {
-    gap: 10px;
-  }
   .search-actions {
     flex-wrap: wrap;
     justify-content: center;
@@ -124,17 +102,6 @@
     grid-column: 1;
     margin: 0;
     align-self: start;
-  }
-  .search-choice .choice-cards {
-    grid-column: 2;
-    grid-row: 1 / span 3;
-    margin: 0;
-    max-height: none;
-    gap: 12px;
-  }
-  .search-choice .choice-card {
-    width: clamp(90px, calc((100dvh - 170px) * 0.6), 140px);
-    flex-basis: clamp(90px, calc((100dvh - 170px) * 0.6), 140px);
   }
   .search-actions,
   .search-privacy {

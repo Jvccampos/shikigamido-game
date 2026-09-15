@@ -17,8 +17,8 @@ import { unitEffects } from "../shared/unit-insight.js";
 import { ArenaNotices } from "./arena-notices.js";
 import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import type { ComponentChildren } from "preact";
-import { ArenaScene, type Point } from "./arena-scene.js";
-import { cards, phases, type Cmd } from "../shared/game.js";
+import { ArenaScene, type Point, type Presentation } from "./arena-scene.js";
+import { cards, type Cmd } from "../shared/game.js";
 type Props = {
   game: GameView;
   seat: number;
@@ -91,7 +91,7 @@ export function Arena(p: Props) {
     [elementsOpen, setElementsOpen] = useState(false),
     [discardOpen, setDiscardOpen] = useState(false),
     [drawing, setDrawing] = useState(false),
-    [presenting, setPresenting] = useState<string | null>(null),
+    [presenting, setPresenting] = useState<Presentation | null>(null),
     [visibleUnits, setVisibleUnits] = useState<UnitView[]>(p.game.units),
     [settledRevision, setSettledRevision] = useState(p.game.revision),
     [log, setLog] = useState(false),
@@ -199,8 +199,11 @@ export function Arena(p: Props) {
       onSelect: (u: UnitView) => v.onSelect(u),
       onDrop: (x: number, y: number, u?: UnitView, id?: string) =>
         v.onDrop(x, y, u, id ? { kind: "unit", unitId: id } : undefined),
-      onPresentation: (label: string | null, units?: UnitView[]) => {
-        setPresenting(label);
+      onPresentation: (
+        presentation: Presentation | null,
+        units?: UnitView[],
+      ) => {
+        setPresenting(presentation);
         if (units) {
           setVisibleUnits(units);
           setSettledRevision(latest.current.game.revision);
@@ -427,8 +430,8 @@ export function Arena(p: Props) {
     );
   }
   const response = !!(g.combat || g.stack.length);
-  const resolvingCombat = !!presenting?.includes("resolvendo dano");
-  const resolvingSpell = !!presenting?.endsWith(" resolve");
+  const resolvingCombat = presenting?.kind === "combat";
+  const resolvingSpell = presenting?.kind === "spell";
   const responseContext = response || resolvingCombat || resolvingSpell;
   const actionText = g.followup
     ? "Pular movimento"
@@ -443,44 +446,6 @@ export function Arena(p: Props) {
           "Concluir magias",
           "Concluir descarte",
         ][g.phase] || "Continuar";
-  const instruction = g.setup
-    ? ""
-    : g.centerPending
-      ? "Escolha seu avanço em segredo."
-      : presenting
-        ? "Acompanhe a resolução no tabuleiro."
-        : response
-          ? yourTurn
-            ? "Jogue uma magia rápida ou instantânea, ou passe sua resposta."
-            : `${p.names[g.priority]} pode responder antes da resolução.`
-          : yourTurn
-            ? [
-                "",
-                "Arraste uma criatura até um selo iluminado.",
-                `Arraste suas unidades. Movimentos grátis restantes: ${Math.max(0, 2 - (g.moveCounts?.[p.seat] || 0))}.`,
-                "Arraste uma magia até o alvo ou ative uma habilidade.",
-                "Converta cartas em Reserva ou mantenha sua mão.",
-              ][g.phase]
-            : `Aguarde ${p.names[g.priority]} concluir esta etapa.`;
-  const turnText = resolvingCombat
-    ? "Resolvendo combate"
-    : resolvingSpell
-      ? "Resolvendo magia"
-      : g.setup
-        ? "Prepare seu espírito"
-        : g.centerPending
-          ? "O centro se abriu"
-          : g.followup
-            ? "Movimento adicional"
-            : g.duel
-              ? "Escolha do duelo"
-              : response
-                ? yourTurn
-                  ? "Sua resposta"
-                  : "Resposta do oponente"
-                : yourTurn
-                  ? "Sua vez"
-                  : `Vez de ${p.names[g.priority]}`;
   return (
     <section
       aria-busy={p.busy || !ready}
@@ -559,51 +524,14 @@ export function Arena(p: Props) {
             seat={p.seat}
             names={p.names}
             presenting={
-              presenting ||
+              presenting?.label ||
               (drawing ? "Compra automática · carta vindo para a mão" : null)
             }
           />
         ) : (
           <>
-            <small>
-              TURNO {String(g.turn).padStart(2, "0")} ·{" "}
-              {g.setup
-                ? "PREPARAÇÃO"
-                : drawing
-                  ? "COMPRA AUTOMÁTICA"
-                  : phases[g.phase].toUpperCase()}
-            </small>
-            <h1>{drawing ? "Uma nova carta, novos caminhos" : turnText}</h1>
-            <div className="phase-steps">
-              {(responseContext
-                ? [
-                    g.combat || resolvingCombat ? "Ataque" : "Conjuração",
-                    "Respostas",
-                    "Resolução",
-                  ]
-                : phases.slice(1)
-              ).map((phase, i) => (
-                <span
-                  key={phase}
-                  className={
-                    (
-                      responseContext
-                        ? i === (resolvingCombat || resolvingSpell ? 2 : 1)
-                        : i === g.phase - 1
-                    )
-                      ? "current"
-                      : ""
-                  }
-                >
-                  {phase}
-                </span>
-              ))}
-            </div>
-            {!g.setup && (
-              <p className="phase-instruction" role="status">
-                {instruction}
-              </p>
-            )}
+            <small>TURNO {String(g.turn).padStart(2, "0")} · PREPARAÇÃO</small>
+            <h1>Prepare seu espírito</h1>
           </>
         )}
       </div>

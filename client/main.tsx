@@ -7,4 +7,6 @@ import "./tactical-hud.css";
 import "./combat-preview.css";
 import "./search-choice.css";
 import "./action-ui.css";
+import "./choices.css";
+import "./journal.css";
 render(<App />, document.getElementById("app")!);

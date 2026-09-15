@@ -1,3 +1,5 @@
+import { apply, type Game } from "../../shared/game.js";
+import { publicRoom } from "../../shared/visibility.js";
 import {
   expect,
   type APIRequestContext,
@@ -109,4 +111,52 @@ export async function start(contexts: BrowserContext[], code: string) {
 export async function openRoom(page: Page, code: string) {
   await page.goto(`/?sala=${code}`);
   await page.getByRole("button", { name: new RegExp(code) }).click();
+}
+
+/** Deterministic UI scenarios run the real engine behind an isolated transport. */
+export async function scenario(page: Page, state: Game, code = "UXTEST") {
+  const snapshot = () =>
+    publicRoom(
+      {
+        code,
+        hostId: "a",
+        status: "playing",
+        state,
+        spectators: [
+          { id: "a", name: "Você" },
+          { id: "b", name: "Oponente" },
+        ],
+      },
+      "a",
+    );
+  let send = () => {};
+  await page.routeWebSocket("**/socket", (socket) => {
+    send = () =>
+      socket.send(JSON.stringify({ type: "room", room: snapshot() }));
+    socket.onMessage(send);
+  });
+  await page.route("**/api/**", (route) => {
+    const path = new URL(route.request().url()).pathname;
+    if (path === "/api/auth")
+      return route.fulfill({
+        json: {
+          userId: "a",
+          displayName: "Você",
+          isAuthenticated: true,
+          isLoading: false,
+        },
+      });
+    if (path.endsWith("/myRooms"))
+      return route.fulfill({ json: { result: [{ code, status: "playing" }] } });
+    if (path.endsWith("/room"))
+      return route.fulfill({ json: { result: snapshot() } });
+    if (path.endsWith("/gameCommand")) {
+      const [, command] = route.request().postDataJSON().args;
+      const error = apply(state, 0, command);
+      if (!error) state.revision = (state.revision || 0) + 1;
+      return route.fulfill({ json: { result: { error, room: snapshot() } } });
+    }
+    return route.fulfill({ json: { result: [] } });
+  });
+  return () => send();
 }

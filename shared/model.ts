@@ -174,7 +174,8 @@ export const commandTypes = [
   "discard",
   "discardMany",
 ] as const;
-export type Cmd = {
+/** A UI selection may be incomplete; only Cmd can cross the command boundary. */
+export type CommandDraft = {
   promptId?: string;
   type: (typeof commandTypes)[number];
   cardId?: string;
@@ -191,6 +192,23 @@ export type Cmd = {
   x2?: number;
   y2?: number;
 };
+
+export type Cmd = CommandDraft &
+  (
+    | { type: "concede" | "pass" | "mulligan" | "center" | "duel" }
+    | { type: "ready"; y: number }
+    | { type: "search"; promptId: string }
+    | { type: "followup"; x: number; y: number }
+    | { type: "ability"; unitId: string }
+    | { type: "move"; unitId: string; x: number; y: number }
+    | { type: "attack"; unitId: string; targetId: string }
+    | { type: "cast"; cardId: string }
+    | ({ type: "summon"; cardId: string } & (
+        { x: number; y: number } | { targetId: string }
+      ))
+    | ({ type: "discard" } & ({ cardId: string } | { handIndex: number }))
+    | { type: "discardMany"; handIndices: number[] }
+  );
 
 /** Events describe completed commands. Unit snapshots must never share mutable state. */
 export type EventPayload<U = Unit> =
@@ -252,7 +270,7 @@ export type GameEvent<U = Unit> = EventPayload<U> & {
 };
 
 /** Validate untrusted command shape; legality and costs belong to the rules engine. */
-export function isCommand(value: unknown): value is Cmd {
+function isCommandDraft(value: unknown): value is CommandDraft {
   if (!value || typeof value !== "object" || Array.isArray(value)) return false;
   const c = value as Record<string, unknown>;
   if (
@@ -292,4 +310,36 @@ export function isCommand(value: unknown): value is Cmd {
         c.handIndices.length <= 30 &&
         c.handIndices.every(integer)))
   );
+}
+
+/** Required fields for a submitted action, independent of game legality. */
+export function isCommand(value: unknown): value is Cmd {
+  if (!isCommandDraft(value)) return false;
+  const c = value;
+  switch (c.type) {
+    case "ready":
+      return c.y !== undefined;
+    case "search":
+      return !!c.promptId;
+    case "followup":
+      return c.x !== undefined && c.y !== undefined;
+    case "ability":
+      return !!c.unitId;
+    case "move":
+      return !!c.unitId && c.x !== undefined && c.y !== undefined;
+    case "attack":
+      return !!c.unitId && !!c.targetId;
+    case "cast":
+      return !!c.cardId;
+    case "summon":
+      return (
+        !!c.cardId && (!!c.targetId || (c.x !== undefined && c.y !== undefined))
+      );
+    case "discard":
+      return !!c.cardId || c.handIndex !== undefined;
+    case "discardMany":
+      return !!c.handIndices;
+    default:
+      return true;
+  }
 }

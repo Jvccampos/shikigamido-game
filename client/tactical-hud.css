@@ -68,32 +68,6 @@
 .fan-card.not-playable.selected .fan-art > img {
   filter: saturate(0.85) brightness(0.92);
 }
-.unit-insights {
-  display: grid;
-  gap: 7px;
-  margin: 12px 0;
-}
-.unit-insights p {
-  display: grid;
-  gap: 4px;
-  margin: 0 !important;
-  padding: 9px 11px;
-  border-left: 2px solid #91ac9c;
-  background: #142b2377;
-  font: 13px/1.45 Arial !important;
-}
-.unit-insights b {
-  color: #dedfc4;
-}
-.unit-insights span {
-  color: #b9d0c1;
-}
-.unit-insights .bad {
-  border-color: #eb9985;
-}
-.unit-insights .good {
-  border-color: #86d3b0;
-}
 .card-focus .focus-text {
   max-height: 82dvh;
   overflow-y: auto;

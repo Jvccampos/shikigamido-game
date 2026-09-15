@@ -1,10 +1,4 @@
-import {
-  type Game,
-  type Seat,
-  type Cmd,
-  isCommand,
-  type Unit,
-} from "./model.js";
+import { type Game, type Seat, isCommand, type Unit } from "./model.js";
 import { RULES_VERSION } from "./rules/setup.js";
 import {
   draw,
@@ -31,7 +25,7 @@ import { ability, spellError, resolveSpell } from "./rules/spells.js";
 import { destroy, summonEffects, heal, takeDamage } from "./rules/units.js";
 import { resolveSearch } from "./rules/searches.js";
 
-export function apply(g: Game, seat: Seat, c: Cmd): string | undefined {
+export function apply(g: Game, seat: Seat, c: unknown): string | undefined {
   if (!isCommand(c)) return "Comando inválido.";
   if ((g.rulesVersion ?? 1) > RULES_VERSION)
     return "Esta partida usa uma versão mais recente das regras.";

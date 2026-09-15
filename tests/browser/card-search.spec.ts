@@ -1,12 +1,11 @@
 import { test, expect } from "@playwright/test";
 import { freshGame, apply } from "../../shared/game.js";
 import { starterDeck } from "../../shared/practice.js";
-import { publicRoom } from "../../shared/visibility.js";
 import { layout } from "../../shared/arena-layout.js";
 import { summonEffects } from "../../shared/rules/units.js";
 import { makeUnit } from "../../shared/rules/core.js";
 import { spawnCurse } from "../../shared/rules/curses.js";
-import { idle } from "./fixtures.js";
+import { idle, scenario } from "./fixtures.js";
 import { mkdir } from "node:fs/promises";
 
 test("Curador search is private, inspectable, responsive and puts the chosen card in hand", async ({
@@ -28,51 +27,7 @@ test("Curador search is private, inspectable, responsive and puts the chosen car
     "taodu-corrupto",
     "lobo-branco",
   ];
-  const snapshot = () =>
-    publicRoom(
-      {
-        code: "SEARCH",
-        hostId: "a",
-        status: "playing",
-        state: g,
-        spectators: [
-          { id: "a", name: "Você" },
-          { id: "b", name: "Oponente" },
-        ],
-      },
-      "a",
-    );
-  let send = () => {};
-  await page.routeWebSocket("**/socket", (socket) => {
-    send = () =>
-      socket.send(JSON.stringify({ type: "room", room: snapshot() }));
-    socket.onMessage(send);
-  });
-  await page.route("**/api/**", (route) => {
-    const url = new URL(route.request().url());
-    if (url.pathname === "/api/auth")
-      return route.fulfill({
-        json: {
-          userId: "a",
-          displayName: "Você",
-          isAuthenticated: true,
-          isLoading: false,
-        },
-      });
-    if (url.pathname.endsWith("/myRooms"))
-      return route.fulfill({
-        json: { result: [{ code: "SEARCH", status: "playing" }] },
-      });
-    if (url.pathname.endsWith("/room"))
-      return route.fulfill({ json: { result: snapshot() } });
-    if (url.pathname.endsWith("/gameCommand")) {
-      const [, cmd] = route.request().postDataJSON().args;
-      const error = apply(g, 0, cmd);
-      if (!error) g.revision = (g.revision || 0) + 1;
-      return route.fulfill({ json: { result: { error, room: snapshot() } } });
-    }
-    return route.fulfill({ json: { result: [] } });
-  });
+  const send = await scenario(page, g, "SEARCH");
   await page.goto("/");
   await page.getByRole("button", { name: /SEARCH/ }).click();
   await idle(page);

@@ -18,10 +18,11 @@ Abra http://localhost:5175. Vite encaminha API e WebSocket ao servidor na porta 
 ## Organização do código
 
 - `shared/game.ts` é a entrada dos comandos. As regras ficam em `shared/rules/`: `board.ts` para caminhos e movimentos, `combat.ts` para combate, `spells.ts` para magias e habilidades, `turns.ts` para fases, `units.ts` para cura, invocação e morte, `setup.ts` para criação da partida e `core.ts` para operações compartilhadas. Servidor e treino usam o mesmo motor.
-- `shared/model.ts` define o estado completo, comandos, eventos e efeitos nas unidades. `shared/room.ts` distingue lobby, partida salva e visão pública; `shared/protocol.ts` define os contratos HTTP e WebSocket. `shared/cards.ts` tipa e valida o catálogo ao carregar.
+- `shared/model.ts` define o estado completo, comandos, eventos e efeitos nas unidades. `CommandDraft` admite seleções incompletas; `Cmd` exige os campos básicos de cada ação, e `isCommand` valida a forma das entradas antes de o motor verificar sua legalidade. `shared/room.ts` distingue lobby, partida salva e visão pública; `shared/protocol.ts` define os contratos HTTP e WebSocket. `shared/cards.ts` tipa e valida o catálogo ao carregar.
 - `shared/visibility.ts` prepara a visão de cada jogador ou espectador, ocultando mãos, baralhos e peças secretas antes da transmissão. A arena recebe `GameView`; somente o motor recebe `Game`. Uma peça oculta tem atributos `null`, inclusive nas cópias históricas dos eventos.
-- `client/index.tsx` reúne navegação, baralhos, lobby e treino. `client/match-interaction.tsx` concentra seleção, arraste, alvos e controles contextuais. `client/card.tsx` apresenta cartas e leitura ampliada.
-- `client/arena.tsx` controla a interface da partida; `client/arena-scene.ts` desenha e anima o tabuleiro PixiJS. `client/network.ts` mantém a conexão da sala e aplica a mesma verificação de revisão às respostas HTTP e WebSocket.
+- `client/index.tsx` reúne navegação e lobby. `client/deck-builder.tsx` mantém o editor de baralhos, inclusive o rascunho ao trocar de tela. `client/match-session.tsx` controla a sessão, os comandos e o bot enquanto a arena está aberta.
+- `client/match-interaction.tsx` controla seleção e arraste; `client/action-selection.ts` define a ação em preparação e os passos de seleção. `client/match-controls.tsx` apresenta os controles. `client/card.tsx` apresenta cartas e leitura ampliada.
+- `client/arena.tsx` controla a interface da partida; `client/arena-scene.ts` controla o tabuleiro, a entrada e a sequência de animações PixiJS; `client/unit-renderer.ts` desenha cada peça. Estados de apresentação e motivos de incerteza são tipados, separados dos textos exibidos. Os estilos das escolhas e do histórico ficam em `client/choices.css` e `client/journal.css`. `client/network.ts` mantém a conexão da sala e aplica a mesma verificação de revisão às respostas HTTP e WebSocket.
 - `server/index.ts` trata salas e baralhos. `server/main.ts` fornece HTTP, sessões e WebSocket; `server/database.ts` concentra a persistência SQLite.
 
 Os testes de salas usam SQLite em memória através do mesmo módulo de persistência da aplicação. A checagem de tipos inclui os testes e rejeita declarações e parâmetros sem uso.
@@ -70,10 +71,6 @@ npm run check
 npx playwright install chromium
 npm run test:browser
 npm run test:multiplayer
-node --import tsx scripts/spell-ux.mjs
-node --import tsx scripts/combat-smoke.mjs
-node scripts/ui-sweep.mjs
-node scripts/readability-smoke.mjs
 ```
 
 O comando `check` verifica formatação, lint e tipos, depois executa os testes de regras, catálogo, privacidade, salas, SQLite, HTTP e WebSocket. O CI executa o mesmo comando.
@@ -91,13 +88,13 @@ As configurações ficam em `.prettierrc.json` e `eslint.config.mjs`. O Prettier
 
 `test:browser` compila a aplicação e inicia um servidor isolado na porta 3187 com SQLite em memória. Exercita a preparação e a leitura em quatro tamanhos de tela. O multiplayer tem cenários separados para organizar o lobby, receber uma resposta HTTP atrasada, reconectar um espectador e arrastar cartas e peças. Cada cenário renderiza uma única arena; os demais participantes usam a API real. `test:multiplayer` executa somente esses cenários. Falhas deixam capturas e traces em `.sited/playwright-results/` e um relatório em `.sited/playwright-report/`. Os testes de navegador são executados localmente ou contra um deploy com `TEST_URL`; não rodam no CI. O GitHub Actions executa apenas `npm run check` a cada push e pull request.
 
-Os scripts adicionais de magia, combate e revisão visual usam o servidor de desenvolvimento já aberto e salvam capturas em `.sited/qa/`. `TEST_URL` permite direcionar os testes de navegador e esses scripts a outro servidor, inclusive ao deploy. Eles criam perfis e salas de QA nesse servidor.
+Os cenários visuais estão em `tests/browser/`. A fixture `scenario` usa o motor real com transporte isolado para reproduzir magias, combate e busca; as fixtures de multiplayer usam HTTP e WebSocket reais. Capturas ficam em `.sited/qa*/`. `TEST_URL` permite executar a suíte contra um deploy; os cenários de multiplayer criam perfis e salas de QA nesse servidor.
 
 ## Interpretações ainda provisórias
 
-- Os arquivos recebidos não incluem fichas de maldição: níveis 1/2/3 usam ataque 2/3/4, vida 6/9/12 e velocidade 1. Precisam de confirmação do autor.
+- As oito cartas com Amaldiçoado são as maldições. O custo determina o nível: até 1 → nível 1; até 3 → nível 2; acima de 3 → nível 3. Cada surgimento sorteia uma carta do nível correspondente.
 - A vantagem elemental segue o diagrama do manual; há um exemplo textual contraditório.
 - Espécie e gênero não são metadados completos do catálogo; os efeitos correspondentes usam listas explícitas em `shared/traits.ts`, que devem ser revisadas pelo autor.
-- Os cinco Omionjis usam as imagens e efeitos enviados pelo autor. O catálogo contém 102 cartas de baralho e cinco Omionjis.
+- Os cinco Omionjis usam as imagens e efeitos enviados pelo autor. O catálogo contém 94 cartas de baralho, oito maldições e cinco Omionjis.
 
 A arte do cenário foi gerada para esta interface. As cartas conservam as imagens fornecidas pelo autor; a procedência das ilustrações originais está no catálogo.

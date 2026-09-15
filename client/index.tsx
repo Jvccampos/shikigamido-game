@@ -1,8 +1,8 @@
+import { DeckBuilder } from "./deck-builder.js";
 import type { MutationResponse, PublicRoom } from "../shared/room.js";
 import type { CardFocus } from "./card.js";
-import { E, SPEED, CardFace, Focus } from "./card.js";
-import { useMatchInteraction } from "./match-interaction.js";
-import { Arena } from "./arena.js";
+import { E, Focus } from "./card.js";
+import { MatchSession } from "./match-session.js";
 import { enterAsGuest } from "./network.js";
 import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import {
@@ -14,15 +14,11 @@ import {
   useRoom,
 } from "./network.js";
 import {
-  allCards,
   cards as catalog,
   phases as PHASES,
-  validateDeck,
-  apply,
   type Game,
-  type Cmd,
 } from "../shared/game.js";
-import { practiceGame, starterDeck, botCommand } from "../shared/practice.js";
+import { practiceGame } from "../shared/practice.js";
 import { publicRoom } from "../shared/visibility.js";
 export function App() {
   const [loginOpen, setLoginOpen] = useState(false),
@@ -35,20 +31,12 @@ export function App() {
   const auth = useAuth(),
     decks = useQuery("myDecks"),
     myRooms = useQuery("myRooms");
-  const saveDeck = useMutation("saveDeck"),
-    deleteDeck = useMutation("deleteDeck"),
-    createRoom = useMutation("createRoom"),
+  const createRoom = useMutation("createRoom"),
     joinRoom = useMutation("joinRoom"),
-    command = useMutation("gameCommand"),
     lobbyCommand = useMutation("lobbyCommand");
   const [view, setView] = useState("inicio"),
     [element, setElement] = useState("agua"),
-    [deckName, setDeckName] = useState("Maré ancestral"),
-    [chosen, setChosen] = useState<string[]>([]),
-    [editId, setEditId] = useState(""),
     [selectedDeck, setSelectedDeck] = useState(""),
-    [search, setSearch] = useState(""),
-    [filter, setFilter] = useState("all"),
     [code, setCode] = useState(
       () =>
         new URLSearchParams(location.search).get("sala") ||
@@ -58,30 +46,15 @@ export function App() {
     [practice, setPractice] = useState<Game | null>(null),
     [toast, setToast] = useState(""),
     [busy, setBusy] = useState(false),
-    [sceneBusy, setSceneBusy] = useState(false),
-    [noticeBusy, setNoticeBusy] = useState(false),
     [focus, setFocus] = useState<CardFocus | null>(null);
-  const [concede, setConcede] = useState(false);
   const liveRoom = useRoom(code, view === "sala" && !practice);
   const room = useMemo(
     () => (practice ? practiceRoom(practice) : liveRoom.data),
     [practice, liveRoom.data],
   );
-  const toastTimer = useRef<ReturnType<typeof setTimeout>>(),
-    hovered = useRef<CardFocus | null>(null),
-    localRef = useRef(practice);
-  localRef.current = practice;
+  const toastTimer = useRef<ReturnType<typeof setTimeout>>();
   const g = room && room.status !== "waiting" ? room.state : undefined,
-    seat = room?.seat ?? -1,
-    myTurn = !!g && seat === g.priority && !g.setup && !g.centerPending;
-  const interaction = useMatchInteraction(
-    g,
-    seat,
-    busy || sceneBusy,
-    act,
-    setFocus,
-    code,
-  );
+    seat = room?.seat ?? -1;
   const flash = (message: string) => {
     setToast(message);
     clearTimeout(toastTimer.current);
@@ -100,56 +73,11 @@ export function App() {
         return;
       if (e.key === "Escape") {
         setFocus(null);
-        interaction.arena.onClear();
-      }
-      if (e.key.toLowerCase() === "f" && hovered.current) {
-        setFocus(hovered.current);
-        e.preventDefault();
       }
     };
     window.addEventListener("keydown", key);
     return () => window.removeEventListener("keydown", key);
   }, []);
-  useEffect(() => {
-    if (
-      !practice ||
-      practice.winner !== null ||
-      practice.draw ||
-      sceneBusy ||
-      noticeBusy
-    )
-      return;
-    if (!(
-      (practice.setup && !practice.players[1].ready) ||
-      (practice.centerPending &&
-        !Object.hasOwn(practice.centerChoices || {}, 1)) ||
-      (!practice.setup &&
-        !practice.centerPending &&
-        (practice.searches?.[0]?.seat ?? practice.priority) === 1)
-    ))
-      return;
-    const timer = setTimeout(() => {
-      const original = localRef.current;
-      if (!original) return;
-      const next = structuredClone(original);
-      const cmd = botCommand(next, 1);
-      const error = apply(next, 1, cmd);
-      if (error) {
-        const clean = structuredClone(original);
-        if (!apply(clean, 1, { type: "pass" })) {
-          clean.revision = (clean.revision || 0) + 1;
-          setPractice(clean);
-        }
-        return;
-      }
-      // Conversion is a single choice. Hand over the phase without another
-      // thinking pause after every discarded card and the final pass.
-      if (cmd.type === "discardMany") apply(next, 1, { type: "pass" });
-      next.revision = (next.revision || 0) + 1;
-      setPractice(next);
-    }, 750);
-    return () => clearTimeout(timer);
-  }, [practice, sceneBusy, noticeBusy]);
   function playerName(s: number) {
     const id = g?.players?.[s]?.id;
     return room?.members?.find((m) => m.id === id)?.name || `Jogador ${s + 1}`;
@@ -187,46 +115,12 @@ export function App() {
       setBusy(false);
     }
   }
-  async function act(cmd: Cmd) {
-    if (busy || sceneBusy) return false;
-    if (practice) {
-      const next = structuredClone(practice),
-        error = apply(next, 0, cmd);
-      if (error) {
-        flash(error);
-        return false;
-      }
-      next.revision = (next.revision || 0) + 1;
-      setPractice(next);
-
-      return true;
-    }
-    const r = await request(() => command.mutate(code, cmd, g?.revision || 0));
-    return !!r && !r.error;
-  }
-  useEffect(() => {
-    if (
-      g &&
-      !g.setup &&
-      g.phase === 0 &&
-      myTurn &&
-      !g.stack.length &&
-      !g.combat &&
-      !g.searches?.length &&
-      !busy
-    ) {
-      const timer = setTimeout(() => void act({ type: "pass" }), 500);
-      return () => clearTimeout(timer);
-    }
-  }, [g?.revision, busy]);
   function startPractice() {
     const game = practiceGame(element);
-    setSceneBusy(false);
 
     setPractice(game);
 
     setCode("TREINO");
-    interaction.reset();
     setView("sala");
   }
   async function enter(spectator = false) {
@@ -250,52 +144,6 @@ export function App() {
       setView("sala");
     }
   }
-  async function save() {
-    if (!auth.isAuthenticated) {
-      openLogin();
-      return;
-    }
-    const r = await request(() =>
-      saveDeck.mutate({
-        id: editId || undefined,
-        name: deckName,
-        element,
-        omionji: `omionji-${element}`,
-        cardIds: chosen,
-      }),
-    );
-    if (r?.deck) {
-      setEditId(r.deck.id);
-      setSelectedDeck(r.deck.id);
-      flash("Baralho salvo.");
-      await decks.refetch();
-    }
-  }
-  const mainCount = chosen.filter((id) =>
-      catalog.get(id)?.types.includes(element),
-    ).length,
-    deckError = validateDeck({ element, cardIds: chosen });
-  const filtered = useMemo(
-    () =>
-      allCards
-        .filter(
-          (c) =>
-            c.kind !== "omionji" &&
-            c.kind !== "curse" &&
-            (c.kind === "unit" || c.types.includes(element)) &&
-            (filter === "all" ||
-              (filter === "main" && c.types.includes(element)) ||
-              filter === c.kind) &&
-            `${c.name} ${c.effect_text}`
-              .toLowerCase()
-              .includes(search.toLowerCase()),
-        )
-        .sort(
-          (a, b) => a.stats.cost - b.stats.cost || a.name.localeCompare(b.name),
-        ),
-    [element, search, filter],
-  );
-  const count = (id: string) => chosen.filter((x) => x === id).length;
   return (
     <div
       className={`app ${view === "sala" && g?.players ? "in-game playing-arena" : ""}`}
@@ -518,212 +366,19 @@ export function App() {
           </section>
         </main>
       )}
-      {view === "decks" && (
-        <main className="builder">
-          <aside>
-            <p className="eyebrow">SEU ARSENAL</p>
-            <h1>{editId ? "Editar baralho" : "Novo baralho"}</h1>
-            <label>
-              NOME
-              <input
-                value={deckName}
-                maxLength={80}
-                onInput={(e) => setDeckName(e.currentTarget.value)}
-              />
-            </label>
-            <div className="elements">
-              {Object.entries(E).map(([id, [color, symbol, label]]) => (
-                <button
-                  key={id}
-                  className={element === id ? "active" : ""}
-                  style={{ "--element": color }}
-                  onClick={() => {
-                    setElement(id);
-                    setChosen([]);
-                    setEditId("");
-                  }}
-                  aria-label={label}
-                >
-                  {symbol}
-                  <small>{label}</small>
-                </button>
-              ))}
-            </div>
-            <button
-              className="omionji-mini"
-              onClick={() =>
-                setFocus({ card: catalog.get(`omionji-${element}`) })
-              }
-            >
-              <img src={catalog.get(`omionji-${element}`)!.asset} alt="" />
-              <span>
-                <small>SEU OMIONJI</small>
-                <b>{catalog.get(`omionji-${element}`)!.name}</b>
-                <small>Começa em campo · fora das 30 cartas ↗</small>
-              </span>
-            </button>
-            <div className="deck-progress">
-              <b>
-                {chosen.length}
-                <small> / 30 cartas</small>
-              </b>
-              <span className={mainCount >= 20 ? "up" : "muted"}>
-                {mainCount}/20 de {E[element][2]}
-              </span>
-              <div>
-                <i style={{ width: `${(chosen.length / 30) * 100}%` }} />
-              </div>
-            </div>
-            <button
-              className="outline"
-              onClick={() => {
-                const d = starterDeck(element);
-                setChosen(d.cardIds);
-                setDeckName(d.name);
-                setEditId("");
-              }}
-            >
-              Usar baralho inicial
-            </button>
-            <div className="decklist">
-              {[...new Set(chosen)].map((id) => (
-                <div key={id}>
-                  <button onClick={() => setFocus({ card: catalog.get(id) })}>
-                    {catalog.get(id)?.name}
-                  </button>
-                  <span>{count(id)}×</span>
-                  <button
-                    aria-label={`Remover ${catalog.get(id)?.name}`}
-                    onClick={() => {
-                      const next = [...chosen];
-                      next.splice(next.indexOf(id), 1);
-                      setChosen(next);
-                    }}
-                  >
-                    −
-                  </button>
-                </div>
-              ))}
-              {!chosen.length && (
-                <p className="empty">
-                  Escolha suas cartas à direita ou comece com um baralho
-                  inicial.
-                </p>
-              )}
-            </div>
-            <small className="muted">
-              30 cartas · mínimo 20 do elemento · até 2 cópias. Magias do
-              elemento principal.
-            </small>
-            <button
-              className="gold"
-              disabled={!!deckError || busy}
-              onClick={save}
-            >
-              {auth.isAuthenticated ? "Salvar baralho" : "Entrar para salvar"}
-            </button>
-            {!!decks.data?.length && (
-              <div className="saved">
-                <h3>Meus baralhos</h3>
-                {decks.data.map((d) => (
-                  <div key={d.id}>
-                    <button
-                      className={selectedDeck === d.id ? "sel" : ""}
-                      onClick={() => {
-                        setEditId(d.id);
-                        setSelectedDeck(d.id);
-                        setDeckName(d.name);
-                        setElement(d.element);
-                        setChosen(d.cardIds);
-                      }}
-                    >
-                      {d.name}
-                      <small>{E[d.element]?.[2]}</small>
-                    </button>
-                    <button
-                      aria-label={`Excluir ${d.name}`}
-                      onClick={async () => {
-                        await request(() => deleteDeck.mutate(d.id));
-                        if (editId === d.id) setEditId("");
-                        if (selectedDeck === d.id) setSelectedDeck("");
-                        await decks.refetch();
-                      }}
-                    >
-                      ×
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </aside>
-          <section>
-            <div className="toolbar">
-              <div>
-                <p className="eyebrow">BIBLIOTECA</p>
-                <h2>Escolha seus familiares.</h2>
-              </div>
-              <span>{filtered.length} cartas</span>
-            </div>
-            <div className="catalog-filters">
-              <input
-                aria-label="Buscar cartas"
-                placeholder="Buscar nome ou keyword…"
-                value={search}
-                onInput={(e) => setSearch(e.currentTarget.value)}
-              />
-              <select
-                aria-label="Filtrar cartas"
-                value={filter}
-                onChange={(e) => setFilter(e.currentTarget.value)}
-              >
-                <option value="all">Todas compatíveis</option>
-                <option value="main">Elemento principal</option>
-                <option value="unit">Monstros</option>
-                <option value="spell">Magias</option>
-              </select>
-            </div>
-            <div className="cards">
-              {filtered.map((c) => (
-                <article className="catalog-card" key={c.id}>
-                  <button
-                    className="art-button"
-                    onClick={() => setFocus({ card: c })}
-                    onMouseEnter={() => (hovered.current = { card: c })}
-                    onMouseLeave={() => (hovered.current = null)}
-                    aria-label={`Ler ${c.name}`}
-                  >
-                    <CardFace card={c} />
-                    <span className="zoom-cue">⤢ Ler carta</span>
-                  </button>
-                  <div className="catalog-meta">
-                    <b>{c.name}</b>
-                    <small>
-                      {c.stats.cost} PE ·{" "}
-                      {c.kind === "spell" ? SPEED[c.stats.speed] : "Monstro"}
-                    </small>
-                  </div>
-                  <button
-                    className="add-card"
-                    disabled={count(c.id) >= 2 || chosen.length >= 30}
-                    onClick={() =>
-                      setChosen((prev) =>
-                        prev.length < 30 &&
-                        prev.filter((id) => id === c.id).length < 2
-                          ? [...prev, c.id]
-                          : prev,
-                      )
-                    }
-                  >
-                    {count(c.id) >= 2
-                      ? "2 / 2 cópias"
-                      : `+ Adicionar${count(c.id) ? " · 1/2" : ""}`}
-                  </button>
-                </article>
-              ))}
-            </div>
-          </section>
-        </main>
-      )}
+      <DeckBuilder
+        active={view === "decks"}
+        element={element}
+        onElement={setElement}
+        decks={decks}
+        selectedDeck={selectedDeck}
+        onSelectedDeck={setSelectedDeck}
+        authenticated={auth.isAuthenticated}
+        busy={busy}
+        request={request}
+        onFocus={setFocus}
+        flash={flash}
+      />
       {view === "sala" && (
         <main className="game">
           <div className="gamebar">
@@ -856,17 +511,19 @@ export function App() {
             </section>
           )}
           {g?.players && (
-            <Arena
+            <MatchSession
+              key={code}
               game={g}
               seat={seat}
               code={code}
               names={[playerName(0), playerName(1)]}
-              {...interaction.arena}
-              busy={busy || sceneBusy}
-              onPresentationBusy={setSceneBusy}
-              onNoticeBusy={setNoticeBusy}
+              practice={practice}
+              onPractice={setPractice}
+              busy={busy}
+              request={request}
+              onFocus={setFocus}
+              flash={flash}
               onExit={() => setView("inicio")}
-              onConcede={() => setConcede(true)}
             />
           )}
         </main>
@@ -977,37 +634,6 @@ export function App() {
           unit={g?.units?.find((u) => u.id === focus.unit?.id) || focus.unit}
           onClose={() => setFocus(null)}
         />
-      )}
-      {concede && (
-        <div className="modal-scrim">
-          <section
-            className="confirm-dialog"
-            role="dialog"
-            aria-modal="true"
-            aria-label="Conceder partida"
-          >
-            <h2>Conceder esta partida?</h2>
-            <p>Seu oponente será declarado vencedor.</p>
-            <div className="actions">
-              <button
-                className="outline"
-                autoFocus
-                onClick={() => setConcede(false)}
-              >
-                Continuar jogando
-              </button>
-              <button
-                className="danger"
-                onClick={() => {
-                  setConcede(false);
-                  void act({ type: "concede" });
-                }}
-              >
-                Conceder
-              </button>
-            </div>
-          </section>
-        </div>
       )}
       {toast && (
         <div className="toast" role="alert">

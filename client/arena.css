@@ -107,9 +107,6 @@
   align-items: center;
   pointer-events: none;
 }
-.duelist-self {
-  bottom: 45px;
-}
 .duelist-portrait {
   position: relative;
   width: 76px;
@@ -135,11 +132,8 @@
 .duelist-life {
   position: absolute;
   bottom: -13px;
-  left: 22px;
   border: 1px solid #b8ae7d;
-  border-radius: 50%;
   background: radial-gradient(#374438, #0b1d15);
-  width: 32px;
   height: 32px;
   font: bold 22px Georgia;
   display: grid;
@@ -148,12 +142,9 @@
 }
 .duelist-info {
   display: grid;
-  gap: 5px;
   text-shadow: 0 2px 4px #000;
 }
 .duelist-info > small {
-  font-size: 8px;
-  letter-spacing: 2px;
   color: #91bba5;
 }
 .duelist-info > b {
@@ -161,27 +152,20 @@
 }
 .duelist-element {
   font-family: ShikigamidoJP, Georgia, serif;
-  font-size: 10px;
-  color: #b0baa3;
 }
 .arena-phase {
   position: absolute;
-  top: 28px;
   left: 50%;
   transform: translateX(-50%);
-  width: 440px;
   text-align: center;
   pointer-events: none;
   text-shadow: 0 2px 8px #000;
 }
 .arena-phase > small {
-  font-size: 9px;
-  letter-spacing: 3px;
   color: #a8b8a6;
 }
 .arena-phase h1 {
   font: 30px Georgia;
-  margin: 7px 0 13px;
   color: #d7dfcc;
 }
 .arena-phase.active h1 {
@@ -248,16 +232,13 @@
 }
 .arena-pass {
   position: absolute;
-  top: 48%;
   display: flex;
   align-items: center;
   gap: 14px;
   border: 0;
   background: linear-gradient(90deg, transparent, #233e2ee8);
   color: #a2b099;
-  padding: 16px 12px 16px 28px;
   clip-path: polygon(12% 0, 100% 0, 100% 100%, 12% 100%, 0 50%);
-  font-size: 11px;
   letter-spacing: 1px;
 }
 .arena-pass b {
@@ -366,16 +347,9 @@
 }
 .fan-zoom {
   position: absolute;
-  right: 5px;
-  top: 5px;
   background: #081811df;
   border: 1px solid #dac78a;
   color: #ffeabb;
-  border-radius: 4px;
-  width: 25px;
-  height: 25px;
-  padding: 0;
-  font-size: 20px;
 }
 .fan-card:hover .fan-zoom,
 .fan-card:focus-within .fan-zoom {
@@ -434,11 +408,6 @@
 }
 .arena-menu-panel {
   position: absolute;
-  right: 20px;
-  top: 100px;
-  bottom: 180px;
-  width: 310px;
-  padding: 25px 20px;
   background: linear-gradient(135deg, #142b20fa, #071b14fa);
   border: 1px solid #a5ad7b66;
   box-shadow: 0 15px 60px #0009;
@@ -481,7 +450,6 @@
 .arena-hover {
   position: absolute;
   left: 50%;
-  bottom: 219px;
   transform: translateX(-50%);
   pointer-events: none;
   text-shadow: 0 2px 6px #000;
@@ -663,48 +631,15 @@
   .arena-room {
     font-size: 8px;
   }
-  .arena-phase {
-    top: 54px;
-    width: 250px;
-  }
-  .arena-phase h1 {
-    font-size: 21px;
-    margin: 5px 0 9px;
-  }
-  .arena-phase > small {
-    letter-spacing: 2px;
-  }
-  .duelist-opponent {
-    top: 122px;
-  }
-  .duelist-self {
-    bottom: 142px;
-  }
   .duelist-portrait {
     width: 40px;
     height: 48px;
   }
-  .duelist-life {
-    font-size: 17px;
-    width: 25px;
-    height: 25px;
-    left: 7px;
-    bottom: -10px;
-  }
   .duelist-info {
     gap: 2px;
   }
-  .duelist-info > b {
-    font-size: 11px;
-    max-width: 110px;
-  }
-  .duelist-element {
-    display: none;
-  }
   .arena-pass {
     top: auto;
-    padding: 9px 10px 9px 19px;
-    max-width: 145px;
   }
   .arena-pass b {
     font-size: 20px;
@@ -744,12 +679,7 @@
   .fan-zoom {
     opacity: 1;
     width: 22px;
-    height: 22px;
     font-size: 17px;
-  }
-  .fan-card:hover,
-  .fan-card:focus-within {
-    transform: translate(var(--offset), -33px) rotate(0deg) scale(1.15);
   }
   .arena-preparation {
     bottom: 205px;
@@ -774,7 +704,6 @@
     font-size: 7px;
   }
   .arena-hover {
-    bottom: 215px;
     font-size: 12px;
     max-width: 180px;
   }
@@ -1007,15 +936,7 @@ footer {
   .arena-wordmark {
     display: none;
   }
-  .arena-phase {
-    top: 10px;
-    width: 310px;
-  }
-  .arena-phase h1 {
-    margin: 4px 0 7px;
-  }
   .arena-phase > small {
-    font-size: 7px;
     letter-spacing: 2px;
   }
   .opponent-hand {
@@ -1025,32 +946,18 @@ footer {
     left: 12px;
     gap: 8px;
   }
-  .duelist-opponent {
-    top: 70px;
-  }
-  .duelist-self {
-    bottom: 35px;
-  }
   .duelist-portrait {
     width: 44px;
     height: 52px;
   }
   .duelist-life {
-    width: 26px;
-    height: 26px;
-    left: 8px;
-    font-size: 17px;
     bottom: -10px;
   }
   .duelist-info > b {
-    font-size: 11px;
     max-width: 100px;
     overflow: hidden;
     white-space: nowrap;
     text-overflow: ellipsis;
-  }
-  .duelist-info > small {
-    font-size: 6px;
   }
   .duelist-element {
     display: none;
@@ -1108,15 +1015,9 @@ footer {
   }
   .arena-pass {
     top: 42%;
-    right: 7px;
-    max-width: 135px;
-    padding: 10px 8px 10px 20px;
   }
   .arena-pass b {
     font-size: 20px;
-  }
-  .arena-hover {
-    bottom: 151px;
   }
   .arena-hover b {
     font-size: 12px;
@@ -1171,179 +1072,6 @@ footer {
   padding: 42px 30px;
   overflow-y: auto;
 }
-.choice-heading {
-  text-align: center;
-  max-width: 750px;
-}
-.choice-step {
-  font-size: 10px;
-  letter-spacing: 3px;
-  color: #dbc98d;
-}
-.choice-heading h1 {
-  font: 42px Georgia;
-  margin: 12px 0;
-}
-.choice-heading p {
-  font-size: 14px;
-  line-height: 1.7;
-  color: #bacbb7;
-  margin: 8px 0;
-}
-.choice-heading small {
-  font-size: 12px;
-  color: #d9cdad;
-}
-.choice-cards {
-  display: flex;
-  justify-content: center;
-  gap: 20px;
-  max-width: 100%;
-  flex-wrap: wrap;
-  padding: 14px 8px;
-}
-.choice-card {
-  position: relative;
-  width: clamp(90px, 10vw, 165px);
-  transition:
-    transform 0.18s,
-    filter 0.18s;
-}
-.choice-art {
-  width: 100%;
-  padding: 0 !important;
-  display: block;
-  border: 2px solid #82977b66;
-  border-radius: 7px;
-  background: #14261c;
-  box-shadow: 0 8px 16px #0005;
-  overflow: hidden;
-  user-select: none;
-  -webkit-touch-callout: none;
-}
-.choice-art img {
-  width: 100%;
-  display: block;
-  aspect-ratio: 315/440;
-  object-fit: cover;
-}
-.choice-card.chosen {
-  transform: translateY(-6px);
-  filter: drop-shadow(0 0 12px #d8c37888);
-}
-.choice-card.chosen .choice-art {
-  border-color: #efda96;
-  outline: 1px solid #efda96;
-  outline-offset: 3px;
-}
-.choice-art:focus-visible {
-  outline: 2px dashed #fff5d8;
-  outline-offset: 4px;
-}
-@media (hover: hover) {
-  .choice-card:not(.chosen):hover {
-    transform: translateY(-3px);
-  }
-  .choice-art:hover {
-    border-color: #d9d3a4;
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .choice-card {
-    transition: none;
-  }
-}
-.choice-footer {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 20px;
-  flex-wrap: wrap;
-}
-.choice-footer > p {
-  flex-basis: 100%;
-  text-align: center;
-  margin: 0;
-  color: #bbcaaf;
-  font-size: 12px;
-}
-.choice-confirm {
-  padding: 14px 24px;
-  border: 1px solid #ead99e;
-  border-radius: 3px;
-  background: linear-gradient(#dbcb92, #b3a565);
-  color: #17251a;
-  font-size: 13px;
-  font-weight: bold;
-  min-width: 210px;
-}
-.choice-confirm span {
-  margin-left: 16px;
-}
-.choice-confirm:disabled {
-  opacity: 0.4;
-}
-.choice-skip,
-.choice-back {
-  background: transparent;
-  color: #d4dcc3;
-  border: 1px solid #8c9a6c77;
-  padding: 13px 20px;
-  border-radius: 3px;
-  font-size: 12px;
-}
-.choice-back {
-  position: absolute;
-  top: 24px;
-  left: 24px;
-}
-.reserve-preview {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 12px;
-  color: #c8d9b7;
-  margin-top: 16px;
-}
-.reserve-preview > b {
-  font-size: 27px;
-}
-.reserve-preview small {
-  font-size: 17px;
-  color: #97ab8c;
-}
-.reserve-preview em {
-  color: #ead17d;
-  font-style: normal;
-}
-.choice-empty {
-  padding: 30px;
-  color: #b4c9a5;
-}
-.position-guide {
-  position: absolute;
-  left: 28px;
-  top: 35%;
-  width: 245px;
-  padding: 20px;
-  background: linear-gradient(110deg, #0b211be8, #173328aa);
-  border-left: 2px solid #d2bc74;
-}
-.position-guide > small {
-  font-size: 8px;
-  letter-spacing: 2px;
-  color: #cfbe85;
-}
-.position-guide h2 {
-  font: 27px Georgia;
-  line-height: 1.2;
-  margin: 10px 0;
-}
-.position-guide p {
-  font-size: 12px;
-  line-height: 1.6;
-  color: #b2c3aa;
-}
 .position-options {
   display: flex;
   gap: 6px;
@@ -1365,12 +1093,6 @@ footer {
 .position-options .active {
   border-color: #e9d58a;
   background: #596443;
-}
-.position-guide .choice-confirm {
-  width: 100%;
-  min-width: 0;
-  padding: 12px 8px;
-  font-size: 11px;
 }
 .preparation-wait {
   position: absolute;
@@ -1404,18 +1126,10 @@ footer {
 }
 .player-resources {
   display: grid;
-  gap: 6px;
-  margin-top: 7px;
 }
 .player-resources > div {
   display: grid;
-  grid-template-columns: 65px auto;
-  gap: 0 10px;
   align-items: baseline;
-}
-.player-resources span {
-  font-size: 10px;
-  color: #c7d4b9;
 }
 .player-resources b {
   font: 20px Georgia;
@@ -1423,13 +1137,10 @@ footer {
 }
 .player-resources small {
   font: 12px Arial;
-  color: #9aad92;
 }
 .player-resources em {
   grid-column: 1/-1;
-  font-size: 8px;
   font-style: normal;
-  color: #849f85;
 }
 .duelist-life {
   width: 48px;
@@ -1449,8 +1160,6 @@ footer {
 .open-discard {
   position: absolute;
   right: 24px;
-  top: calc(48% + 85px);
-  width: 210px;
   padding: 20px 15px;
   background: #1e3b27;
   border: 1px solid #d3bc77;
@@ -1507,228 +1216,11 @@ footer {
   pointer-events: none;
   animation: reserve-gain 1.5s both;
 }
-.duel-journal {
-  position: absolute;
-  right: 18px;
-  top: 75px;
-  bottom: 25px;
-  width: 410px;
-  max-width: calc(100vw - 24px);
-  z-index: 70;
-  display: flex;
-  flex-direction: column;
-  background: #0c211bf7;
-  border: 1px solid #9ca77877;
-  border-radius: 5px;
-  box-shadow: 0 18px 60px #0009;
-  overflow: hidden;
-}
-.duel-journal > header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 22px 22px 15px;
-  border: 0;
-  background: none;
-  min-height: 0;
-}
-.duel-journal header small {
-  font-size: 8px;
-  letter-spacing: 2px;
-  color: #9fb293;
-}
-.duel-journal header h2 {
-  font: 28px Georgia;
-  margin: 6px 0 0;
-}
-.duel-journal header button {
-  background: none;
-  border: 0;
-  color: #e1d3aa;
-  font-size: 25px;
-  padding: 5px;
-}
-.duel-journal > nav {
-  display: flex;
-  border-bottom: 1px solid #87976844;
-  padding: 0 20px;
-  gap: 15px;
-}
-.duel-journal nav button {
-  background: none;
-  border: 0;
-  border-bottom: 2px solid transparent;
-  padding: 12px 0;
-  color: #8ca489;
-  font-size: 12px;
-}
-.duel-journal nav button.active {
-  color: #e3d398;
-  border-color: #d2be7f;
-}
-.journal-filters {
-  display: flex;
-  gap: 7px;
-  padding: 15px 20px;
-  align-items: center;
-}
-.journal-filters button,
-.journal-players button {
-  background: #173428;
-  border: 1px solid #91a57244;
-  border-radius: 3px;
-  color: #acc29e;
-  font-size: 10px;
-  padding: 6px 8px;
-}
-.journal-filters .active,
-.journal-players .active {
-  background: #405b37;
-  color: #f0e3b2;
-}
-.journal-filters > span {
-  font-size: 8px;
-  color: #7f987b;
-  margin-left: auto;
-}
-.journal-scroll {
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  padding: 0 20px 24px;
-}
-.journal-turn {
-  font-size: 10px;
-  font-weight: normal;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  color: #beccaa;
-  padding: 12px 0;
-  border-bottom: 1px solid #8d9b6333;
-  margin: 5px 0 8px;
-}
-.journal-event {
-  display: flex;
-  gap: 12px;
-  padding: 13px 0;
-  border-bottom: 1px solid #85946c22;
-}
-.event-card {
-  padding: 0 !important;
-  border: 1px solid #9bad7f77;
-  border-radius: 3px;
-  width: 39px;
-  flex-shrink: 0;
-  background: none;
-  height: 54px;
-  overflow: hidden;
-}
-.event-card img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-.event-icon {
-  width: 39px;
-  flex-shrink: 0;
-  display: grid;
-  place-items: center;
-  color: #d3c58d;
-  font-size: 22px;
-}
-.event-body strong {
-  display: block;
-  font-size: 12px;
-  color: #e0ddbc;
-  font-weight: 500;
-}
-.event-body p {
-  font-size: 11px;
-  color: #adbea1;
-  line-height: 1.5;
-  margin: 6px 0;
-}
-.event-body small {
-  font-size: 8px;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  color: #7c987d;
-}
-.event-body b {
-  color: #e8bda0;
-  font-weight: normal;
-}
-.event-duel {
-  display: flex;
-  gap: 4px;
-  align-items: center;
-}
-.event-duel .event-card {
-  width: 30px;
-  height: 43px;
-}
-.event-duel > span {
-  color: #d7b185;
-  font-size: 12px;
-}
-.journal-players {
-  display: flex;
-  gap: 8px;
-  padding: 15px 20px;
-}
-.journal-players button {
-  flex: 1;
-}
-.journal-players b {
-  margin-left: 6px;
-}
-.discard-gallery {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  align-content: start;
-  gap: 12px;
-}
-.discard-gallery > button {
-  position: relative;
-  padding: 0;
-  background: none;
-  color: #c2d0ae;
-  border: 0;
-  text-align: left;
-}
-.discard-gallery img {
-  width: 100%;
-  border-radius: 4px;
-  border: 1px solid #7e926955;
-}
-.discard-gallery span {
-  display: block;
-  font-size: 9px;
-  line-height: 1.4;
-  margin-top: 6px;
-}
-.discard-gallery b {
-  position: absolute;
-  right: 3px;
-  top: 3px;
-  background: #173124;
-  padding: 3px 5px;
-  font-size: 11px;
-}
-.journal-empty {
-  font-size: 12px;
-  color: #93aa8a;
-  line-height: 1.7;
-  padding: 25px 0;
-  grid-column: 1/-1;
-}
 .arena-pass {
   z-index: 55;
 }
 .arena-hover {
   bottom: 205px;
-}
-.arena-phase {
-  width: 500px;
 }
 .arena-phase h1 {
   font-size: 27px;
@@ -1800,14 +1292,7 @@ footer {
   .duelist-life {
     left: 5px;
   }
-  .position-guide {
-    left: 12px;
-    width: 215px;
-    padding: 15px;
-  }
   .open-discard {
-    width: 155px;
-    right: 10px;
     padding: 14px 10px;
   }
   .open-discard b {
@@ -1819,84 +1304,12 @@ footer {
   .open-discard > span {
     display: none;
   }
-  .choice-cards {
-    gap: 10px;
-  }
-  .choice-heading h1 {
-    font-size: 34px;
-  }
 }
 @media (max-width: 759px) {
   .card-choice-screen {
     padding: 30px 14px;
     gap: 18px;
     justify-content: center;
-  }
-  .choice-heading h1 {
-    font-size: 28px;
-  }
-  .choice-step {
-    font-size: 8px;
-    letter-spacing: 2px;
-  }
-  .choice-heading p {
-    font-size: 11px;
-    line-height: 1.5;
-  }
-  .choice-heading small {
-    font-size: 10px;
-  }
-  .choice-cards {
-    gap: 9px;
-    width: 100%;
-    max-height: 48dvh;
-    overflow-y: auto;
-    padding: 10px 4px;
-  }
-  .choice-card {
-    width: calc((100% - 26px) / 3);
-    max-width: 102px;
-  }
-  .choice-footer {
-    gap: 10px;
-    width: 100%;
-  }
-  .choice-footer > p {
-    font-size: 10px;
-  }
-  .choice-confirm,
-  .choice-skip {
-    width: 100%;
-    font-size: 11px;
-    padding: 12px;
-  }
-  .choice-back {
-    position: static;
-    align-self: flex-start;
-    font-size: 10px;
-    padding: 8px 10px;
-  }
-  .reserve-preview {
-    margin-top: 7px;
-    font-size: 11px;
-  }
-  .reserve-preview > b {
-    font-size: 21px;
-  }
-  .position-guide {
-    top: auto;
-    bottom: 22px;
-    left: 18px;
-    width: calc(100% - 36px);
-    padding: 16px;
-  }
-  .position-guide h2 {
-    font-size: 22px;
-    margin: 6px 0;
-  }
-  .position-guide p {
-    font-size: 10px;
-    margin: 6px 0;
   }
   .position-options {
     margin: 10px 0;
@@ -1907,9 +1320,6 @@ footer {
   .preparing-position .duelist-self {
     display: none;
   }
-  .duelist-opponent {
-    top: 114px;
-  }
   .duelist-life {
     width: 38px;
     height: 23px;
@@ -1917,49 +1327,17 @@ footer {
     font-size: 13px;
     bottom: -8px;
   }
-  .player-resources {
-    gap: 2px;
-  }
-  .player-resources > div {
-    grid-template-columns: 40px auto;
-  }
-  .player-resources span {
-    font-size: 8px;
-  }
-  .player-resources b {
-    font-size: 13px;
-  }
-  .player-resources small {
-    font-size: 9px;
-  }
   .player-resources em {
     display: none;
-  }
-  .duelist-info > small {
-    font-size: 6px;
-  }
-  .arena-phase {
-    width: calc(100% - 40px);
-    top: 52px;
-  }
-  .arena-phase h1 {
-    font-size: 20px;
   }
   .arena-pass {
     z-index: 55;
   }
   .open-discard {
     top: auto;
-    bottom: 198px;
-    width: 155px;
   }
   .open-discard small {
     display: none;
-  }
-  .duel-journal {
-    top: 48px;
-    bottom: 14px;
-    right: 12px;
   }
   .reserve-gain {
     left: 20px;
@@ -1975,86 +1353,11 @@ footer {
   .arena-hover {
     bottom: 255px;
   }
-  .discard-choice .choice-cards {
-    max-height: 39dvh;
-  }
-  .discard-choice {
-    gap: 12px;
-  }
-  .discard-choice .choice-footer {
-    flex-direction: column-reverse;
-  }
 }
 @media (max-height: 559px) and (orientation: landscape) {
   .card-choice-screen {
     padding: 16px 22px;
     gap: 12px;
-  }
-  .choice-heading h1 {
-    font-size: 24px;
-    margin: 5px 0;
-  }
-  .choice-heading p {
-    font-size: 10px;
-    margin: 4px 0;
-  }
-  .choice-heading small {
-    font-size: 9px;
-  }
-  .choice-step {
-    font-size: 7px;
-    letter-spacing: 2px;
-  }
-  .choice-card {
-    width: 80px;
-  }
-  .choice-cards {
-    gap: 12px;
-    max-height: 48dvh;
-    overflow-y: auto;
-    padding: 6px;
-  }
-  .choice-footer {
-    gap: 10px;
-  }
-  .choice-footer > p {
-    font-size: 9px;
-  }
-  .choice-confirm,
-  .choice-skip {
-    padding: 9px 15px;
-    font-size: 10px;
-    min-width: 180px;
-  }
-  .choice-back {
-    top: 12px;
-    left: 12px;
-    padding: 8px;
-    font-size: 9px;
-  }
-  .reserve-preview {
-    margin-top: 4px;
-    font-size: 10px;
-  }
-  .reserve-preview > b {
-    font-size: 18px;
-  }
-  .position-guide {
-    left: 10px;
-    top: 140px;
-    bottom: auto;
-    width: 145px;
-    padding: 10px;
-  }
-  .position-guide > small {
-    font-size: 6px;
-  }
-  .position-guide h2 {
-    font-size: 19px;
-    margin: 5px 0;
-  }
-  .position-guide p {
-    font-size: 9px;
   }
   .position-options {
     margin: 9px 0;
@@ -2066,28 +1369,8 @@ footer {
     padding: 6px 3px;
     font-size: 14px;
   }
-  .position-guide .choice-confirm {
-    padding: 8px 4px;
-    font-size: 9px;
-    min-width: 0;
-  }
   .player-resources em {
     display: none;
-  }
-  .player-resources {
-    gap: 2px;
-  }
-  .player-resources span {
-    font-size: 8px;
-  }
-  .player-resources b {
-    font-size: 13px;
-  }
-  .player-resources > div {
-    grid-template-columns: 42px auto;
-  }
-  .duelist-opponent {
-    top: 65px;
   }
   .duelist-self {
     bottom: 28px;
@@ -2098,35 +1381,15 @@ footer {
     left: 2px;
     height: 23px;
   }
-  .arena-phase {
-    top: 8px;
-    width: 330px;
-  }
-  .arena-phase h1 {
-    font-size: 19px;
-  }
   .arena-hover {
     bottom: 126px;
   }
   .open-discard {
-    top: calc(42% + 65px);
-    bottom: auto;
-    width: 130px;
     padding: 10px;
   }
   .preparation-wait {
     bottom: 25px;
     padding: 15px;
-  }
-  .duel-journal {
-    top: 12px;
-    bottom: 12px;
-  }
-  .duel-journal > header {
-    padding: 12px 20px;
-  }
-  .duel-journal header h2 {
-    font-size: 22px;
   }
   .reserve-gain {
     left: 20px;
@@ -2135,45 +1398,12 @@ footer {
   }
 }
 /* Response windows occupy a reserved side of the square arena. */
-.phase-steps {
-  display: flex;
-  justify-content: center;
-  gap: 17px;
-  margin-top: 12px;
-}
-.phase-steps span {
-  font-size: 9px;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  color: #718d79;
-  padding-bottom: 7px;
-  border-bottom: 2px solid transparent;
-}
-.phase-steps .current {
-  color: #ead69b;
-  border-color: #c8b573;
-}
-.phase-instruction {
-  font-size: 11px;
-  color: #becdb4;
-  line-height: 1.5;
-  margin: 9px auto 0;
-  max-width: 450px;
-  letter-spacing: 0.1px;
-}
-.arena-phase {
-  top: 19px;
-}
 .arena-phase h1 {
   margin: 7px 0;
 }
 .response-mode .arena-phase {
   background: linear-gradient(90deg, transparent, #482c1bd9, transparent);
   padding: 8px 20px;
-}
-.response-mode .phase-steps .current {
-  color: #ffd0a1;
-  border-color: #e4a675;
 }
 .response-mode .arena-phase h1 {
   color: #ffd5af;
@@ -2295,20 +1525,11 @@ footer {
   bottom: 285px;
   width: 245px;
 }
-.preparing-position .phase-steps {
-  display: none;
-}
 .preparing-position .arena-phase {
   top: 32px;
 }
-.choice-heading .choice-step {
-  display: block;
-}
 .duelist-portrait {
   pointer-events: auto;
-}
-.duel-journal .event-cast {
-  display: none;
 }
 @media (max-width: 1100px) {
   .arena-pass {
@@ -2329,47 +1550,12 @@ footer {
     width: 205px;
     right: 12px;
   }
-  .phase-instruction {
-    font-size: 10px;
-  }
 }
 @media (max-width: 759px) {
-  .phase-steps {
-    margin-top: 8px;
-  }
-  .phase-steps span {
-    font-size: 7px;
-    letter-spacing: 0.4px;
-  }
-  .phase-instruction {
-    font-size: 9px;
-    max-width: 290px;
-  }
-  .arena-phase h1 {
-    font-size: 18px;
-  }
-  .arena-phase > small {
-    font-size: 7px;
-  }
-  .duelist-opponent {
-    top: 155px;
-  }
-  .response-mode .duelist-opponent {
-    top: 157px;
-  }
   .arena-stack-panel {
-    top: 156px;
     bottom: auto;
     right: 10px;
     width: 185px;
-    max-height: 145px;
-    padding: 8px;
-  }
-  .stack-heading > b {
-    font-size: 12px !important;
-  }
-  .stack-heading > span {
-    margin-top: 4px;
   }
   .pending-combat {
     font-size: 8px;
@@ -2381,7 +1567,6 @@ footer {
     overflow-x: auto;
     overflow-y: hidden;
     gap: 8px;
-    margin-top: 5px;
     flex: none;
   }
   .stack-card {
@@ -2391,16 +1576,8 @@ footer {
     gap: 5px;
     border-bottom: 0;
   }
-  .stack-card img {
-    width: 30px;
-    height: 42px;
-  }
   .stack-card small {
     font-size: 5px;
-  }
-  .stack-card b {
-    font-size: 8px;
-    margin-top: 2px;
   }
   .stack-card span {
     font-size: 6px;
@@ -2412,15 +1589,12 @@ footer {
     margin-top: 5px;
   }
   .arena-pass {
-    bottom: 148px;
     right: 10px;
     width: 170px;
     max-width: 170px;
     font-size: 9px;
-    padding: 12px 9px 12px 20px;
   }
   .open-discard {
-    bottom: 205px;
     width: 170px;
     right: 10px;
   }
@@ -2432,22 +1606,6 @@ footer {
   }
 }
 @media (max-height: 559px) and (orientation: landscape) {
-  .arena-phase {
-    top: 5px;
-    width: 360px;
-  }
-  .arena-phase h1 {
-    font-size: 17px;
-    margin: 4px 0;
-  }
-  .phase-steps {
-    display: none;
-  }
-  .phase-instruction {
-    font-size: 8px;
-    margin-top: 4px;
-    max-width: 330px;
-  }
   .arena-pass {
     bottom: 130px;
     right: 8px;
@@ -2526,10 +1684,6 @@ footer {
   }
 }
 @media (max-width: 759px) {
-  .arena-stack-panel {
-    top: 150px;
-    padding: 6px;
-  }
   .arena-stack-panel > p {
     display: none;
   }
@@ -2541,29 +1695,11 @@ footer {
     margin-top: 2px;
     font-size: 6px;
   }
-  .stack-card b {
-    font-size: 9px;
-  }
-}
-.duel-journal > header {
-  height: auto;
-  flex: 0 0 auto;
-}
-.duel-journal > nav {
-  flex: 0 0 auto;
-}
-.journal-filters,
-.journal-players {
-  flex: 0 0 auto;
 }
 @media (max-width: 759px) {
   .stack-card span {
     display: none;
   }
-}
-.journal-scroll {
-  flex: 1;
-  min-height: 0;
 }
 /* Hand reading controls stay outside the printed card. */
 .fan-zoom {
@@ -2604,10 +1740,6 @@ footer {
   opacity: 0;
 }
 /* The HUD is read continuously during play, so its labels use body-sized text. */
-.player-resources {
-  gap: 8px;
-  margin-top: 10px;
-}
 .player-resources > div {
   grid-template-columns: 76px auto;
   gap: 1px 12px;
@@ -2645,23 +1777,6 @@ footer {
 .arena-phase > small {
   font-size: 11px;
   letter-spacing: 2px;
-}
-.phase-steps {
-  gap: 22px;
-  margin-top: 10px;
-}
-.phase-steps span {
-  font-size: 13px;
-  letter-spacing: 0.65px;
-  color: #acbca3;
-  padding-bottom: 6px;
-}
-.phase-instruction {
-  font-size: 15px;
-  max-width: 560px;
-  line-height: 1.4;
-  color: #d0dcc3;
-  margin-top: 8px;
 }
 @media (min-width: 760px) and (min-height: 560px) {
   .duelist-opponent {
@@ -2715,7 +1830,6 @@ footer {
   }
   .duelist-info > b {
     font-size: 14px;
-    max-width: 140px;
   }
   .duelist-element {
     font-size: 11px;
@@ -2732,21 +1846,6 @@ footer {
     font-size: 24px;
     margin: 6px 0;
   }
-  .phase-steps {
-    gap: 12px;
-    margin-top: 7px;
-  }
-  .phase-steps span {
-    font-size: 10px;
-    letter-spacing: 0.25px;
-    padding-bottom: 4px;
-  }
-  .phase-instruction {
-    font-size: 13px;
-    max-width: 345px;
-    line-height: 1.35;
-    margin-top: 6px;
-  }
   .duelist-opponent {
     top: 176px;
   }
@@ -2755,7 +1854,6 @@ footer {
   }
   .arena-stack-panel {
     top: 175px;
-    max-height: 95px;
   }
   .duelist-self {
     bottom: 148px;
@@ -2798,10 +1896,6 @@ footer {
   .arena-phase h1 {
     font-size: 21px;
     margin: 3px 0;
-  }
-  .phase-instruction {
-    font-size: 12px;
-    max-width: 380px;
   }
 }
 @media (min-width: 760px) and (min-height: 560px) {

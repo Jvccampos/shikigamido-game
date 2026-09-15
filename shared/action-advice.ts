@@ -5,7 +5,7 @@ import { cards } from "./cards.js";
 import { spellSpecs, transferableKeywords } from "./spells.js";
 import { abilities } from "./abilities.js";
 import type { GameView, UnitView } from "./room.js";
-import type { Cmd, Game, Seat, Unit } from "./model.js";
+import type { CommandDraft, Game, Seat, Unit } from "./model.js";
 import { connected, route, summonCells } from "./rules/board.js";
 import { elementModifier } from "./elements.js";
 import { kw, typesOf } from "./rules/core.js";
@@ -69,11 +69,11 @@ export function adviceState(view: GameView): Game {
     random: { state: 1729 },
   });
 }
-export function commandError(g: GameView, seat: number, cmd: Cmd) {
+export function commandError(g: GameView, seat: number, cmd: CommandDraft) {
   if (seat !== 0 && seat !== 1) return "Você está assistindo ao duelo.";
   return apply(adviceState(g), seat, cmd);
 }
-export function actionCost(g: GameView, seat: number, c: Cmd) {
+export function actionCost(g: GameView, seat: number, c: CommandDraft) {
   const p = g.players[seat];
   if (!p) return 0;
   if (c.type === "cast" || c.type === "summon")
@@ -108,7 +108,11 @@ export function movementReason(g: GameView, u: UnitView) {
   return undefined;
 }
 
-function* spellCandidates(g: GameView, seat: Seat, base: Cmd): Generator<Cmd> {
+function* spellCandidates(
+  g: GameView,
+  seat: Seat,
+  base: CommandDraft,
+): Generator<CommandDraft> {
   const spec = spellSpecs[base.cardId!];
   if (!spec) return;
   const units = g.units;
@@ -159,8 +163,11 @@ function* spellCandidates(g: GameView, seat: Seat, base: Cmd): Generator<Cmd> {
     } else yield { ...base, targetId: u.id };
   }
 }
-export function* abilityCandidates(g: GameView, u: UnitView): Generator<Cmd> {
-  const base: Cmd = { type: "ability", unitId: u.id };
+export function* abilityCandidates(
+  g: GameView,
+  u: UnitView,
+): Generator<CommandDraft> {
+  const base: CommandDraft = { type: "ability", unitId: u.id };
   if (u.cardId === "chama-marinha") {
     for (const choice of cards.get(u.cardId)!.types) yield { ...base, choice };
   } else if (u.cardId === "javali-espinhoso") yield base;
@@ -186,7 +193,11 @@ export function* abilityCandidates(g: GameView, u: UnitView): Generator<Cmd> {
       } else yield { ...base, targetId: target.id };
     }
 }
-export type ActionPlan = { cost: number; reason?: string; options: Cmd[] };
+export type ActionPlan = {
+  cost: number;
+  reason?: string;
+  options: CommandDraft[];
+};
 export function cardPlan(
   g: GameView,
   seat: number,
@@ -195,7 +206,7 @@ export function cardPlan(
   fromDeck = false,
 ): ActionPlan {
   const card = cards.get(cardId);
-  const base: Cmd = {
+  const base: CommandDraft = {
     type: card?.kind === "unit" ? "summon" : "cast",
     cardId,
     handIndex,
@@ -232,7 +243,7 @@ export function cardPlan(
     return unavailable(
       `Faltam ${cost - g.players[seat].pe - g.players[seat].permanentPe} PE`,
     );
-  const candidates: Cmd[] =
+  const candidates: CommandDraft[] =
     card?.kind === "unit"
       ? [
           ...summonCells(g, seat).map((cell) => ({ ...base, ...cell })),
@@ -300,22 +311,18 @@ export type CombatPreview = {
 export type ActionPreview = {
   title: string;
   cost: number;
-  energy: number;
-  reserve: number;
   error?: string;
-  lines: string[];
   affected: string[];
   path: [number, number][];
-  uncertain?: string;
+  uncertainty?: "stack" | "hidden" | "random" | "search";
   combat?: CombatPreview;
 };
 export function previewAction(
   g: GameView,
   seat: number,
-  c: Cmd,
+  c: CommandDraft,
 ): ActionPreview {
-  const cost = actionCost(g, seat, c),
-    pe = g.players[seat]?.pe || 0;
+  const cost = actionCost(g, seat, c);
   const result: ActionPreview = {
     title:
       c.type === "move"
@@ -328,9 +335,6 @@ export function previewAction(
               ? "Usar habilidade"
               : "Conjurar",
     cost,
-    energy: Math.min(cost, pe),
-    reserve: Math.max(0, cost - pe),
-    lines: [],
     affected: [],
     path: [],
   };
@@ -341,14 +345,6 @@ export function previewAction(
   const mover = g.units.find((u) => u.id === c.unitId);
   if (c.type === "move" && mover)
     result.path = [[mover.x, mover.y], ...(route(g, mover, c.x!, c.y!) || [])];
-  const target = g.units.find((u) => u.id === c.targetId);
-  if (target) result.lines.push(`Alvo: ${pieceName(target)}`);
-  if (c.targetId2)
-    result.lines.push(
-      `Segundo alvo: ${pieceName(g.units.find((u) => u.id === c.targetId2))}`,
-    );
-  if (c.x !== undefined && c.y !== undefined)
-    result.lines.push(`Destino ${String.fromCharCode(65 + c.x)}${c.y + 1}`);
   const combat = state.combat || g.combat;
   const forecastsCombat =
     combat &&
@@ -379,14 +375,11 @@ export function previewAction(
       };
   }
   if (result.combat && g.stack.length) {
-    result.uncertain =
-      "Há magias pendentes: resolva a pilha para prever o combate.";
+    result.uncertainty = "stack";
     return result;
   }
   if (unknown || randomCombat) {
-    result.uncertain = unknown
-      ? "Há cartas ocultas: o resultado completo não pode ser previsto."
-      : "Este combate depende de um sorteio. O resultado pode variar.";
+    result.uncertainty = unknown ? "hidden" : "random";
     return result;
   }
   if (forecastsCombat && state.combat) settleCombat(state);
@@ -394,7 +387,6 @@ export function previewAction(
     const a = g.units.find((u) => u.id === combat.attackerId),
       d = g.units.find((u) => u.id === combat.defenderId);
     if (a && d) {
-      result.lines.push(`${pieceName(a)} → ${pieceName(d)}`);
       const modifier = kw(a, "Amaldiçoado")
         ? 0
         : typesOf(a).reduce(
@@ -406,9 +398,6 @@ export function previewAction(
               ),
             0,
           );
-      result.lines.push(
-        `Relação elemental: ${modifier > 0 ? "+" : ""}${modifier} no ataque`,
-      );
       if (result.combat) result.combat.modifier = modifier;
     }
   }
@@ -443,52 +432,19 @@ export function previewAction(
       );
     }
   }
-  if (fight?.type === "combat")
-    result.lines.push(
-      `${fight.keyword}: ${fight.attackDamage} de dano · ${fight.defenseDamage} de contra-ataque`,
-    );
-  for (const before of g.units) {
-    const after = state.units.find((u) => u.id === before.id);
-    if (!after) {
-      result.affected.push(before.id);
-      const dead = state.events?.some(
-        (e) => e.type === "destroy" && e.unitId === before.id,
-      );
-      result.lines.push(
-        `${pieceName(before)}: ${dead ? "será derrotado" : "sairá do campo"}`,
-      );
-      continue;
-    }
-    const changes = unitChanges(before, after);
-    if (changes.length) {
-      result.affected.push(before.id);
-      result.lines.push(`${pieceName(before)}: ${changes.join(" · ")}`);
-    }
-  }
-  for (const created of state.units.filter(
-    (u) => !g.units.some((before) => before.id === u.id),
-  ))
-    result.lines.push(
-      `${pieceName(created)} entra em campo: ${created.attack} ataque · ${created.hp} vida · ${created.speed} velocidade`,
-    );
-  if (c.type === "cast" && !result.affected.length && !forecastsCombat)
-    result.lines.push(cards.get(c.cardId!)?.effect_text || "");
-  if (
-    forecastsCombat ||
-    (c.type === "cast" && cards.get(c.cardId!)?.stats.speed !== "instant")
-  )
-    result.uncertain =
-      "Previsão sem novas respostas. Magias e habilidades podem alterar o resultado.";
-  if (g.stack.length)
-    result.uncertain =
-      "Há magias pendentes. Prévia deste efeito isolado; a pilha pode alterar o resultado.";
+  result.affected = g.units
+    .filter((before) => {
+      const after = state.units.find((u) => u.id === before.id);
+      return !after || unitChanges(before, after).length > 0;
+    })
+    .map((u) => u.id);
+  if (g.stack.length) result.uncertainty = "stack";
   if (
     forecastsCombat &&
     g.units.some((u) =>
       ["oni-azul", "kirijin-o-oni-da-fumaca"].includes(u.cardId),
     )
   )
-    result.uncertain =
-      "Efeitos de busca no baralho podem alterar as peças que ficam em campo.";
+    result.uncertainty = "search";
   return result;
 }

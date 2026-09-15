@@ -2,9 +2,8 @@ import { test, expect } from "@playwright/test";
 import { freshGame, apply } from "../../shared/game.js";
 import { makeUnit } from "../../shared/rules/core.js";
 import { starterDeck } from "../../shared/practice.js";
-import { publicRoom } from "../../shared/visibility.js";
 import { layout } from "../../shared/arena-layout.js";
-import { idle } from "./fixtures.js";
+import { idle, scenario } from "./fixtures.js";
 import { mkdir } from "node:fs/promises";
 
 test("spell targeting rejects Omionjis and exposes granted effects on the affected card", async ({
@@ -24,51 +23,7 @@ test("spell targeting rejects Omionjis and exposes granted effects on the affect
   snake.summonedTurn = 1;
   snake.hp = 1;
   g.units.push(snake);
-  const snapshot = () =>
-    publicRoom(
-      {
-        code: "SPELLS",
-        hostId: "a",
-        status: "playing",
-        state: g,
-        spectators: [
-          { id: "a", name: "Você" },
-          { id: "b", name: "Oponente" },
-        ],
-      },
-      "a",
-    );
-  let send = () => {};
-  await page.routeWebSocket("**/socket", (socket) => {
-    send = () =>
-      socket.send(JSON.stringify({ type: "room", room: snapshot() }));
-    socket.onMessage(send);
-  });
-  await page.route("**/api/**", (route) => {
-    const path = new URL(route.request().url()).pathname;
-    if (path === "/api/auth")
-      return route.fulfill({
-        json: {
-          userId: "a",
-          displayName: "Você",
-          isAuthenticated: true,
-          isLoading: false,
-        },
-      });
-    if (path.endsWith("/myRooms"))
-      return route.fulfill({
-        json: { result: [{ code: "SPELLS", status: "playing" }] },
-      });
-    if (path.endsWith("/room"))
-      return route.fulfill({ json: { result: snapshot() } });
-    if (path.endsWith("/gameCommand")) {
-      const [, cmd] = route.request().postDataJSON().args;
-      const error = apply(g, 0, cmd);
-      if (!error) g.revision = (g.revision || 0) + 1;
-      return route.fulfill({ json: { result: { error, room: snapshot() } } });
-    }
-    return route.fulfill({ json: { result: [] } });
-  });
+  const send = await scenario(page, g, "SPELLS");
   await page.setViewportSize({ width: 1920, height: 1080 });
   await page.goto("/");
   await page.getByRole("button", { name: /SPELLS/ }).click();

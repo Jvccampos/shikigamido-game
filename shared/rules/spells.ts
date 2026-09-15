@@ -1,5 +1,10 @@
 import type { StatusValue } from "../model.js";
-import { type Game, type Seat, type Cmd, type EventPayload } from "../model.js";
+import {
+  type Game,
+  type Seat,
+  type CommandDraft,
+  type EventPayload,
+} from "../model.js";
 import { spellSpecs, transferableKeywords } from "../spells.js";
 import {
   valid,
@@ -25,7 +30,11 @@ import { summonEffects, destroy, takeDamage, heal } from "./units.js";
 import { fight } from "./combat.js";
 import { baseKeywords } from "../keywords.js";
 
-export function spellError(g: Game, seat: Seat, c: Cmd): string | undefined {
+export function spellError(
+  g: Game,
+  seat: Seat,
+  c: CommandDraft,
+): string | undefined {
   const id = c.cardId!,
     spec = spellSpecs[id];
   if (!spec) return "Magia sem definição.";
@@ -458,7 +467,11 @@ export function resolveSpell(
   g.log.push(`${card.name} resolveu.`);
 }
 
-export function ability(g: Game, seat: Seat, c: Cmd): string | undefined {
+export function ability(
+  g: Game,
+  seat: Seat,
+  c: CommandDraft,
+): string | undefined {
   const u = g.units.find((u) => u.id === c.unitId && u.owner === seat),
     t = g.units.find((t) => t.id === c.targetId);
   if (!u) return "Selecione uma unidade sua.";

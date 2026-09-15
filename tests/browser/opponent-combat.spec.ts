@@ -2,9 +2,8 @@ import { test, expect } from "@playwright/test";
 import { freshGame, apply } from "../../shared/game.js";
 import { makeUnit } from "../../shared/rules/core.js";
 import { starterDeck } from "../../shared/practice.js";
-import { publicRoom } from "../../shared/visibility.js";
 import { layout } from "../../shared/arena-layout.js";
-import { idle } from "./fixtures.js";
+import { idle, scenario } from "./fixtures.js";
 import { mkdir } from "node:fs/promises";
 
 test("opponent combat stays visible while a selected defender is aimed elsewhere", async ({
@@ -19,45 +18,7 @@ test("opponent combat stays visible while a selected defender is aimed elsewhere
   const attacker = makeUnit(g, 1, "lobo-branco", 3, 2);
   defender.summonedTurn = attacker.summonedTurn = 1;
   g.units.push(defender, attacker);
-  const snapshot = () =>
-    publicRoom(
-      {
-        code: "UXTEST",
-        hostId: "a",
-        status: "playing",
-        state: g,
-        spectators: [
-          { id: "a", name: "Você" },
-          { id: "b", name: "Oponente" },
-        ],
-      },
-      "a",
-    );
-  let send = () => {};
-  await page.routeWebSocket("**/socket", (socket) => {
-    send = () =>
-      socket.send(JSON.stringify({ type: "room", room: snapshot() }));
-    socket.onMessage(send);
-  });
-  await page.route("**/api/**", (route) => {
-    const url = new URL(route.request().url());
-    if (url.pathname === "/api/auth")
-      return route.fulfill({
-        json: {
-          userId: "a",
-          displayName: "Você",
-          isAuthenticated: true,
-          isLoading: false,
-        },
-      });
-    if (url.pathname.endsWith("/myRooms"))
-      return route.fulfill({
-        json: { result: [{ code: "UXTEST", status: "playing" }] },
-      });
-    if (url.pathname.endsWith("/room"))
-      return route.fulfill({ json: { result: snapshot() } });
-    return route.fulfill({ json: { result: [] } });
-  });
+  const send = await scenario(page, g, "UXTEST");
   await page.goto("/");
   await page.getByRole("button", { name: /UXTEST/ }).click();
   await idle(page);

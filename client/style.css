@@ -225,10 +225,6 @@ nav .on {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.home {
-  max-width: 1440px;
-  margin: auto;
-}
 .hero {
   position: relative;
   display: grid;
@@ -650,10 +646,6 @@ footer small {
   font: 700 18px "Trebuchet MS";
   white-space: nowrap;
 }
-.stat small {
-  font-size: 11px;
-  color: #bdc7b6;
-}
 .stat sup {
   font-size: 10px;
 }
@@ -793,7 +785,6 @@ footer small {
   pointer-events: none;
 }
 .stack-panel {
-  background: #111d19;
   border: 1px solid var(--line);
   border-radius: 6px;
   padding: 16px;
@@ -828,12 +819,6 @@ footer small {
   border: 1px solid #739c7f66;
   border-radius: 3px;
   background: #42623a22;
-}
-.clear-selection {
-  font-size: 9px;
-  color: #a0b49e;
-  text-decoration: underline;
-  padding: 10px 0;
 }
 .stack-panel {
   margin-top: 16px;
