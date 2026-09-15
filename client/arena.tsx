@@ -5,6 +5,7 @@ import { OpeningHand, DiscardChoice } from "./choices.js";
 import { Journal } from "./journal.js";
 import { ElementsGuide } from "./elements-guide.js";
 import { DuelContext } from "./duel-context.js";
+import { layout } from "../shared/arena-layout.js";
 import { CombatForecast } from "./combat-preview.js";
 import { SearchChoice } from "./search-choice.js";
 import type {
@@ -64,9 +65,18 @@ const elementGlyph: Record<string, string> = {
   vazio: "空",
 };
 export function Arena(p: Props) {
-  const [viewport, setViewport] = useState(() => innerWidth);
+  const [screen, setScreen] = useState(() => ({
+    width: innerWidth,
+    height: innerHeight,
+  }));
+  const viewport = screen.width;
+  const railLeft = Math.min(
+    layout(screen.width, screen.height).point(6.85, 3).x + 28,
+    viewport - 212,
+  );
+  const railWidth = Math.min(320, viewport - railLeft - 28);
   useEffect(() => {
-    const resize = () => setViewport(innerWidth);
+    const resize = () => setScreen({ width: innerWidth, height: innerHeight });
     window.addEventListener("resize", resize);
     return () => window.removeEventListener("resize", resize);
   }, []);
@@ -115,28 +125,6 @@ export function Arena(p: Props) {
     library: number;
     turn: number;
   } | null>(null);
-  const [handHint, setHandHint] = useState<{
-    left: number;
-    top: number;
-  } | null>(null);
-  useEffect(() => {
-    if (handHover === null) {
-      setHandHint(null);
-      return;
-    }
-    const update = () => {
-      const el =
-        host.current?.parentElement?.querySelectorAll(".fan-art")[handHover];
-      if (!el) return;
-      const r = el.getBoundingClientRect();
-      const width = 210;
-      const left = Math.max(8, Math.min(innerWidth - width - 8, r.left));
-      setHandHint({ left, top: Math.max(70, r.top - 88) });
-    };
-    update();
-    const timer = setInterval(update, 80);
-    return () => clearInterval(timer);
-  }, [handHover, viewport]);
   const reserveBefore = useRef(me?.permanentPe || 0),
     [reserveGain, setReserveGain] = useState(0);
   useEffect(() => {
@@ -498,6 +486,10 @@ export function Arena(p: Props) {
       aria-busy={p.busy || !ready}
       className={`arena-shell ${g.setup ? "preparing-position" : ""} ${opening ? "choosing-hand" : ""} ${drawing ? "drawing" : ""} ${responseContext ? "response-mode" : ""} ${presenting ? "presenting" : ""}`}
       aria-label="Partida de Shikigamido"
+      style={{
+        "--action-rail-left": `${railLeft}px`,
+        "--action-rail-width": `${railWidth}px`,
+      }}
     >
       <div className="arena-environment" />
       <div className="arena-vignette" />
@@ -754,8 +746,9 @@ export function Arena(p: Props) {
                 center = index - (me.hand.length - 1) / 2,
                 n = Math.min(
                   80,
-                  (viewport -
-                    (viewport < 760 ? 115 : viewport <= 1100 ? 560 : 480)) /
+                  (viewport > 1100
+                    ? Math.max(160, 2 * (railLeft - viewport / 2) - 240)
+                    : viewport - (viewport < 760 ? 115 : 560)) /
                     Math.max(1, me.hand.length),
                 ),
                 angle = center * Math.min(4, 30 / me.hand.length),
@@ -816,7 +809,6 @@ export function Arena(p: Props) {
                         p.onHand(index);
                       }
                     }}
-                    title={plan?.reason || "Disponível para jogar"}
                     aria-label={`Selecionar ${c.name}, cópia ${index + 1}. ${plan?.reason || "Disponível"}`}
                   >
                     <img src={c.asset} alt={c.name} draggable={false} />
@@ -842,19 +834,24 @@ export function Arena(p: Props) {
           </div>
         </div>
       )}
-      {!g.setup &&
-        !discardOpen &&
-        !presenting &&
-        handHover !== null &&
-        p.handPlans[handHover]?.reason && (
-          <div
-            className="hand-action-hint"
-            role="status"
-            style={handHint || undefined}
-          >
-            {p.handPlans[handHover].reason}
-          </div>
-        )}
+      <div
+        className={`hand-action-hint ${!g.setup && !discardOpen && !presenting && handHover !== null && p.handPlans[handHover]?.reason ? "visible" : ""}`}
+        role="status"
+      >
+        <span className="hand-hint-icon" aria-hidden="true">
+          !
+        </span>
+        <div>
+          <small>
+            {handHover !== null
+              ? cards.get(me?.hand[handHover] || "")?.name
+              : ""}
+          </small>
+          <span>
+            {handHover !== null ? p.handPlans[handHover]?.reason : ""}
+          </span>
+        </div>
+      </div>
       {!g.setup && !discardOpen && !presenting && shownCombat?.combat && (
         <CombatForecast preview={shownCombat} game={g} />
       )}
@@ -893,12 +890,6 @@ export function Arena(p: Props) {
           +{reserveGain} Reserva
         </div>
       )}
-      {!g.setup &&
-        !g.centerPending &&
-        !discardOpen &&
-        !presenting &&
-        !g.searches?.length &&
-        p.controls}
       {hover && !dragging && !discardOpen && (
         <div className="arena-hover">
           <b>
@@ -923,73 +914,86 @@ export function Arena(p: Props) {
           </div>
         </div>
       )}
-      {response &&
-        (!shownCombat ||
-          g.stack.length > 0 ||
-          (p.preview && !p.preview.combat && !p.preview.error)) && (
-          <aside className="arena-stack-panel" aria-label="Pilha de respostas">
-            <div className="stack-heading">
-              <b>
-                {g.stack.length
-                  ? "✧ Magias em resposta"
-                  : "⚔ Combate anunciado"}
-              </b>
-              <span>
-                {yourTurn
-                  ? "VOCÊ TEM A PRIORIDADE"
-                  : `PRIORIDADE · ${p.names[g.priority]}`}
-              </span>
-            </div>
-            {g.combat && !shownCombat && (
-              <div className="pending-combat">
+      <div className="arena-action-rail">
+        {!g.setup &&
+          !g.centerPending &&
+          !discardOpen &&
+          !presenting &&
+          !g.searches?.length &&
+          p.controls}
+        {response &&
+          (!shownCombat ||
+            g.stack.length > 0 ||
+            (p.preview && !p.preview.combat && !p.preview.error)) && (
+            <aside
+              className="arena-stack-panel"
+              aria-label="Pilha de respostas"
+            >
+              <div className="stack-heading">
+                <b>
+                  {g.stack.length
+                    ? "✧ Magias em resposta"
+                    : "⚔ Combate anunciado"}
+                </b>
                 <span>
-                  {cards.get(
-                    g.units.find((u) => u.id === g.combat?.attackerId)
-                      ?.cardId || "",
-                  )?.name || "Unidade"}
-                </span>
-                <b>→</b>
-                <span>
-                  {cards.get(
-                    g.units.find((u) => u.id === g.combat?.defenderId)
-                      ?.cardId || "",
-                  )?.name || "Unidade"}
+                  {yourTurn
+                    ? "VOCÊ TEM A PRIORIDADE"
+                    : `PRIORIDADE · ${p.names[g.priority]}`}
                 </span>
               </div>
-            )}
-            <div className="stack-list">
-              {[...g.stack].reverse().map((entry, i) => {
-                const c = cards.get(entry.cardId)!;
-                return (
-                  <button
-                    className="stack-card"
-                    key={`${entry.cardId}-${i}`}
-                    onClick={() => p.onFocus(c)}
-                  >
-                    <img src={c.asset} alt={c.name} />
-                    <div>
-                      <small>
-                        {i === 0 ? "PRÓXIMA A RESOLVER" : `NA FILA · ${i + 1}`}
-                      </small>
-                      <b>{c.name}</b>
-                      <span>
-                        {p.names[entry.seat]} ·{" "}
-                        {c.stats.speed === "fast" ? "Rápida" : "Lenta"}
-                      </span>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-            <p>
-              {g.passes === 1
-                ? "Um passe confirmado. O próximo passe resolve."
-                : g.stack.length
-                  ? "Duas respostas passadas resolvem a última magia."
-                  : "Os dois jogadores podem responder antes do dano."}
-            </p>
-          </aside>
-        )}
+              {g.combat && !shownCombat && (
+                <div className="pending-combat">
+                  <span>
+                    {cards.get(
+                      g.units.find((u) => u.id === g.combat?.attackerId)
+                        ?.cardId || "",
+                    )?.name || "Unidade"}
+                  </span>
+                  <b>→</b>
+                  <span>
+                    {cards.get(
+                      g.units.find((u) => u.id === g.combat?.defenderId)
+                        ?.cardId || "",
+                    )?.name || "Unidade"}
+                  </span>
+                </div>
+              )}
+              <div className="stack-list">
+                {[...g.stack].reverse().map((entry, i) => {
+                  const c = cards.get(entry.cardId)!;
+                  return (
+                    <button
+                      className="stack-card"
+                      key={`${entry.cardId}-${i}`}
+                      onClick={() => p.onFocus(c)}
+                    >
+                      <img src={c.asset} alt={c.name} />
+                      <div>
+                        <small>
+                          {i === 0
+                            ? "PRÓXIMA A RESOLVER"
+                            : `NA FILA · ${i + 1}`}
+                        </small>
+                        <b>{c.name}</b>
+                        <span>
+                          {p.names[entry.seat]} ·{" "}
+                          {c.stats.speed === "fast" ? "Rápida" : "Lenta"}
+                        </span>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+              <p>
+                {g.passes === 1
+                  ? "Um passe confirmado. O próximo passe resolve."
+                  : g.stack.length
+                    ? "Duas respostas passadas resolvem a última magia."
+                    : "Os dois jogadores podem responder antes do dano."}
+              </p>
+            </aside>
+          )}
+      </div>
       {!done && !presenting && !drawing && g.searches?.[0]?.seat === p.seat && (
         <SearchChoice
           key={g.searches[0].id}

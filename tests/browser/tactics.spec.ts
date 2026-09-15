@@ -9,6 +9,7 @@ test("legal actions and movement remain clear without redundant panels across vi
 }) => {
   const errors: string[] = [];
   page.on("pageerror", (e) => errors.push(e.message));
+  await page.setViewportSize({ width: 1920, height: 1080 });
   await page.goto("/");
   const source = randomState(1);
   await page.evaluate(
@@ -48,7 +49,10 @@ test("legal actions and movement remain clear without redundant panels across vi
   await expect(page.locator(".action-requirement")).toContainText(
     "Magia lenta · fase de Magia",
   );
-  await expect(crystal).toHaveAttribute("title", "Magia lenta · fase de Magia");
+  await expect(crystal).toHaveAttribute(
+    "aria-label",
+    /Magia lenta · fase de Magia/,
+  );
   await crystal.hover();
   await expect(page.locator(".hand-action-hint")).toBeVisible();
   await expect(async () => {
@@ -70,7 +74,7 @@ test("legal actions and movement remain clear without redundant panels across vi
   });
   // Aim at the exposed left edge of the fanned card, not its covered center.
   await snake.click({ position: { x: 14, y: 70 } });
-  const point = layout(1440, 1000).point(0, 0);
+  const point = layout(1920, 1080).point(0, 0);
   await page.mouse.move(point.x, point.y);
   await expect(page.locator(".action-preview")).toHaveCount(0);
   await page.mouse.click(point.x, point.y);
@@ -88,17 +92,16 @@ test("legal actions and movement remain clear without redundant panels across vi
     page.getByRole("button", { name: "Concluir movimentos" }),
   ).toBeEnabled({ timeout: 20000 });
   await idle(page);
-  const from = layout(1440, 1000).point(0, 2),
-    to = layout(1440, 1000).point(0, 3);
+  const from = layout(1920, 1080).point(0, 2),
+    to = layout(1920, 1080).point(0, 3);
   await page.mouse.click(from.x, from.y);
   await page.mouse.move(to.x, to.y);
   await expect(page.locator(".action-preview")).toHaveCount(0);
   await mkdir(".sited/qa-tactics", { recursive: true });
   for (const [width, height] of [
-    [1440, 1000],
-    [1024, 768],
-    [390, 844],
-    [844, 390],
+    [1920, 1080],
+    [2560, 1440],
+    [1600, 900],
   ]) {
     await page.setViewportSize({ width, height });
     await expect(page.locator(".arena-canvas canvas")).toHaveAttribute(

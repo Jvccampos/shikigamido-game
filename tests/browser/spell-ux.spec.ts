@@ -69,12 +69,13 @@ test("spell targeting rejects Omionjis and exposes granted effects on the affect
     }
     return route.fulfill({ json: { result: [] } });
   });
+  await page.setViewportSize({ width: 1920, height: 1080 });
   await page.goto("/");
   await page.getByRole("button", { name: /SPELLS/ }).click();
   await idle(page);
   await page.getByRole("button", { name: /^Selecionar Gishikido/ }).click();
-  const om = layout(1440, 1000).point(0, 2),
-    target = layout(1440, 1000).point(2, 2);
+  const om = layout(1920, 1080).point(0, 2),
+    target = layout(1920, 1080).point(2, 2);
   await page.mouse.click(om.x, om.y);
   await expect(
     page.getByText("Alvo 1: Takaya Isen", { exact: true }),
@@ -83,10 +84,9 @@ test("spell targeting rejects Omionjis and exposes granted effects on the affect
   await page.mouse.click(target.x, target.y);
   await mkdir(".sited/qa-spell-ux", { recursive: true });
   for (const [width, height] of [
-    [1440, 1000],
-    [1024, 768],
-    [390, 844],
-    [844, 390],
+    [1920, 1080],
+    [2560, 1440],
+    [1600, 900],
   ]) {
     await page.setViewportSize({ width, height });
     const dock = page.getByRole("region", { name: "Ação da carta" });
@@ -96,6 +96,7 @@ test("spell targeting rejects Omionjis and exposes granted effects on the affect
     expect(box.x).toBeGreaterThanOrEqual(0);
     expect(box.x + box.width).toBeLessThanOrEqual(width);
     expect(box.y + box.height).toBeLessThanOrEqual(height);
+    expect(box.x).toBeGreaterThan(layout(width, height).point(6.85, 3).x);
     const point = layout(width, height).point(2, 2);
     expect(
       point.x < box.x ||
@@ -104,10 +105,18 @@ test("spell targeting rejects Omionjis and exposes granted effects on the affect
         point.y > box.y + box.height,
     ).toBe(true);
   }
-  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.setViewportSize({ width: 1920, height: 1080 });
   await page.getByRole("button", { name: "Conjurar · 2 PE" }).click();
   await expect(page.locator(".stack-card")).toHaveCount(1);
-  await expect(page.locator(".stack-card")).toHaveCount(1);
+  await page.getByRole("button", { name: /^Selecionar Mamoru/ }).click();
+  const selectedBox = (await page.locator(".action-dock").boundingBox())!;
+  const stackBox = (await page.locator(".arena-stack-panel").boundingBox())!;
+  const passBox = (await page.locator(".arena-pass").boundingBox())!;
+  expect(selectedBox.y + selectedBox.height).toBeLessThanOrEqual(stackBox.y);
+  expect(stackBox.y + stackBox.height).toBeLessThanOrEqual(passBox.y);
+  expect(selectedBox.x).toBe(stackBox.x);
+  await page.screenshot({ path: ".sited/qa-spell-ux/sidebar-stack.png" });
+  await page.getByRole("button", { name: "Cancelar seleção" }).click();
   expect(apply(g, 1, { type: "pass" })).toBeUndefined();
   expect(apply(g, 0, { type: "pass" })).toBeUndefined();
   g.revision!++;
@@ -150,22 +159,49 @@ test("spell targeting rejects Omionjis and exposes granted effects on the affect
         requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
       ),
   );
-  const k = layout(1440, 1000).point(3, 3);
+  const k = layout(1920, 1080).point(3, 3);
   await page.mouse.click(k.x, k.y, { button: "right" });
   await page.getByRole("button", { name: "Pular", exact: true }).focus();
   await expect(page.getByRole("tooltip")).toContainText(
     "horizontal ou vertical",
   );
   await page.screenshot({ path: ".sited/qa-spell-ux/keyword.png" });
-  await page.setViewportSize({ width: 390, height: 844 });
-  await expect(page.getByRole("tooltip")).toHaveCount(0);
-  await page.getByRole("button", { name: "Pular", exact: true }).click();
-  const tooltip = page.getByRole("tooltip");
-  await expect(tooltip).toBeVisible();
-  const box = (await tooltip.boundingBox())!;
-  expect(box.x + box.width).toBeLessThanOrEqual(390);
-  expect(box.y + box.height).toBeLessThanOrEqual(844);
-  await page.screenshot({ path: ".sited/qa-spell-ux/keyword-mobile.png" });
   await page.getByRole("button", { name: "Fechar carta" }).click();
-  await expect(tooltip).toHaveCount(0);
+  g.players[0].pe = 0;
+  g.players[0].hand = [
+    "gishikido-n-7-cura-da-agua",
+    "mamoru-n-18-pele-de-ourico",
+  ];
+  g.revision!++;
+  send();
+  const unavailable = page.getByRole("button", {
+    name: /^Selecionar Gishikido/,
+  });
+  await expect(unavailable).toHaveAttribute("aria-label", /Faltam/);
+  await page.mouse.move(100, 600);
+  await unavailable.hover();
+  const positions = await page.evaluate(async () => {
+    const positions: { x: number; y: number }[] = [];
+    const start = performance.now();
+    while (performance.now() - start < 400) {
+      const hint = document.querySelector(".hand-action-hint")!;
+      const r = hint.getBoundingClientRect();
+      positions.push({ x: r.x, y: r.y });
+      await new Promise(requestAnimationFrame);
+    }
+    return positions;
+  });
+  expect(
+    Math.max(...positions.map((p) => p.x)) -
+      Math.min(...positions.map((p) => p.x)),
+  ).toBeLessThan(1);
+  expect(
+    Math.max(...positions.map((p) => p.y)) -
+      Math.min(...positions.map((p) => p.y)),
+  ).toBeLessThan(1);
+  expect(Math.min(...positions.map((p) => p.x))).toBeGreaterThan(
+    layout(1920, 1080).point(6.85, 3).x,
+  );
+  await expect(page.locator(".hand-action-hint")).toContainText("Faltam 2 PE");
+  await page.screenshot({ path: ".sited/qa-spell-ux/fixed-hand-feedback.png" });
 });

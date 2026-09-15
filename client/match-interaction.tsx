@@ -561,9 +561,27 @@ export function useMatchInteraction(
               (abilitySpec ||
                 kw(selectedUnit!, "Range") ||
                 selectedUnit?.statuses?.range))) && (
-            <ActionDock game={g} targets={highlights}>
+            <ActionDock>
               <div className="action-dock-head">
-                <b>{selectedCard?.name || unitName(selectedUnit)}</b>
+                {(selectedCard || catalog.get(selectedUnit?.cardId || ""))
+                  ?.asset && (
+                  <img
+                    className="action-card-art"
+                    src={
+                      (selectedCard || catalog.get(selectedUnit?.cardId || ""))!
+                        .asset
+                    }
+                    alt=""
+                  />
+                )}
+                <div className="action-card-title">
+                  <small>
+                    {selectedCard?.kind === "spell"
+                      ? "CONJURAÇÃO"
+                      : "HABILIDADE"}
+                  </small>
+                  <b>{selectedCard?.name || unitName(selectedUnit)}</b>
+                </div>
                 <button aria-label="Cancelar seleção" onClick={clear}>
                   ×
                 </button>
@@ -576,9 +594,25 @@ export function useMatchInteraction(
               {selectedCard?.kind === "spell" && (
                 <div className="target-controls">
                   {targetIds.map((id, i) => (
-                    <small key={id}>
-                      Alvo {i + 1}: {unitName(g.units.find((u) => u.id === id))}
-                    </small>
+                    <div className="action-target" key={id}>
+                      {catalog.get(
+                        g.units.find((u) => u.id === id)?.cardId || "",
+                      )?.asset && (
+                        <img
+                          src={
+                            catalog.get(
+                              g.units.find((u) => u.id === id)!.cardId,
+                            )!.asset
+                          }
+                          alt=""
+                        />
+                      )}
+                      <small>
+                        Alvo {i + 1}:{" "}
+                        {unitName(g.units.find((u) => u.id === id))}
+                      </small>
+                      <span aria-hidden="true">✓</span>
+                    </div>
                   ))}
                   {["cell", "lake", "wind", "move"].includes(
                     spellSpecs[selectedCard.id].target,
@@ -819,7 +853,7 @@ export function useMatchInteraction(
             g.phase === 1 &&
             myTurn &&
             !selected && (
-              <ActionDock game={g} targets={highlights}>
+              <ActionDock>
                 <p className="eyebrow">INVOCAÇÃO DO BARALHO</p>
                 {me.summonableDeck.map((id: string) => (
                   <button
