@@ -19,7 +19,8 @@ import { unitEffects } from "../shared/unit-insight.js";
 import { ArenaNotices } from "./arena-notices.js";
 import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import type { ComponentChildren } from "preact";
-import { type Point, type Presentation } from "./arena-scene.js";
+import type { Point } from "./arena-scene.js";
+import type { DuelPresentationState } from "./use-duel-presentation.js";
 import { cards, type Cmd } from "../shared/game.js";
 type Props = {
   game: GameView;
@@ -56,8 +57,7 @@ type Props = {
   onMulligan: () => void;
   onClear: () => void;
   onConcede: () => void;
-  onPresentationBusy: (busy: boolean) => void;
-  onNoticeBusy: (busy: boolean) => void;
+  presentation: DuelPresentationState;
 };
 const elementGlyph: Record<string, string> = {
   agua: "水",
@@ -88,10 +88,6 @@ export function Arena(p: Props) {
     [menu, setMenu] = useState(false),
     [elementsOpen, setElementsOpen] = useState(false),
     [discardOpen, setDiscardOpen] = useState(false),
-    [drawing, setDrawing] = useState(false),
-    [presenting, setPresenting] = useState<Presentation | null>(null),
-    [visibleUnits, setVisibleUnits] = useState<UnitView[]>(p.game.units),
-    [settledRevision, setSettledRevision] = useState(p.game.revision),
     [log, setLog] = useState(false),
     [sound, setSound] = useState(
       () => localStorage.getItem("shiki-sound") === "true",
@@ -109,29 +105,8 @@ export function Arena(p: Props) {
   );
   const shownCombat = combatPreview || (p.preview?.combat ? p.preview : null);
   const hover = g.units.find((u) => u.id === hoverId) || null;
-  const previousHand = useRef<{
-    count: number;
-    library: number;
-    turn: number;
-  } | null>(null);
   const reserveBefore = useRef(me?.permanentPe || 0),
     [reserveGain, setReserveGain] = useState(0);
-  useEffect(() => {
-    if (!me) return;
-    const before = previousHand.current,
-      library = me.libraryCount ?? me.library.length;
-    previousHand.current = { count: me.hand.length, library, turn: g.turn };
-    if (
-      before &&
-      !g.setup &&
-      me.hand.length > before.count &&
-      library < before.library
-    ) {
-      setDrawing(true);
-      const timer = setTimeout(() => setDrawing(false), 950);
-      return () => clearTimeout(timer);
-    }
-  }, [me?.hand.length, g.turn, g.setup]);
   useEffect(() => {
     if (!me) return;
     const gain = me.permanentPe - reserveBefore.current;
@@ -162,10 +137,14 @@ export function Arena(p: Props) {
     !!g.combat,
     g.searches?.length,
   ]);
-  useEffect(
-    () => p.onPresentationBusy(!!presenting || drawing),
-    [presenting, drawing],
-  );
+  const { drawing, presenting, visibleUnits } = p.presentation;
+  useEffect(() => {
+    p.presentation.onOverlays({
+      discard: discardOpen,
+      elements: elementsOpen,
+      menu,
+    });
+  }, [discardOpen, elementsOpen, menu, p.presentation.onOverlays]);
   const opening = !!g.setup && !!me && !me.mulligan && !me.ready;
   function state() {
     const v = latest.current;
@@ -188,16 +167,7 @@ export function Arena(p: Props) {
       onSelect: (u: UnitView) => v.onSelect(u),
       onDrop: (x: number, y: number, u?: UnitView, id?: string) =>
         v.onDrop(x, y, u, id ? { kind: "unit", unitId: id } : undefined),
-      onPresentation: (
-        presentation: Presentation | null,
-        units?: UnitView[],
-      ) => {
-        setPresenting(presentation);
-        if (units) {
-          setVisibleUnits(units);
-          setSettledRevision(latest.current.game.revision);
-        }
-      },
+      onPresentation: v.presentation.onScene,
       onInspect: (u: UnitView) => v.onFocus(cards.get(u.cardId), u),
       onHover: (u: UnitView | null) => {
         hoveredRef.current = u;
@@ -205,9 +175,10 @@ export function Arena(p: Props) {
       },
     };
   }
-  const { host, ready, canvasError, cellAt } = useArenaScene(
-    state(),
-    p.onPresentationBusy,
+  const { host, ready, canvasError, cellAt } = useArenaScene(state());
+  useEffect(
+    () => p.presentation.onReady(ready),
+    [ready, p.presentation.onReady],
   );
   useEffect(() => {
     const key = (e: KeyboardEvent) => {
@@ -720,20 +691,8 @@ export function Arena(p: Props) {
         />
       )}
       <ArenaNotices
-        game={g}
-        seat={p.seat}
-        names={p.names}
-        onReading={p.onNoticeBusy}
-        waiting={
-          !ready ||
-          !!presenting ||
-          drawing ||
-          settledRevision !== g.revision ||
-          discardOpen ||
-          !!g.searches?.length ||
-          elementsOpen ||
-          menu
-        }
+        notice={p.presentation.notice}
+        leaving={p.presentation.noticeLeaving}
       />
       {elementsOpen && <ElementsGuide onClose={() => setElementsOpen(false)} />}
       {menu && (
@@ -773,7 +732,7 @@ export function Arena(p: Props) {
           onFocus={p.onFocus}
         />
       )}
-      {done && !presenting && settledRevision === g.revision && (
+      {done && p.presentation.resultReady && (
         <div className="arena-victory">
           <small>O DUELO TERMINOU</small>
           <h1>

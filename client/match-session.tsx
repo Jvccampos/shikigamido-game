@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "preact/hooks";
 import { Arena } from "./arena.js";
+import { useDuelPresentation } from "./use-duel-presentation.js";
 import { useMatchInteraction } from "./match-interaction.js";
 import { mutate } from "./network.js";
 import { apply, type Game, type Cmd } from "../shared/game.js";
@@ -35,16 +36,15 @@ export function MatchSession({
   flash: (message: string) => void;
   onExit: () => void;
 }) {
-  const [sceneBusy, setSceneBusy] = useState(false),
-    [noticeBusy, setNoticeBusy] = useState(false),
-    [concede, setConcede] = useState(false);
+  const [concede, setConcede] = useState(false);
+  const presentation = useDuelPresentation(g, seat, names);
   const localRef = useRef(practice);
   localRef.current = practice;
   const myTurn = seat === g.priority && !g.setup && !g.centerPending;
   const interaction = useMatchInteraction(
     g,
     seat,
-    busy || sceneBusy,
+    busy || presentation.inputBlocked,
     act,
     setFocus,
     code,
@@ -54,8 +54,7 @@ export function MatchSession({
       !practice ||
       practice.winner !== null ||
       practice.draw ||
-      sceneBusy ||
-      noticeBusy
+      presentation.automationBlocked
     )
       return;
     if (!(
@@ -88,9 +87,9 @@ export function MatchSession({
       setPractice(next);
     }, 750);
     return () => clearTimeout(timer);
-  }, [practice, sceneBusy, noticeBusy]);
+  }, [practice, presentation.automationBlocked]);
   async function act(cmd: Cmd) {
-    if (busy || sceneBusy) return false;
+    if (busy || presentation.inputBlocked) return false;
     if (practice) {
       const next = structuredClone(practice),
         error = apply(next, 0, cmd);
@@ -117,12 +116,12 @@ export function MatchSession({
       !g.combat &&
       !g.searches?.length &&
       !busy &&
-      !sceneBusy
+      !presentation.inputBlocked
     ) {
       const timer = setTimeout(() => void act({ type: "pass" }), 500);
       return () => clearTimeout(timer);
     }
-  }, [g, seat, busy, sceneBusy]);
+  }, [g, seat, busy, presentation.inputBlocked]);
   return (
     <>
       <Arena
@@ -131,9 +130,8 @@ export function MatchSession({
         code={code}
         names={names}
         {...interaction.arena}
-        busy={busy || sceneBusy}
-        onPresentationBusy={setSceneBusy}
-        onNoticeBusy={setNoticeBusy}
+        busy={busy || presentation.inputBlocked}
+        presentation={presentation}
         onExit={onExit}
         onConcede={() => setConcede(true)}
       />

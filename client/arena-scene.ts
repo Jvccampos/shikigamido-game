@@ -15,10 +15,7 @@ import {
   type Ticker,
 } from "pixi.js";
 import { connected, cards as catalog } from "../shared/game.js";
-export type Presentation = {
-  kind: "summon" | "move" | "combat" | "cast" | "spell";
-  label: string;
-};
+import type { Presentation } from "./duel-presentation.js";
 export type Point = { x: number; y: number };
 export type ArenaState = {
   game: GameView;
@@ -46,6 +43,7 @@ export type ArenaState = {
   onPresentation: (
     presentation: Presentation | null,
     units?: UnitView[],
+    revision?: number,
   ) => void;
 };
 const nodes = [
@@ -268,7 +266,7 @@ export class ArenaScene {
       return;
     }
     this.syncUnits(state);
-    this.state.onPresentation(null, state.game.units);
+    this.state.onPresentation(null, state.game.units, state.game.revision);
   }
   private syncUnits(state: ArenaState) {
     const l = layout(this.app.screen.width, this.app.screen.height);
@@ -858,7 +856,11 @@ export class ArenaScene {
     this.presenting = false;
     this.activeViews.clear();
     this.syncUnits(this.state);
-    this.state.onPresentation(null, this.state.game.units);
+    this.state.onPresentation(
+      null,
+      this.state.game.units,
+      this.state.game.revision,
+    );
   }
   private burst(x: number, y: number, color: number, count: number) {
     for (let i = 0; i < count; i++) {

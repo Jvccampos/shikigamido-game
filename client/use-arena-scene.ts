@@ -1,16 +1,11 @@
 import { useEffect, useRef, useState } from "preact/hooks";
 import { ArenaScene, type ArenaState } from "./arena-scene.js";
 
-export function useArenaScene(
-  value: ArenaState,
-  onPresentationBusy: (busy: boolean) => void,
-) {
+export function useArenaScene(value: ArenaState) {
   const host = useRef<HTMLDivElement>(null),
     scene = useRef<ArenaScene | null>(null),
-    latest = useRef(value),
-    onBusy = useRef(onPresentationBusy);
+    latest = useRef(value);
   latest.current = value;
-  onBusy.current = onPresentationBusy;
   const [ready, setReady] = useState(false),
     [canvasError, setCanvasError] = useState("");
   // Pixi retains handlers between redraws. Forward input to the current render,
@@ -25,8 +20,8 @@ export function useArenaScene(
       onDrop: (x, y, unit, id) => latest.current.onDrop(x, y, unit, id),
       onInspect: (unit) => latest.current.onInspect(unit),
       onHover: (unit) => latest.current.onHover(unit),
-      onPresentation: (presentation, units) =>
-        latest.current.onPresentation(presentation, units),
+      onPresentation: (presentation, units, revision) =>
+        latest.current.onPresentation(presentation, units, revision),
     };
   }
   useEffect(() => {
@@ -47,7 +42,6 @@ export function useArenaScene(
     return () => {
       closed = true;
       engine.destroy();
-      onBusy.current(false);
     };
   }, []);
   useEffect(() => {

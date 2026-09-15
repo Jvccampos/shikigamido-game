@@ -19,11 +19,12 @@ import {
   enterPhase,
 } from "./rules/turns.js";
 import { route, at, summonCells, movementBudget } from "./rules/board.js";
-import { fight, settleCombat } from "./rules/combat.js";
+import { fight } from "./rules/combat.js";
 import { cards } from "./cards.js";
 import { ability, spellError, resolveSpell } from "./rules/spells.js";
 import { destroy, summonEffects, heal, takeDamage } from "./rules/units.js";
 import { resolveSearch } from "./rules/searches.js";
+import { resolveResponse } from "./rules/responses.js";
 
 export function apply(g: Game, seat: Seat, c: unknown): string | undefined {
   if (!isCommand(c)) return "Comando inválido.";
@@ -449,18 +450,7 @@ export function apply(g: Game, seat: Seat, c: unknown): string | undefined {
       g.priority = (1 - seat) as Seat;
       return;
     }
-    g.passes = 0;
-    if (g.stack.length) {
-      const top = g.stack.pop()!;
-      resolveSpell(g, top.seat, top);
-      if (!g.duel)
-        g.priority = g.stack.length
-          ? ((1 - g.stack.at(-1)!.seat) as Seat)
-          : g.combat
-            ? ((1 - g.combat.returnPriority) as Seat)
-            : g.phaseOwner!;
-    } else settleCombat(g);
-    refreshAuras(g);
+    resolveResponse(g);
     return;
   }
   if (seat !== g.phaseOwner) {
