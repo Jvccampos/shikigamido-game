@@ -1,11 +1,22 @@
-import { defineRailway, project, service, volume, preserve } from "railway/iac";
+import {
+  defineRailway,
+  github,
+  project,
+  service,
+  volume,
+  preserve,
+} from "railway/iac";
 
 export default defineRailway(() => {
   const data = volume("shikigamido-game-volume", {
     sizeMB: 5000,
     region: "us-east4-eqdc4a",
   });
-  const web = service("shikigamido-game", {
+  const web = service("shikigamido", {
+    source: github("Jvccampos/shikigamido-game", {
+      branch: "main",
+      checkSuites: true,
+    }),
     healthcheck: "/healthz",
     healthcheckTimeout: 120,
     variables: {

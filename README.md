@@ -47,9 +47,9 @@ O perfil por nome usa um cookie de sessão de 30 dias neste navegador. Sair ou a
 
 `Dockerfile` gera uma imagem que serve cliente, API e WebSocket. `docker compose up --build` usa volume persistente em `/data`. No Railway, o serviço tem um volume em `/data`, `DATABASE_PATH=/data/shikigamido.db`, `PUBLIC_URL` com o domínio HTTPS e domínio apontando à porta definida por `PORT` (8080 no deploy atual). Use uma única réplica: SQLite e as notificações WebSocket pertencem a este processo. Reiniciar preserva sessões, baralhos e partidas; navegadores reconectam automaticamente.
 
-```sh
-railway up --detach
-```
+O serviço de produção está conectado a `Jvccampos/shikigamido-game`, branch `main`, com deploy automático e **Wait for CI** habilitados. Cada push na `main` publica uma nova versão depois que o workflow `Check` passa; uma falha no CI impede a publicação. O Railway compila o `Dockerfile` e verifica `/healthz` antes de ativar a versão. Acompanhe as verificações na aba Actions do GitHub e a publicação no histórico de deploys do Railway.
+
+Não é necessário executar `railway up` após um push. Para uma publicação manual excepcional, use `railway up --detach` com o projeto, ambiente e serviço de produção selecionados no CLI.
 
 O site anterior em d.ellep.dev permanece separado. Dados e sessões dele não foram importados para o novo servidor.
 
