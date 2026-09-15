@@ -9,7 +9,7 @@ import {
   openLogin,
   signOut,
   useAuth,
-  useMutation,
+  mutate,
   useQuery,
   useRoom,
 } from "./network.js";
@@ -31,9 +31,6 @@ export function App() {
   const auth = useAuth(),
     decks = useQuery("myDecks"),
     myRooms = useQuery("myRooms");
-  const createRoom = useMutation("createRoom"),
-    joinRoom = useMutation("joinRoom"),
-    lobbyCommand = useMutation("lobbyCommand");
   const [view, setView] = useState("inicio"),
     [element, setElement] = useState("agua"),
     [selectedDeck, setSelectedDeck] = useState(""),
@@ -63,21 +60,6 @@ export function App() {
   useEffect(() => {
     if (!selectedDeck && decks.data?.[0]) setSelectedDeck(decks.data[0].id);
   }, [decks.data]);
-  useEffect(() => {
-    const key = (e: KeyboardEvent) => {
-      if (
-        ["INPUT", "SELECT", "TEXTAREA"].includes(
-          (e.target as HTMLElement)?.tagName,
-        )
-      )
-        return;
-      if (e.key === "Escape") {
-        setFocus(null);
-      }
-    };
-    window.addEventListener("keydown", key);
-    return () => window.removeEventListener("keydown", key);
-  }, []);
   function playerName(s: number) {
     const id = g?.players?.[s]?.id;
     return room?.members?.find((m) => m.id === id)?.name || `Jogador ${s + 1}`;
@@ -127,7 +109,7 @@ export function App() {
     setPractice(null);
 
     const r = await request(() =>
-      joinRoom.mutate(code, selectedDeck || undefined, spectator),
+      mutate("joinRoom", code, selectedDeck || undefined, spectator),
     );
     if (r?.room) {
       localStorage.setItem("shiki-room", code);
@@ -137,7 +119,7 @@ export function App() {
   async function makeRoom() {
     setPractice(null);
 
-    const r = await request(() => createRoom.mutate(selectedDeck));
+    const r = await request(() => mutate("createRoom", selectedDeck));
     if (r?.room) {
       setCode(r.room.code);
       localStorage.setItem("shiki-room", r.room.code);
@@ -185,11 +167,6 @@ export function App() {
               Entrar e jogar →
             </button>
             <p>Seu perfil e seus baralhos ficam vinculados a este navegador.</p>
-            {auth.googleEnabled && (
-              <a className="outline" href="/auth/google">
-                Continuar com Google
-              </a>
-            )}
           </form>
         </div>
       )}
@@ -447,7 +424,7 @@ export function App() {
                         disabled={busy}
                         onChange={(e) =>
                           void request(() =>
-                            lobbyCommand.mutate(code, {
+                            mutate("lobbyCommand", code, {
                               type: "seat",
                               seat: s,
                               userId: e.currentTarget.value || null,
@@ -499,7 +476,7 @@ export function App() {
                   }
                   onClick={() =>
                     void request(() =>
-                      lobbyCommand.mutate(code, { type: "start" }),
+                      mutate("lobbyCommand", code, { type: "start" }),
                     )
                   }
                 >
@@ -512,8 +489,8 @@ export function App() {
           )}
           {g?.players && (
             <MatchSession
-              key={code}
               game={g}
+              key={code}
               seat={seat}
               code={code}
               names={[playerName(0), playerName(1)]}
@@ -630,7 +607,6 @@ export function App() {
       {focus && (
         <Focus
           {...focus}
-          game={g}
           unit={g?.units?.find((u) => u.id === focus.unit?.id) || focus.unit}
           onClose={() => setFocus(null)}
         />

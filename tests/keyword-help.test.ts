@@ -27,7 +27,7 @@ test("received effects remain discoverable without duplicating movement markers 
   const unit = makeUnit(g, 0, "serpente-de-gelo", 2, 2);
   unit.statuses = { devolver: 2, healSplash: true, block: 1 };
   g.moved.push(unit.id);
-  const entries = unitEffects(g, unit);
+  const entries = unitEffects(unit);
   assert.deepEqual(
     entries.map((e) => e.label),
     ["Block 1", "Devolver 2", "Cura da Água"],
@@ -35,7 +35,7 @@ test("received effects remain discoverable without duplicating movement markers 
   assert.match(entries[1].detail, /contra-ataque/);
   assert.match(entries[2].detail, /Consumido/);
   assert.deepEqual(
-    unitEffects(g, {
+    unitEffects({
       id: unit.id,
       cardId: "hidden",
       hp: null,

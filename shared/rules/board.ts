@@ -129,35 +129,6 @@ export function route(
   return null;
 }
 
-export function pathLength(
-  g: Board,
-  from: UnitView,
-  tx: number,
-  ty: number,
-  ignoreTarget = true,
-) {
-  const q: [[number, number], number][] = [[[from.x, from.y], 0]],
-    seen = new Set([`${from.x},${from.y}`]);
-  while (q.length) {
-    const [[x, y], d] = q.shift()!;
-    if (x === tx && y === ty) return d;
-    for (const [nx, ny] of neighbors(x, y)) {
-      const k = `${nx},${ny}`;
-      if (seen.has(k)) continue;
-      const occupied = at(g, nx, ny);
-      if (
-        occupied &&
-        (from.kind === "curse" || occupied.owner !== from.owner) &&
-        !(ignoreTarget && nx === tx && ny === ty)
-      )
-        continue;
-      seen.add(k);
-      q.push([[nx, ny], d + 1]);
-    }
-  }
-  return Infinity;
-}
-
 export function summonCells(g: Board, seat: Seat) {
   return Array.from({ length: 49 }, (_, i) => ({
     x: i % 7,

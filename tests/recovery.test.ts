@@ -29,8 +29,6 @@ test(
             NODE_ENV: "test",
             PORT: String(port),
             DATABASE_PATH: join(dir, "game.db"),
-            GOOGLE_CLIENT_ID: "",
-            GOOGLE_CLIENT_SECRET: "",
           },
           stdio: ["ignore", "ignore", "pipe", "ipc"],
         },

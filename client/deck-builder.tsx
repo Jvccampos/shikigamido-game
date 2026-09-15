@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import { E, SPEED, CardFace, type CardFocus } from "./card.js";
-import { openLogin, useMutation, type useQuery } from "./network.js";
+import { openLogin, mutate, type useQuery } from "./network.js";
 import { allCards, cards as catalog, validateDeck } from "../shared/game.js";
 import { starterDeck } from "../shared/practice.js";
 import type { MutationResponse } from "../shared/room.js";
@@ -37,8 +37,6 @@ export function DeckBuilder({
     [editId, setEditId] = useState(""),
     [search, setSearch] = useState(""),
     [filter, setFilter] = useState("all");
-  const saveDeck = useMutation("saveDeck"),
-    deleteDeck = useMutation("deleteDeck");
   const hovered = useRef<CardFocus | null>(null);
   useEffect(() => {
     if (!active) return;
@@ -63,7 +61,7 @@ export function DeckBuilder({
       return;
     }
     const r = await request(() =>
-      saveDeck.mutate({
+      mutate("saveDeck", {
         id: editId || undefined,
         name: deckName,
         element,
@@ -222,7 +220,7 @@ export function DeckBuilder({
                 <button
                   aria-label={`Excluir ${d.name}`}
                   onClick={async () => {
-                    await request(() => deleteDeck.mutate(d.id));
+                    await request(() => mutate("deleteDeck", d.id));
                     if (editId === d.id) setEditId("");
                     if (selectedDeck === d.id) setSelectedDeck("");
                     await decks.refetch();

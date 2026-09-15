@@ -6,87 +6,50 @@ type Patch<T> = T extends StoredRow ? Partial<Omit<T, keyof StoredRow>> : never;
 import Database from "better-sqlite3";
 import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
-const TABLES = new Set(["decks", "rooms"]);
-export class Repository<T extends StoredRow> {
-  private filters: [string, unknown][] = [];
-  private order: [string, string] | null = null;
-  constructor(
-    private db: Database.Database,
-    private table: string,
-  ) {
-    if (!TABLES.has(table)) throw Error("Unknown table");
-  }
-  where(key: keyof T & string, value: unknown) {
-    const q = new Repository<T>(this.db, this.table);
-    q.filters = [...this.filters, [key, value]];
-    q.order = this.order;
-    return q;
-  }
-  orderBy(key: keyof T & string, direction: string) {
-    const q = new Repository<T>(this.db, this.table);
-    q.filters = this.filters;
-    q.order = [key, direction];
-    return q;
-  }
-  private clause() {
-    return this.filters.length
-      ? " WHERE " +
-          this.filters
-            .map(([key]) => {
-              if (!/^[a-zA-Z]+$/.test(key)) throw Error("Invalid field");
-              return `json_extract(body, '$.${key}') = ?`;
-            })
-            .join(" AND ")
-      : "";
-  }
-  all(): T[] {
-    const values = this.filters.map(([, v]) => v);
-    const rows = this.db
-      .prepare(`SELECT body FROM ${this.table}${this.clause()}`)
-      .all(...values)
-      .map((r) => JSON.parse((r as { body: string }).body) as T);
-    if (this.order) {
-      const [key, dir] = this.order;
-      rows.sort(
-        (a, b) =>
-          String(a[key as keyof T]).localeCompare(String(b[key as keyof T])) *
-          (dir === "desc" ? -1 : 1),
+function readRows<T>(
+  db: Database.Database,
+  sql: string,
+  ...args: string[]
+): T[] {
+  return db
+    .prepare(sql)
+    .all(...args)
+    .map((row) => JSON.parse((row as { body: string }).body) as T);
+}
+function records<T extends StoredRow>(
+  db: Database.Database,
+  table: "decks" | "rooms",
+) {
+  return {
+    insert(value: WithoutMetadata<T>): T {
+      const now = new Date().toISOString(),
+        row = {
+          ...value,
+          id: crypto.randomUUID(),
+          createdAt: now,
+          updatedAt: now,
+        } as unknown as T;
+      db.prepare(`INSERT INTO ${table}(id,body) VALUES (?,?)`).run(
+        row.id,
+        JSON.stringify(row),
       );
-    }
-    return rows;
-  }
-  get(id: string): T | null {
-    return this.where("id", id).all()[0] || null;
-  }
-  insert(value: WithoutMetadata<T>): T {
-    const now = new Date().toISOString(),
-      row = {
-        ...value,
-        id: crypto.randomUUID(),
-        createdAt: now,
-        updatedAt: now,
-      } as unknown as T;
-    this.db
-      .prepare(`INSERT INTO ${this.table}(id,body) VALUES (?,?)`)
-      .run(row.id, JSON.stringify(row));
-    return row;
-  }
-  update(id: string, patch: Patch<T>): T {
-    const row = this.get(id);
-    if (!row) throw Error("Registro não encontrado.");
-    Object.assign(row, patch, { updatedAt: new Date().toISOString() });
-    this.db
-      .prepare(`UPDATE ${this.table} SET body=? WHERE id=?`)
-      .run(JSON.stringify(row), id);
-    return row;
-  }
-  delete(id: string) {
-    if (!this.get(id)) return false;
-    return (
-      this.db.prepare(`DELETE FROM ${this.table} WHERE id=?`).run(id).changes >
-      0
-    );
-  }
+      return row;
+    },
+    update(id: string, patch: Patch<T>): T {
+      const row = readRows<T>(
+        db,
+        `SELECT body FROM ${table} WHERE id=?`,
+        id,
+      )[0];
+      if (!row) throw Error("Registro não encontrado.");
+      Object.assign(row, patch, { updatedAt: new Date().toISOString() });
+      db.prepare(`UPDATE ${table} SET body=? WHERE id=?`).run(
+        JSON.stringify(row),
+        id,
+      );
+      return row;
+    },
+  };
 }
 export function openDatabase(path: string) {
   mkdirSync(dirname(path), { recursive: true });
@@ -95,19 +58,50 @@ export function openDatabase(path: string) {
   db.pragma("foreign_keys=ON");
   db.pragma("busy_timeout=5000");
   db.exec(
-    `CREATE TABLE IF NOT EXISTS decks(id TEXT PRIMARY KEY,body TEXT NOT NULL);CREATE INDEX IF NOT EXISTS deck_owner ON decks(json_extract(body,'$.ownerId'));CREATE TABLE IF NOT EXISTS rooms(id TEXT PRIMARY KEY,body TEXT NOT NULL);CREATE UNIQUE INDEX IF NOT EXISTS room_code ON rooms(json_extract(body,'$.code'));CREATE TABLE IF NOT EXISTS users(id TEXT PRIMARY KEY,name TEXT NOT NULL,google_sub TEXT UNIQUE);CREATE TABLE IF NOT EXISTS sessions(hash TEXT PRIMARY KEY,user_id TEXT NOT NULL REFERENCES users(id),expires INTEGER NOT NULL);`,
+    `CREATE TABLE IF NOT EXISTS decks(id TEXT PRIMARY KEY,body TEXT NOT NULL);CREATE INDEX IF NOT EXISTS deck_owner ON decks(json_extract(body,'$.ownerId'));CREATE TABLE IF NOT EXISTS rooms(id TEXT PRIMARY KEY,body TEXT NOT NULL);CREATE UNIQUE INDEX IF NOT EXISTS room_code ON rooms(json_extract(body,'$.code'));CREATE TABLE IF NOT EXISTS users(id TEXT PRIMARY KEY,name TEXT NOT NULL);CREATE TABLE IF NOT EXISTS sessions(hash TEXT PRIMARY KEY,user_id TEXT NOT NULL REFERENCES users(id),expires INTEGER NOT NULL);`,
   );
+  const decks = {
+    ...records<Deck>(db, "decks"),
+    list: (ownerId: string) =>
+      readRows<Deck>(
+        db,
+        "SELECT body FROM decks WHERE json_extract(body, '$.ownerId')=? ORDER BY json_extract(body, '$.updatedAt') DESC",
+        ownerId,
+      ),
+    getOwned: (id: string, ownerId: string): Deck | undefined =>
+      readRows<Deck>(
+        db,
+        "SELECT body FROM decks WHERE id=? AND json_extract(body, '$.ownerId')=?",
+        id,
+        ownerId,
+      )[0],
+    deleteOwned: (id: string, ownerId: string) =>
+      db
+        .prepare(
+          "DELETE FROM decks WHERE id=? AND json_extract(body, '$.ownerId')=?",
+        )
+        .run(id, ownerId).changes > 0,
+  };
+  const rooms = {
+    ...records<SavedRoom>(db, "rooms"),
+    recent: () =>
+      readRows<SavedRoom>(
+        db,
+        "SELECT body FROM rooms ORDER BY json_extract(body, '$.updatedAt') DESC",
+      ),
+    byCode: (code: string): SavedRoom | undefined =>
+      readRows<SavedRoom>(
+        db,
+        "SELECT body FROM rooms WHERE json_extract(body, '$.code')=?",
+        code,
+      )[0],
+  };
   return {
     raw: db,
     transaction<T>(
-      fn: (tx: { decks: Repository<Deck>; rooms: Repository<SavedRoom> }) => T,
+      fn: (tx: { decks: typeof decks; rooms: typeof rooms }) => T,
     ): T {
-      return db.transaction(() =>
-        fn({
-          decks: new Repository<Deck>(db, "decks"),
-          rooms: new Repository<SavedRoom>(db, "rooms"),
-        }),
-      )();
+      return db.transaction(() => fn({ decks, rooms }))();
     },
     close: () => db.close(),
   };

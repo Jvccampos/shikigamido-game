@@ -29,8 +29,6 @@ export default defineConfig({
           NODE_ENV: "production",
           DATABASE_PATH: ":memory:",
           PUBLIC_URL: baseURL,
-          GOOGLE_CLIENT_ID: "",
-          GOOGLE_CLIENT_SECRET: "",
         },
         reuseExistingServer: false,
         timeout: 120000,

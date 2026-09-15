@@ -74,7 +74,7 @@ export function RuleHint({
             <b>{label}</b>
             <span>{detail}</span>
           </div>,
-          document.body,
+          button.current?.closest("dialog") || document.body,
         )}
     </>
   );

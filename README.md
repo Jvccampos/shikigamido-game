@@ -46,7 +46,7 @@ Os testes de salas usam SQLite em memória através do mesmo módulo de persist�
 - Combates, conjurações e maldições são apresentados em sequência no tabuleiro. A pilha mostra quem tem a prioridade e qual magia resolve primeiro.
 - O histórico organiza ações por turno e permite filtrar combates ou consultar as cartas descartadas. O menu também reúne tela cheia e concessão.
 
-O perfil por nome usa um cookie de sessão de 30 dias neste navegador. Sair ou apagar cookies perde acesso a um perfil sem Google. Não é uma conta recuperável por apelido.
+O perfil por nome usa um cookie de sessão de 30 dias neste navegador. Sair ou apagar cookies perde acesso ao perfil. Não é uma conta recuperável por apelido.
 
 ## Publicação e persistência
 
@@ -57,16 +57,6 @@ O serviço de produção está conectado a `Jvccampos/shikigamido-game`, branch 
 Não é necessário executar `railway up` após um push. Para uma publicação manual excepcional, use `railway up --detach` com o projeto, ambiente e serviço de produção selecionados no CLI.
 
 O site anterior em d.ellep.dev permanece separado. Dados e sessões dele não foram importados para o novo servidor.
-
-## Login Google
-
-Opcional e desativado por decisão do autor nesta versão de testes. Para habilitar no futuro, configure `GOOGLE_CLIENT_ID` e `GOOGLE_CLIENT_SECRET` no Railway. Crie um cliente OAuth Web com redirecionamento autorizado:
-
-```
-https://shikigamido-game-production.up.railway.app/auth/google/callback
-```
-
-Use o painel de variáveis do Railway para os segredos; não os coloque no código. O botão Google aparece quando as duas variáveis estão presentes. Um perfil local pode ser associado ao Google ao entrar pela primeira vez.
 
 ## Verificação
 

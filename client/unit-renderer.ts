@@ -229,7 +229,7 @@ export function drawUnit(
     t.position.set(w * 0.3, -h * 0.5);
     view.addChild(t);
   }
-  const effects = unitEffects(getState().game, u);
+  const effects = unitEffects(u);
   if (effects.length) {
     const badge = new Container();
     badge.position.set(w / 2 - 5, -h * 0.12);

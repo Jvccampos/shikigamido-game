@@ -497,7 +497,6 @@ export {
   summonCells,
   moveOptions,
   route,
-  pathLength,
 } from "./rules/board.js";
 export { elementalDamage, fight } from "./rules/combat.js";
 export type {

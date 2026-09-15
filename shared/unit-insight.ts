@@ -5,50 +5,23 @@ import { cards } from "./cards.js";
 import { kw } from "./rules/core.js";
 import { movementReason } from "./action-advice.js";
 export type UnitInsight = {
-  category: "effect" | "movement";
   label: string;
   detail: string;
   tone: "good" | "bad" | "neutral";
 };
-export function unitInsights(
-  g: Pick<GameView, "turn" | "moved">,
-  u: UnitView,
-): UnitInsight[] {
-  if (u.cardId === "hidden")
-    return [
-      {
-        category: "movement",
-        label: "Carta oculta",
-        detail: "Identidade e atributos serão revelados no combate.",
-        tone: "neutral",
-      },
-    ];
+export function unitEffects(u: UnitView): UnitInsight[] {
+  if (u.cardId === "hidden") return [];
   const st = u.statuses || {};
   const entries: UnitInsight[] = [];
   const add = (
     label: string,
     detail: string,
     tone: UnitInsight["tone"] = "neutral",
-    category: UnitInsight["category"] = "effect",
-  ) => entries.push({ label, detail, tone, category });
+  ) => entries.push({ label, detail, tone });
   const expires = (key: string) =>
     effectExpiry(st, key) !== undefined
       ? `Até o fim do turno ${effectExpiry(st, key)}.`
       : "";
-  if (u.summonedTurn === g.turn && ["unit", "omionji"].includes(u.kind))
-    add(
-      "Invocado agora",
-      "Movimento liberado no próximo turno.",
-      "neutral",
-      "movement",
-    );
-  if (g.moved.includes(u.id))
-    add(
-      "Movimento usado",
-      "Esta unidade volta a mover no próximo turno.",
-      "neutral",
-      "movement",
-    );
   if (st.stun)
     add("Atordoado", `Não move nem contra-ataca. ${expires("stun")}`, "bad");
   if (st.softStun)
@@ -72,20 +45,6 @@ export function unitInsights(
       "Intangível",
       `Atravessa inimigos, mas não pode atacá-los. ${expires("intangivel")}`,
       "good",
-    );
-  if (st.abilityTurn === g.turn)
-    add(
-      "Habilidade usada",
-      "Disponível novamente no próximo turno.",
-      "neutral",
-      "movement",
-    );
-  if (st.once)
-    add(
-      "Efeito único usado",
-      "Esta habilidade não pode ser repetida nesta partida.",
-      "neutral",
-      "movement",
     );
   if (st.centerBonus)
     add("Bônus do centro", "+1 de velocidade permanente.", "good");
@@ -214,15 +173,6 @@ export function unitInsights(
     );
   for (const item of u.equipment || [])
     add("Equipamento", cards.get(item.cardId)?.name || item.cardId, "good");
-  if (!u.speed && ["unit", "curse", "omionji"].includes(u.kind))
-    add(
-      "Sem velocidade",
-      u.kind === "curse"
-        ? "Esta maldição não avança enquanto a velocidade for zero."
-        : "Sem alcance próprio. Correntes de vento podem alterar o alcance.",
-      "bad",
-      "movement",
-    );
   return entries;
 }
 export function movementMarker(g: GameView, u: UnitView) {
@@ -251,8 +201,4 @@ export function movementMarker(g: GameView, u: UnitView) {
     label: u.kind === "curse" ? "Avanço automático" : "Movimento disponível",
     color: 0x8edfc0,
   };
-}
-
-export function unitEffects(g: Pick<GameView, "turn" | "moved">, u: UnitView) {
-  return unitInsights(g, u).filter((e) => e.category === "effect");
 }

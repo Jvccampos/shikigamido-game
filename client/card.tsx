@@ -1,7 +1,6 @@
 import { KeywordText, RuleHint } from "./rule-hint.js";
 import type { Card } from "../shared/cards.js";
 import { unitEffects } from "../shared/unit-insight.js";
-import type { GameView } from "../shared/room.js";
 import type { UnitView } from "../shared/room.js";
 export type CardFocus = { card: Card | undefined; unit?: UnitView };
 import { useEffect, useRef } from "preact/hooks";
@@ -127,7 +126,6 @@ export function CardFace({
   );
 }
 export function Focus({
-  game,
   card,
   unit,
   onClose,
@@ -135,53 +133,29 @@ export function Focus({
   card: Card | undefined;
   unit?: UnitView;
   onClose: () => void;
-  game?: GameView;
 }) {
-  const close = useRef<HTMLButtonElement>(null);
+  const dialog = useRef<HTMLDialogElement>(null);
+  const effects = unit ? unitEffects(unit) : [];
   useEffect(() => {
-    const previous = document.activeElement as HTMLElement;
-    close.current?.focus();
-    const key = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-      if (e.key === "Tab") {
-        e.preventDefault();
-        const buttons = Array.from(
-          close.current
-            ?.closest(".card-focus")
-            ?.querySelectorAll<HTMLButtonElement>("button:not(:disabled)") ||
-            [],
-        );
-        const index = buttons.indexOf(
-          document.activeElement as HTMLButtonElement,
-        );
-        buttons[
-          (index + (e.shiftKey ? buttons.length - 1 : 1)) % buttons.length
-        ]?.focus();
-      }
-    };
-    window.addEventListener("keydown", key);
-    return () => {
-      window.removeEventListener("keydown", key);
-      previous?.focus?.();
-    };
+    dialog.current?.showModal();
+    return () => dialog.current?.close();
   }, []);
   return (
-    <div
-      className="modal-scrim"
-      onClick={onClose}
+    <dialog
+      ref={dialog}
+      className="modal-scrim card-dialog"
+      aria-label={card?.name || unitName(unit)}
+      onClose={onClose}
+      onClick={(e) => {
+        if (e.target === dialog.current) dialog.current?.close();
+      }}
       onContextMenu={(e) => e.preventDefault()}
     >
-      <section
-        className="card-focus"
-        role="dialog"
-        aria-modal="true"
-        aria-label={card?.name || unitName(unit)}
-        onClick={(e) => e.stopPropagation()}
-      >
+      <section className="card-focus" onClick={(e) => e.stopPropagation()}>
         <button
-          ref={close}
+          autoFocus
           className="close"
-          onClick={onClose}
+          onClick={() => dialog.current?.close()}
           aria-label="Fechar carta"
         >
           ×
@@ -224,9 +198,9 @@ export function Focus({
                 .join(" · ")}
             </p>
           )}
-          {unit && game && unitEffects(game, unit).length > 0 && (
+          {effects.length > 0 && (
             <div className="active-effects" aria-label="Efeitos ativos">
-              {unitEffects(game, unit).map((entry) => (
+              {effects.map((entry) => (
                 <RuleHint
                   key={entry.label}
                   label={entry.label}
@@ -236,30 +210,9 @@ export function Focus({
               ))}
             </div>
           )}
-          {unit?.statuses && !game && (
-            <div className="status-tags">
-              {statusLabels(unit).map((s) => (
-                <span key={s}>{s}</span>
-              ))}
-            </div>
-          )}
           <small>Esc para fechar</small>
         </div>
       </section>
-    </div>
+    </dialog>
   );
-}
-export function statusLabels(u: UnitView | null | undefined) {
-  const s = u?.statuses || {};
-  return [
-    s.shield && "Escudo",
-    s.burn && `Burn ${s.burn}`,
-    s.softStun && "Imobilizado",
-    s.stun && "Atordoado",
-    s.centerBonus && "Bônus do centro",
-    s.hidden && "Oculto",
-    s.block && `Block ${s.block}`,
-    s.range && `Range ${s.range}`,
-    u?.equipment?.length && `${u?.equipment.length} equipamento(s)`,
-  ].filter(Boolean) as string[];
 }

@@ -30,19 +30,13 @@ export default {
   queries: {
     myDecks: (ctx: Context) =>
       ctx.auth.userId
-        ? ctx.db.transaction((tx) =>
-            tx.decks
-              .where("ownerId", ctx.auth.userId!)
-              .orderBy("updatedAt", "desc")
-              .all(),
-          )
+        ? ctx.db.transaction((tx) => tx.decks.list(ctx.auth.userId!))
         : [],
     myRooms: (ctx: Context) =>
       ctx.auth.userId
         ? ctx.db.transaction((tx) =>
             tx.rooms
-              .orderBy("updatedAt", "desc")
-              .all()
+              .recent()
               .filter(
                 (r) =>
                   r.hostId === ctx.auth.userId ||
@@ -56,7 +50,7 @@ export default {
       const k = clean(c, 6).toUpperCase();
       return k.length === 6
         ? ctx.db.transaction((tx) =>
-            publicRoom(tx.rooms.where("code", k).all()[0], ctx.auth.userId),
+            publicRoom(tx.rooms.byCode(k), ctx.auth.userId),
           )
         : null;
     },
@@ -80,7 +74,7 @@ export default {
           cardIds: input.cardIds,
         };
         if (typeof input.id === "string" && input.id) {
-          if (!tx.decks.where("ownerId", id).get(input.id))
+          if (!tx.decks.getOwned(input.id, id))
             return { error: "Baralho não encontrado." };
           return { deck: tx.decks.update(input.id, values) };
         }
@@ -91,7 +85,7 @@ export default {
       if (!ctx.auth.userId || typeof id !== "string")
         return { error: "Baralho inválido." };
       return ctx.db.transaction((tx) => ({
-        deleted: tx.decks.where("ownerId", ctx.auth.userId!).delete(id),
+        deleted: tx.decks.deleteOwned(id, ctx.auth.userId!),
       }));
     },
     createRoom: (ctx: Context, deckId: unknown) => {
@@ -99,9 +93,7 @@ export default {
       if (!id) return { error: "Entre na sua conta para criar uma sala." };
       return ctx.db.transaction((tx) => {
         const deck =
-          typeof deckId === "string"
-            ? tx.decks.where("ownerId", id).get(deckId)
-            : null;
+          typeof deckId === "string" ? tx.decks.getOwned(deckId, id) : null;
         if (!deck) return { error: "Selecione um baralho." };
         const error = validateDeck(deck);
         if (error) return { error };
@@ -112,7 +104,7 @@ export default {
             .replace(/-/g, "")
             .slice(0, 6)
             .toUpperCase();
-        } while (tx.rooms.where("code", code).all().length);
+        } while (tx.rooms.byCode(code));
         const room = tx.rooms.insert({
           code,
           hostId: id,
@@ -146,7 +138,7 @@ export default {
       if (!id && spectator !== true)
         return { error: "Entre na sua conta para jogar." };
       return ctx.db.transaction((tx) => {
-        const r = tx.rooms.where("code", k).all()[0];
+        const r = tx.rooms.byCode(k);
         if (!r) return { error: "Sala não encontrada." };
         if (!id) return { room: publicRoom(r, null) };
         const list = members(r),
@@ -154,9 +146,7 @@ export default {
         // Reconnection never replaces a running match.
         if (r.status !== "waiting") return { room: publicRoom(r, id) };
         const deck =
-          typeof deckId === "string"
-            ? tx.decks.where("ownerId", id).get(deckId)
-            : null;
+          typeof deckId === "string" ? tx.decks.getOwned(deckId, id) : null;
         const deckError = deck
           ? validateDeck(deck)
           : "Selecione um baralho válido.";
@@ -193,7 +183,7 @@ export default {
       if (!raw || typeof raw !== "object")
         return { error: "Comando inválido." };
       return ctx.db.transaction((tx) => {
-        const r = tx.rooms.where("code", clean(c, 6).toUpperCase()).all()[0];
+        const r = tx.rooms.byCode(clean(c, 6).toUpperCase());
         if (!r) return { error: "Sala não encontrada." };
         if (r.status !== "waiting") return { error: "A batalha já começou." };
         if (r.hostId !== id)
@@ -221,10 +211,8 @@ export default {
           return { error: "Escolha dois jogadores diferentes." };
         const a = list.find((m) => m.id === seats[0]),
           b = list.find((m) => m.id === seats[1]);
-        const da = a?.deckId
-            ? tx.decks.where("ownerId", a.id).get(a.deckId)
-            : null,
-          db = b?.deckId ? tx.decks.where("ownerId", b.id).get(b.deckId) : null;
+        const da = a?.deckId ? tx.decks.getOwned(a.deckId, a.id) : null,
+          db = b?.deckId ? tx.decks.getOwned(b.deckId, b.id) : null;
         if (!da || !db)
           return { error: "Os dois jogadores precisam selecionar baralhos." };
         const error = validateDeck(da) || validateDeck(db);
@@ -253,7 +241,7 @@ export default {
       if (!id) return { error: "Entre na sua conta para jogar." };
       if (!isCommand(raw)) return { error: "Comando inválido." };
       return ctx.db.transaction((tx) => {
-        const r = tx.rooms.where("code", clean(c, 6).toUpperCase()).all()[0];
+        const r = tx.rooms.byCode(clean(c, 6).toUpperCase());
         if (!r) return { error: "Sala não encontrada." };
         if (r.status !== "playing")
           return { error: "Essa sala não está em batalha." };

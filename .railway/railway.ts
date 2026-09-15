@@ -1,11 +1,4 @@
-import {
-  defineRailway,
-  github,
-  project,
-  service,
-  volume,
-  preserve,
-} from "railway/iac";
+import { defineRailway, github, project, service, volume } from "railway/iac";
 
 export default defineRailway(() => {
   const data = volume("shikigamido-game-volume", {
@@ -22,8 +15,6 @@ export default defineRailway(() => {
     variables: {
       PUBLIC_URL: "https://shikigamido-game-production.up.railway.app",
       RAILWAY_RUN_UID: "0",
-      GOOGLE_CLIENT_ID: preserve(),
-      GOOGLE_CLIENT_SECRET: preserve(),
     },
     volumeMounts: { "/data": data },
   });

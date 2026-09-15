@@ -6,7 +6,6 @@ type Auth = {
   displayName: string;
   isAuthenticated: boolean;
   isLoading: boolean;
-  googleEnabled?: boolean;
 };
 let auth: Auth = {
   userId: null,
@@ -67,15 +66,12 @@ export function useQuery<K extends keyof Queries>(
   ...args: Parameters<Queries[K]>
 ) {
   const key = JSON.stringify(args);
-  const [data, setData] = useState<ReturnType<Queries[K]>>(),
-    [error, setError] = useState(""),
-    [isLoading, setLoading] = useState(true);
+  const [data, setData] = useState<ReturnType<Queries[K]>>();
   const pending = useRef<AbortController>();
   const refetch = useCallback(async () => {
     pending.current?.abort();
     const controller = new AbortController();
     pending.current = controller;
-    setLoading(true);
     try {
       const result = await request<{ result: ReturnType<Queries[K]> }>(
         `/api/query/${name}`,
@@ -84,13 +80,10 @@ export function useQuery<K extends keyof Queries>(
       );
       if (controller.signal.aborted) return;
       setData(result.result);
-      setError("");
       return result.result;
-    } catch (e) {
-      if (!controller.signal.aborted)
-        setError(e instanceof Error ? e.message : "Sem conexão.");
-    } finally {
-      if (!controller.signal.aborted) setLoading(false);
+    } catch {
+      // Keep the last snapshot when a refresh fails.
+      return undefined;
     }
   }, [name, key]);
   useEffect(() => {
@@ -105,7 +98,7 @@ export function useQuery<K extends keyof Queries>(
       pending.current?.abort();
     };
   }, [refetch]);
-  return { data, error, isLoading, refetch };
+  return { data, refetch };
 }
 
 // HTTP command replies and socket snapshots pass through the same revision check.
@@ -199,29 +192,13 @@ export function useRoom(code: string, active: boolean) {
     refetch: () => setRetry((n) => n + 1),
   };
 }
-export function useMutation<K extends keyof Mutations>(name: K) {
-  const [isLoading, setLoading] = useState(false),
-    [error, setError] = useState("");
-  const mutate = useCallback(
-    async (
-      ...args: Parameters<Mutations[K]>
-    ): Promise<ReturnType<Mutations[K]>> => {
-      setLoading(true);
-      try {
-        const data = await request<{ result: ReturnType<Mutations[K]> }>(
-          `/api/mutation/${name}`,
-          { args },
-        );
-        setError("");
-        return data.result;
-      } catch (e) {
-        setError(e instanceof Error ? e.message : "Sem conexão.");
-        throw e;
-      } finally {
-        setLoading(false);
-      }
-    },
-    [name],
+export async function mutate<K extends keyof Mutations>(
+  name: K,
+  ...args: Parameters<Mutations[K]>
+): Promise<ReturnType<Mutations[K]>> {
+  const data = await request<{ result: ReturnType<Mutations[K]> }>(
+    `/api/mutation/${name}`,
+    { args },
   );
-  return { mutate, isLoading, error };
+  return data.result;
 }

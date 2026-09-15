@@ -5,7 +5,6 @@ import cookie from "@fastify/cookie";
 import websocket from "@fastify/websocket";
 import staticFiles from "@fastify/static";
 import rateLimit from "@fastify/rate-limit";
-import { OAuth2Client } from "google-auth-library";
 import { createHash, randomBytes } from "node:crypto";
 import { resolve } from "node:path";
 import { existsSync } from "node:fs";
@@ -30,17 +29,8 @@ export async function createServer(
     max: 300,
     timeWindow: "1 minute",
     // Loading the card catalog must not consume the players' command allowance.
-    allowList: (request) =>
-      !request.url.startsWith("/api/") && !request.url.startsWith("/auth/"),
+    allowList: (request) => !request.url.startsWith("/api/"),
   });
-  const google =
-    process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET
-      ? new OAuth2Client(
-          process.env.GOOGLE_CLIENT_ID,
-          process.env.GOOGLE_CLIENT_SECRET,
-          `${process.env.PUBLIC_URL}/auth/google/callback`,
-        )
-      : null;
   const cookieOptions = {
     path: "/",
     httpOnly: true,
@@ -111,7 +101,6 @@ export async function createServer(
       ...auth,
       isAuthenticated: !!auth.userId,
       isLoading: false,
-      googleEnabled: !!google,
     };
   });
   app.post(
@@ -151,52 +140,6 @@ export async function createServer(
     }
     reply.clearCookie("shiki_session", cookieOptions);
     return { ok: true };
-  });
-  app.get("/auth/google", async (_request, reply) => {
-    if (!google)
-      return reply
-        .code(503)
-        .send({ error: "Login Google ainda não configurado neste servidor." });
-    const state = randomBytes(24).toString("hex");
-    reply.setCookie("shiki_oauth", state, { ...cookieOptions, maxAge: 600 });
-    return reply.redirect(
-      google.generateAuthUrl({ scope: ["openid", "profile", "email"], state }),
-    );
-  });
-  app.get("/auth/google/callback", async (request, reply) => {
-    const q = request.query as { code?: unknown; state?: unknown };
-    if (
-      !google ||
-      typeof q.code !== "string" ||
-      !q.state ||
-      q.state !== request.cookies.shiki_oauth
-    )
-      return reply.code(400).send({ error: "Login inválido ou expirado." });
-    reply.clearCookie("shiki_oauth", cookieOptions);
-    const { tokens } = await google.getToken(q.code);
-    const ticket = await google.verifyIdToken({
-      idToken: tokens.id_token!,
-      audience: process.env.GOOGLE_CLIENT_ID,
-    });
-    const profile = ticket.getPayload();
-    if (!profile?.sub)
-      return reply
-        .code(400)
-        .send({ error: "Não foi possível validar o Google." });
-    const existing = db.raw
-      .prepare("SELECT id FROM users WHERE google_sub=?")
-      .get(profile.sub) as { id: string } | undefined;
-    let id = existing?.id;
-    if (!id) {
-      id = getAuth(request).userId || `google:${profile.sub}`;
-      db.raw
-        .prepare(
-          "INSERT INTO users(id,name,google_sub) VALUES (?,?,?) ON CONFLICT(id) DO UPDATE SET google_sub=excluded.google_sub,name=excluded.name",
-        )
-        .run(id, profile.name || "Invocador", profile.sub);
-    }
-    newSession(reply, id);
-    return reply.redirect("/");
   });
   app.post<{ Params: { kind: string; name: string } }>(
     "/api/:kind/:name",

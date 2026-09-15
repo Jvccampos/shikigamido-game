@@ -620,7 +620,7 @@ export function Arena(p: Props) {
             {p.readyAbilities.includes(hover.id) && (
               <span>✦ Habilidade disponível</span>
             )}
-            {unitEffects(g, hover)
+            {unitEffects(hover)
               .slice(0, 3)
               .map((entry) => (
                 <span key={entry.label} title={entry.detail}>

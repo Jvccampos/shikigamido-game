@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "preact/hooks";
 import { Arena } from "./arena.js";
 import { useMatchInteraction } from "./match-interaction.js";
-import { useMutation } from "./network.js";
+import { mutate } from "./network.js";
 import { apply, type Game, type Cmd } from "../shared/game.js";
 import { botCommand } from "../shared/practice.js";
 import type { GameView, MutationResponse } from "../shared/room.js";
@@ -40,7 +40,6 @@ export function MatchSession({
     [concede, setConcede] = useState(false);
   const localRef = useRef(practice);
   localRef.current = practice;
-  const command = useMutation("gameCommand");
   const myTurn = seat === g.priority && !g.setup && !g.centerPending;
   const interaction = useMatchInteraction(
     g,
@@ -104,7 +103,9 @@ export function MatchSession({
 
       return true;
     }
-    const r = await request(() => command.mutate(code, cmd, g.revision || 0));
+    const r = await request(() =>
+      mutate("gameCommand", code, cmd, g.revision || 0),
+    );
     return !!r && !r.error;
   }
   useEffect(() => {

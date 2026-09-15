@@ -12,8 +12,8 @@ function fixture(t: TestContext) {
   });
   const snapshot = () =>
     database.transaction((tx) => ({
-      rooms: tx.rooms.all(),
-      decks: tx.decks.all(),
+      rooms: tx.rooms.recent(),
+      decks: ["a", "b", "c"].flatMap((id) => tx.decks.list(id)),
     }));
   const call = (user: string | null, name: string, ...args: any[]) =>
     (app.mutations as any)[name](ctx(user), ...args);
@@ -97,6 +97,55 @@ test("saved decks enforce ownership and update existing record", (t) => {
   });
   assert.equal(result.deck.name, "Atualizado");
   assert.equal(f.snapshot().decks.length, 3);
+});
+test("deck deletion and lookup enforce ownership", (t) => {
+  const f = fixture(t);
+  assert.equal(f.call("b", "deleteDeck", f.da.id).deleted, false);
+  assert(f.call("b", "createRoom", f.da.id).error);
+  assert.equal(f.query("a", "myDecks")[0].id, f.da.id);
+  assert.equal(f.call("a", "deleteDeck", f.da.id).deleted, true);
+  assert.deepEqual(f.query("a", "myDecks"), []);
+  assert.equal(f.call("a", "deleteDeck", f.da.id).deleted, false);
+  assert.equal(f.query("b", "myDecks")[0].id, f.db.id);
+});
+test("deck lists sort by update time and failed transactions roll back", (t) => {
+  const database = openDatabase(":memory:");
+  t.after(() => database.close());
+  const [older, newer] = database.transaction(({ decks }) =>
+    ["Older", "Newer"].map((name) =>
+      decks.insert({
+        ...starterDeck("agua"),
+        ownerId: "a",
+        name,
+      }),
+    ),
+  );
+  database.raw
+    .prepare(
+      "UPDATE decks SET body=json_set(body, '$.updatedAt', ?) WHERE id=?",
+    )
+    .run("2000-01-01T00:00:00.000Z", older.id);
+  assert.deepEqual(
+    database.transaction(({ decks }) => decks.list("a").map((d) => d.id)),
+    [newer.id, older.id],
+  );
+  assert.throws(
+    () =>
+      database.transaction(({ decks }) => {
+        decks.deleteOwned(newer.id, "a");
+        decks.update(older.id, { name: "Changed" });
+        throw Error("Rollback");
+      }),
+    /Rollback/,
+  );
+  assert.equal(
+    database.transaction(({ decks }) => decks.getOwned(older.id, "a"))?.name,
+    "Older",
+  );
+  assert.equal(
+    database.transaction(({ decks }) => decks.getOwned(newer.id, "a"))?.name,
+    "Newer",
+  );
 });
 test("simultaneous setup confirmations do not require a second click", (t) => {
   const f = fixture(t);

@@ -12,7 +12,7 @@ import {
   abilityPlan,
   movementReason,
 } from "../shared/action-advice.js";
-import { unitInsights } from "../shared/unit-insight.js";
+import { unitEffects } from "../shared/unit-insight.js";
 const game = () => {
   const g = freshGame("a", "b", starterDeck("agua"), starterDeck("fogo"), 42);
   g.setup = false;
@@ -120,9 +120,7 @@ test("movement costs and immobilization are explained before committing", () => 
   (a.statuses ??= {}).softStun = 1;
   a.statuses.softStunUntil = 3;
   assert.equal(movementReason(publicGame(g, 0), a), "Imobilizado");
-  assert(
-    unitInsights(publicGame(g, 0), a).some((e) => e.detail.includes("turno 3")),
-  );
+  assert(unitEffects(a).some((e) => e.detail.includes("turno 3")));
 });
 test("hidden cards and random combat never produce a falsely exact forecast", () => {
   const g = game();
@@ -181,8 +179,6 @@ test("used abilities cannot offer valid targets and ice speed loss keeps its sou
   curse.speed = 1;
   fight(g, curse, ice);
   assert.equal(curse.speed, 0);
-  const effect = unitInsights(publicGame(g, 0), curse).find(
-    (e) => e.label === "Velocidade −1",
-  );
+  const effect = unitEffects(curse).find((e) => e.label === "Velocidade −1");
   assert(effect?.detail.includes("Serpente de Gelo"));
 });

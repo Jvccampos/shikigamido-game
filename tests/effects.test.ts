@@ -43,7 +43,7 @@ test("spell effects survive a saved-room round trip and expire after their last 
   assert.equal(kw(saved, "Lifesteal"), 2);
   assert.equal(kw(saved, "Range"), 1);
   assert(
-    unitEffects(restored, saved).some(
+    unitEffects(saved).some(
       (e) => e.label === "Alcance 1" && e.detail.includes("turno 1"),
     ),
   );
@@ -55,9 +55,7 @@ test("spell effects survive a saved-room round trip and expire after their last 
   assert.equal(kw(saved, "Lifesteal"), 0);
   assert.equal(saved.statuses?.damageCap, undefined);
   assert.equal(kw(saved, "Devolver"), 2, "permanent effects remain");
-  assert(
-    !unitEffects(restored, saved).some((e) => e.label.startsWith("Alcance")),
-  );
+  assert(!unitEffects(saved).some((e) => e.label.startsWith("Alcance")));
 });
 
 test("cancelled and missing-target spells produce structured outcomes without a text log", () => {
@@ -113,8 +111,8 @@ test("Mimetismo transfers a granted keyword and restores it when the effect expi
   });
   assert.equal(kw(donor, "Range"), 0);
   assert.equal(kw(receiver, "Range"), 2);
-  assert(!unitEffects(g, donor).some((e) => e.label === "Alcance 2"));
-  assert(unitEffects(g, donor).some((e) => e.label === "Range cedido"));
+  assert(!unitEffects(donor).some((e) => e.label === "Alcance 2"));
+  assert(unitEffects(donor).some((e) => e.label === "Range cedido"));
   expireEffects(donor.statuses, 2);
   expireEffects(receiver.statuses!, 2);
   assert.equal(kw(receiver, "Range"), 2);

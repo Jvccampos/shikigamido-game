@@ -55,7 +55,12 @@ test("choice cards can be read by keyboard or touch without changing selection",
   await card.focus();
   await page.keyboard.press("Shift+F10");
   await expect(page.locator(".card-focus")).toBeVisible();
+  await expect(page.locator(".card-dialog:modal")).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Fechar carta" }),
+  ).toBeFocused();
   await page.keyboard.press("Escape");
+  await expect(card).toBeFocused();
   await expect(card).toHaveAttribute("aria-pressed", "true");
   await card.dispatchEvent("pointerdown", {
     pointerType: "touch",
