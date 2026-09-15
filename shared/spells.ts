@@ -3,7 +3,6 @@ export type SpellSpec = {
     | "none"
     | "unit"
     | "ally"
-    | "waterAlly"
     | "windAlly"
     | "omionjiFire"
     | "twoAllies"
@@ -18,6 +17,8 @@ export type SpellSpec = {
     | "combat"
     | "redirect";
   hint: string;
+  choice?: "keyword" | "combatRole";
+  amount?: "energy" | "redirectDamage";
 };
 const entries: Record<string, SpellSpec> = {};
 const add = (ids: string[], target: SpellSpec["target"], hint: string) =>
@@ -123,6 +124,10 @@ add(
   "redirect",
   "Escolha seu monstro em combate e o aliado que receberá o dano.",
 );
+entries["gishiki-n-9-mimetismo"].choice = "keyword";
+entries["mamorudo-n-17-defesa-da-fagulha"].choice = "combatRole";
+entries["mamoru-n-9-wonder-wall"].amount = "energy";
+entries["mamoru-n-5-transferencia-espiritual"].amount = "redirectDamage";
 export const spellSpecs = entries;
 export const transferableKeywords = [
   "Pular",
@@ -139,3 +144,30 @@ export const transferableKeywords = [
   "Range",
   "Escudo",
 ];
+
+// Selection steps are UI metadata. The engine still decides which targets are legal.
+export function targetFlow(target?: SpellSpec["target"]) {
+  return {
+    multipleUnits:
+      target === "twoAllies" || target === "twoUnits" || target === "redirect",
+    multipleCells: target === "wind",
+    unitThenCell: target === "move",
+    needsUnit:
+      !!target &&
+      !["none", "cell", "lake", "wind", "discardVoid", "discardCat"].includes(
+        target,
+      ),
+    cellOnly: target === "cell" || target === "lake" || target === "wind",
+    submitOnDrop:
+      !!target &&
+      [
+        "unit",
+        "ally",
+        "windAlly",
+        "omionjiFire",
+        "combat",
+        "lake",
+        "none",
+      ].includes(target),
+  };
+}

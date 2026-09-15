@@ -1,7 +1,6 @@
 import { isCommand, type Cmd, type CommandDraft } from "../shared/model.js";
 import { MatchControls } from "./match-controls.js";
 import {
-  targetFlow,
   emptySelection,
   selectionCommands,
   selectedAbility,
@@ -14,7 +13,7 @@ import type { Card } from "../shared/cards.js";
 import type { CardFocus } from "./card.js";
 import type { GameView, UnitView } from "../shared/room.js";
 import { useEffect, useMemo, useState } from "preact/hooks";
-import { spellSpecs } from "../shared/spells.js";
+import { spellSpecs, targetFlow } from "../shared/spells.js";
 import { cards as catalog, moveOptions, route, kw } from "../shared/game.js";
 import {
   hasAbility,
@@ -139,11 +138,7 @@ export function useMatchInteraction(
         .filter((id): id is string => !!id),
     ),
   ];
-  if (
-    activeUnit &&
-    targetMode &&
-    (kw(activeUnit, "Range") || activeUnit.statuses?.range)
-  )
+  if (activeUnit && targetMode && kw(activeUnit, "Range"))
     for (const u of g.units)
       if (
         !commandError(g, seat, {

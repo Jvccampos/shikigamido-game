@@ -239,7 +239,7 @@ export class ArenaScene {
       state.selectedId,
       state.targets.join(),
       state.validTargets?.join(),
-      JSON.stringify(state.previewPath),
+      JSON.stringify(state.previewPath || []),
       state.affected?.join(),
       state.game.setup,
       state.startY,
@@ -310,7 +310,7 @@ export class ArenaScene {
         JSON.stringify(u.statuses),
         state.validTargets?.includes(u.id),
         state.readyAbilities?.includes(u.id),
-        state.affected?.includes(u.id),
+        !!state.affected?.includes(u.id),
       ].join("|");
       if (!item) {
         const view = new Container();

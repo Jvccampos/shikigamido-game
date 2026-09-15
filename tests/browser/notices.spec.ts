@@ -146,7 +146,11 @@ test.describe("dismissible phase notices", () => {
       await expect(notice).toHaveClass(/leaving/);
       await expect
         .poll(() =>
-          notice.evaluate((el) => parseFloat(getComputedStyle(el).opacity)),
+          notice.evaluateAll((elements) =>
+            elements[0]?.isConnected
+              ? Number(getComputedStyle(elements[0]).opacity)
+              : 0,
+          ),
         )
         .toBeLessThan(1);
       await expect(notice).toHaveCount(0, { timeout: 1200 });

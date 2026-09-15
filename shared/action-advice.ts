@@ -40,7 +40,6 @@ export function adviceState(view: GameView): Game {
   const visible = {
     ...view,
     events: [],
-    log: [],
     pending: [],
     centerChoices: {},
   };
@@ -65,7 +64,6 @@ export function adviceState(view: GameView): Game {
     pending: [],
     centerChoices: {},
     events: [],
-    log: [],
     random: { state: 1729 },
   });
 }
@@ -80,7 +78,7 @@ export function actionCost(g: GameView, seat: number, c: CommandDraft) {
     return (
       (cards.get(c.cardId || "")?.stats.cost || 0) +
       (p.costTaxUntil && p.costTaxUntil >= g.turn ? 1 : 0) +
-      (c.cardId === "mamoru-n-9-wonder-wall" ? c.extraPe || 0 : 0)
+      (spellSpecs[c.cardId || ""]?.amount === "energy" ? c.extraPe || 0 : 0)
     );
   if (c.type === "move" || c.type === "attack")
     return (g.moveCounts?.[seat] || 0) >= 2 ? 1 : 0;
@@ -155,7 +153,7 @@ function* spellCandidates(
       for (const other of units.filter(
         (v) => v.id !== u.id && v.kind === "unit",
       )) {
-        if (base.cardId === "gishiki-n-9-mimetismo") {
+        if (spec.choice === "keyword") {
           for (const choice of transferableKeywords.filter((k) => kw(u, k)))
             yield { ...base, targetId: u.id, targetId2: other.id, choice };
         } else yield { ...base, targetId: u.id, targetId2: other.id };
@@ -171,11 +169,7 @@ export function* abilityCandidates(
   if (u.cardId === "chama-marinha") {
     for (const choice of cards.get(u.cardId)!.types) yield { ...base, choice };
   } else if (u.cardId === "javali-espinhoso") yield base;
-  else if (
-    u.cardId === "cabra-dos-alpes" ||
-    kw(u, "Construir") ||
-    u.statuses?.construir
-  ) {
+  else if (u.cardId === "cabra-dos-alpes" || kw(u, "Construir")) {
     for (const cell of boardCells) yield { ...base, ...cell };
   } else
     for (const target of g.units) {
@@ -289,9 +283,7 @@ export function abilityPlan(
   };
 }
 export function hasAbility(u: UnitView) {
-  return (
-    !!abilities[u.cardId] || !!kw(u, "Construir") || !!u.statuses?.construir
-  );
+  return !!abilities[u.cardId] || !!kw(u, "Construir");
 }
 
 export type CombatantPreview = {
@@ -403,19 +395,7 @@ export function previewAction(
   }
   if (c.type === "cast" && cards.get(c.cardId!)?.stats.speed !== "instant") {
     state.stack.pop();
-    resolveSpell(
-      state,
-      seat,
-      c.cardId!,
-      c.targetId,
-      c.targetId2,
-      c.x,
-      c.y,
-      c.extraPe,
-      c.choice,
-      c.x2,
-      c.y2,
-    );
+    resolveSpell(state, seat, { ...c, cardId: c.cardId! });
   }
   const fight = state.events?.find((e) => e.type === "combat");
   if (result.combat && fight?.type === "combat") {

@@ -1,3 +1,4 @@
+import { setEffect } from "../effects.js";
 import { type Unit, type Game, type EventPayload } from "../model.js";
 import { typesOf, kw, adjacent, event, cardOf, alive } from "./core.js";
 import { yokaiIds, masculineIds } from "../traits.js";
@@ -48,7 +49,7 @@ export function elementalDamage(attacker: Unit, defender: Unit, g?: Game) {
     0,
     Math.min(
       Number(attacker.statuses?.damageCap ?? Infinity),
-      dmg - kw(defender, "Block") - Number(defender.statuses?.block || 0),
+      dmg - kw(defender, "Block"),
     ),
   );
 }
@@ -110,13 +111,13 @@ export function fight(g: Game, a: Unit, d: Unit) {
               attack:
                 d.attack +
                 Number(d.statuses?.combatAttack || 0) +
-                kw(d, "Devolver") +
-                Number(d.statuses?.devolver || 0),
+                kw(d, "Devolver"),
             },
             a,
             g,
           );
-  let da = 0,
+  let missed = false,
+    da = 0,
     ddone = 0;
   if (
     a.cardId === "escorpiao-da-morte" &&
@@ -125,8 +126,7 @@ export function fight(g: Game, a: Unit, d: Unit) {
   ) {
     destroy(g, d, a);
     quick = true;
-  } else if (a.statuses?.fireball && random(g.random) < 0.5)
-    g.log.push("Fireball errou no dado.");
+  } else if (a.statuses?.fireball && random(g.random) < 0.5) missed = true;
   else da = takeDamage(g, d, ad, a, true);
   const equip =
     ["neko-o-gato-eletrico", "suineko-o-gato-aquatico"].includes(a.cardId) &&
@@ -138,8 +138,7 @@ export function fight(g: Game, a: Unit, d: Unit) {
     if (a.cardId === "neko-o-gato-eletrico") {
       d.attack++;
       d.speed++;
-      (d.statuses ??= {}).burn = 1;
-      d.statuses.burnUntil = g.turn + 2;
+      setEffect((d.statuses ??= {}), "burn", 1, g.turn + 2);
     } else d.maxHp += 2;
   } else if (!quick || alive(g, d)) ddone = takeDamage(g, a, dd, d, true);
   for (const [u, other, dealt] of [
@@ -147,10 +146,7 @@ export function fight(g: Game, a: Unit, d: Unit) {
     [d, a, ddone],
   ] as [Unit, Unit, number][]) {
     if (alive(g, u)) {
-      const life = Math.max(
-        kw(u, "Lifesteal"),
-        Number(u.statuses?.lifesteal || 0),
-      );
+      const life = kw(u, "Lifesteal");
       if (life) heal(g, u, Math.min(life, dealt));
       if (u.cardId === "kappa") {
         u.maxHp++;
@@ -159,12 +155,10 @@ export function fight(g: Game, a: Unit, d: Unit) {
     }
     const burn = Math.max(
       kw(u, "Burn"),
-      Number(u.statuses?.burnAttack || 0),
       u === a && u.cardId === "ino-ino" ? 1 : 0,
     );
     if (burn && alive(g, other)) {
-      (other.statuses ??= {}).burn = burn;
-      other.statuses.burnUntil = g.turn + 2;
+      setEffect((other.statuses ??= {}), "burn", burn, g.turn + 2);
     }
   }
   if (
@@ -186,6 +180,7 @@ export function fight(g: Game, a: Unit, d: Unit) {
     g.draw = true;
   }
   Object.assign(combatCue, {
+    ...(missed ? { missed: true } : {}),
     attackDamage: da,
     defenseDamage: ddone,
     afterA: a.hp,
@@ -199,9 +194,7 @@ export function fight(g: Game, a: Unit, d: Unit) {
           : "Combate simultâneo",
     element: typesOf(a)[0] || "vazio",
   });
-  g.log.push(
-    `${cardOf(a)?.name || a.cardId} enfrentou ${cardOf(d)?.name || d.cardId}: ${da} / ${ddone} de dano.`,
-  );
+
   return !alive(g, d) && alive(g, a);
 }
 

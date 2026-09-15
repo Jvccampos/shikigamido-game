@@ -6,7 +6,7 @@ import {
   type Seat,
 } from "../model.js";
 import { cards } from "../cards.js";
-import { baseKeywords } from "../keywords.js";
+import { baseKeywords, keywordStatuses } from "../keywords.js";
 
 export const phases = ["Compra", "Invocação", "Movimento", "Magia", "Descarte"];
 
@@ -28,26 +28,15 @@ export function cardOf(u: Pick<Unit, "cardId">) {
   return cards.get(u.cardId);
 }
 
-export function keyword(text: string, name: string) {
-  const normalized = text
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/QuickAt+ack/gi, "Quick Attack")
-    .replace(/QuickAttack/gi, "Quick Attack")
-    .replace(/Renascer/gi, "Ressurgir");
-  const key = name.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-  const m = normalized.match(
-    new RegExp(`(?:^|[.\\n ]+)${key}\\s*(\\d+)?`, "i"),
-  );
-  return m ? Number(m[1] || 1) : 0;
-}
-
 export function kw(u: Pick<Unit, "cardId" | "statuses">, key: string): number {
   if (u.statuses?.stolenKeyword === key) return 0;
-  return Math.max(
+  const printed = Math.max(
     baseKeywords[u.cardId]?.[key] || 0,
     Number(u.statuses?.[key] || 0),
   );
+  const granted = keywordStatuses[key];
+  const value = Number(u.statuses?.[granted?.field] || 0);
+  return granted?.stacks ? printed + value : Math.max(printed, value);
 }
 
 export function typesOf(
@@ -109,7 +98,7 @@ export function makeUnit(
     summonedTurn: g.turn,
     kind: card.kind === "curse" ? "curse" : "unit",
     statuses: {
-      shield: card.id !== "potaru" && keyword(card.effect_text, "Escudo") > 0,
+      shield: card.id === "garca-pacificadora",
       hidden: card.kind !== "curse" && g.players[seat].concealTurn === g.turn,
     },
   };

@@ -15,6 +15,6 @@ export function spawnCurse(g: Game, owner: Seat, level: number) {
   u.level = level;
   g.units.push(u);
   event(g, { type: "summon", unit: u });
-  g.log.push(`${card.name}, maldição nível ${level}, surgiu no portal.`);
+
   return u;
 }

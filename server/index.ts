@@ -284,7 +284,7 @@ export default {
         const error = apply(g, seat as Seat, raw);
         if (error) return { error };
         g.revision = (g.revision || 0) + 1;
-        g.log = g.log.slice(-100);
+        delete g.log;
         return {
           room: publicRoom(
             tx.rooms.update(r.id, {

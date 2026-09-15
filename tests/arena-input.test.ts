@@ -128,3 +128,38 @@ test("a rejected drop returns the piece to its authoritative position", async ()
   for (let frame = 0; frame < 60; frame++) input.tick(1);
   assert(Math.hypot(view.x - from.x, view.y - from.y) < 1);
 });
+
+test("an empty preview does not replace board hit targets during a click", () => {
+  const g = freshGame("a", "b", starterDeck("agua"), starterDeck("fogo"), 42);
+  const scene = new ArenaScene();
+  Object.defineProperty(scene.app, "screen", {
+    value: new Rectangle(0, 0, 1440, 1000),
+  });
+  Object.defineProperty(scene.app, "renderer", { value: {} });
+  let boardDraws = 0,
+    unitDraws = 0;
+  const painting = scene as unknown as { drawBoard(): void; drawUnit(): void };
+  painting.drawBoard = () => {
+    boardDraws++;
+  };
+  painting.drawUnit = () => {
+    unitDraws++;
+  };
+  const state = {
+    game: publicGame(g, 0),
+    seat: 0,
+    highlights: [],
+    targets: [],
+    startY: 2,
+    onCell() {},
+    onSelect() {},
+    onInspect() {},
+    onHover() {},
+    onPresentation() {},
+    onDrop: async () => false,
+  };
+  scene.update(state);
+  const before = { boardDraws, unitDraws };
+  scene.update({ ...state, previewPath: [], affected: [] });
+  assert.deepEqual({ boardDraws, unitDraws }, before);
+});

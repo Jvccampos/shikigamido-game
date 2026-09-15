@@ -1,6 +1,8 @@
+import { effectExpiry } from "./effects.js";
 import type { GameView, UnitView } from "./room.js";
 import { keywordHelp } from "./keyword-help.js";
 import { cards } from "./cards.js";
+import { kw } from "./rules/core.js";
 import { movementReason } from "./action-advice.js";
 export type UnitInsight = {
   category: "effect" | "movement";
@@ -30,8 +32,8 @@ export function unitInsights(
     category: UnitInsight["category"] = "effect",
   ) => entries.push({ label, detail, tone, category });
   const expires = (key: string) =>
-    typeof st[`${key}Until`] === "number"
-      ? `Até o fim do turno ${st[`${key}Until`]}.`
+    effectExpiry(st, key) !== undefined
+      ? `Até o fim do turno ${effectExpiry(st, key)}.`
       : "";
   if (u.summonedTurn === g.turn && ["unit", "omionji"].includes(u.kind))
     add(
@@ -113,13 +115,13 @@ export function unitInsights(
     );
   if (st.dualUntil !== undefined)
     add("Dualidade", `Atributos divididos até o fim do turno ${st.dualUntil}.`);
-  if (st.range)
+  if (st.range && kw(u, "Range"))
     add(
       `Alcance ${st.range}`,
       `Ataque à distância. ${expires("range")}`,
       "good",
     );
-  if (st.lifesteal)
+  if (st.lifesteal && kw(u, "Lifesteal"))
     add(
       `Roubo de vida ${st.lifesteal}`,
       `Recupera vida ao causar dano. ${expires("lifesteal")}`,
@@ -136,6 +138,12 @@ export function unitInsights(
       `O controle muda no início do turno ${st.controlTurn}.`,
       "bad",
     );
+  if (st.stolenKeyword)
+    add(
+      `${st.stolenKeyword} cedido`,
+      `Esta keyword está com outra carta. ${expires("stolenKeyword")}`,
+      "bad",
+    );
   if (st.borrowed)
     add(
       String(st.borrowed),
@@ -148,13 +156,13 @@ export function unitInsights(
       `Ataque ganho por cura: +${st.primordialBoost || 0}, até +3.`,
       "good",
     );
-  if (st.block)
+  if (st.block && kw(u, "Block"))
     add(
       `Block ${st.block}`,
       `Recebe ${st.block} a menos de dano em cada combate. ${expires("block") || "Permanece enquanto a carta estiver em campo."}`,
       "good",
     );
-  if (st.devolver)
+  if (st.devolver && kw(u, "Devolver"))
     add(
       `Devolver ${st.devolver}`,
       `Ao ser atacada, recebe +${st.devolver} de ataque para o contra-ataque. ${expires("devolver") || "Permanece enquanto a carta estiver em campo."}`,
@@ -166,13 +174,13 @@ export function unitInsights(
       "Na próxima cura recebida, cura 2 de vida dos monstros adjacentes. Consumido após ativar.",
       "good",
     );
-  if (st.ressurgir)
+  if (st.ressurgir && kw(u, "Ressurgir"))
     add(
       `Ressurgir ${st.ressurgir}`,
       `Após ser destruída, retorna em ${st.ressurgir} turnos. Se a casa estiver ocupada, retorna à mão.`,
       "good",
     );
-  if (st.burnAttack)
+  if (st.burnAttack && kw(u, "Burn"))
     add(
       `Burn ${st.burnAttack}`,
       `Aplica ${st.burnAttack} de queimadura ao inimigo após combater, durante dois turnos.`,
@@ -191,14 +199,14 @@ export function unitInsights(
       "good",
     );
   for (const key of ["Quick Attack", "Alimentar", "Lifesteal", "Construir"]) {
-    if (st[key] && st.borrowed !== key)
+    if (st[key] && st.borrowed !== key && kw(u, key))
       add(
         `${key}${Number(st[key]) > 1 ? ` ${st[key]}` : ""}`,
         keywordHelp[key].replace(/\bX\b/g, String(st[key])),
         "good",
       );
   }
-  if (st.construir && !st.Construir)
+  if (st.construir && !st.Construir && kw(u, "Construir"))
     add(
       "Construir",
       "Pode criar um caminho ortogonal na fase de Magia.",

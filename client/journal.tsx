@@ -34,6 +34,7 @@ export function Journal(p: {
         "discard",
         "destroy",
         "spell",
+        "spell-result",
         "ability",
         "concede",
         "search",
@@ -42,7 +43,14 @@ export function Journal(p: {
     .filter((e) =>
       filter === "all" || filter === "combat"
         ? filter === "all" || e.type === "combat"
-        : ["summon", "spell", "discard", "ability", "search"].includes(e.type),
+        : [
+            "summon",
+            "spell",
+            "spell-result",
+            "discard",
+            "ability",
+            "search",
+          ].includes(e.type),
     );
   function thumb(id?: string) {
     const c = cards.get(id || "");
@@ -73,6 +81,14 @@ export function Journal(p: {
       owner = p.names[seat ?? -1] || "";
     let title: string, detail: string;
     switch (e.type) {
+      case "spell-result":
+        title = name;
+        detail = {
+          missingTarget: "Sem efeito: o alvo saiu do campo.",
+          immune: "Sem efeito: alvo imune.",
+          cancelled: "Magia anulada.",
+        }[e.outcome];
+        break;
       case "search":
         title = `${cards.get(e.sourceCardId)?.name} · ${e.zone === "library" ? "Busca no baralho" : "Recuperação do descarte"}`;
         detail =
@@ -105,6 +121,7 @@ export function Journal(p: {
             </div>
             <div className="event-body">
               <strong>{e.keyword}</strong>
+              {e.missed && <p>Fireball errou no dado.</p>}
               <p>
                 {cards.get(e.attacker?.cardId)?.name || "Unidade"}{" "}
                 <b>−{e.attackDamage}</b> →{" "}

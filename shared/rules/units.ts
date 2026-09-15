@@ -87,7 +87,7 @@ export function destroy(g: Game, u: Unit, killer?: Unit) {
   event(g, { type: "destroy", unitId: u.id, unit: u });
   if (u.kind === "omionji") {
     g.winner = (1 - u.owner) as Seat;
-    g.log.push(`Omionji do Jogador ${u.owner + 1} derrotado.`);
+
     return;
   }
   if (u.kind === "crystal" || u.kind === "wall") return;
@@ -104,10 +104,7 @@ export function destroy(g: Game, u: Unit, killer?: Unit) {
     draw(g.players[u.owner]);
   }
   const p = g.players[u.owner],
-    resurrect = Math.max(
-      kw(u, "Ressurgir"),
-      Number(u.statuses?.ressurgir || 0),
-    );
+    resurrect = kw(u, "Ressurgir");
   if (u.kind !== "curse" && !u.statuses?.copy) {
     if (resurrect) {
       (g.pending ??= []).push({

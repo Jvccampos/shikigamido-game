@@ -46,7 +46,4 @@ export function resolveSearch(g: Game, seat: Seat, c: Cmd) {
     outcome,
     cardId: skip ? undefined : c.cardId,
   });
-  g.log.push(
-    `${cards.get(search.sourceCardId)?.name}: ${outcome === "chosen" ? "uma carta foi adicionada à mão" : outcome === "empty" ? "nenhuma carta compatível disponível" : "busca dispensada"}.`,
-  );
 }

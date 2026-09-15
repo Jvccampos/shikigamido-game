@@ -42,6 +42,8 @@ export function MatchControls({
     selected?.kind === "hand" ? catalog.get(selected.cardId) : undefined;
   const selectedUnit = g.units.find((u) => u.id === selected?.unitId);
   const abilitySpec = selectedAbility(selectedUnit);
+  const spellSpec =
+    selectedCard?.kind === "spell" ? spellSpecs[selectedCard.id] : undefined;
   const { castCommand, abilityCommand, rangedCommand } =
     selectionCommands(draft);
   const castError =
@@ -60,9 +62,7 @@ export function MatchControls({
         selectedCard?.id === "anubis-o-gato-da-morte" ||
         g.duel ||
         (selectedUnit?.owner === seat &&
-          (abilitySpec ||
-            kw(selectedUnit!, "Range") ||
-            selectedUnit?.statuses?.range))) && (
+          (abilitySpec || kw(selectedUnit!, "Range")))) && (
         <ActionDock>
           <div className="action-dock-head">
             {(selectedCard || catalog.get(selectedUnit?.cardId || ""))
@@ -142,7 +142,7 @@ export function MatchControls({
                     ))}
                 </select>
               )}
-              {selectedCard.id === "gishiki-n-9-mimetismo" && (
+              {spellSpec?.choice === "keyword" && (
                 <select
                   aria-label="Keyword"
                   value={choice}
@@ -154,7 +154,7 @@ export function MatchControls({
                   ))}
                 </select>
               )}
-              {selectedCard.id === "mamorudo-n-17-defesa-da-fagulha" && (
+              {spellSpec?.choice === "combatRole" && (
                 <select
                   aria-label="Papel no combate"
                   value={choice}
@@ -164,12 +164,9 @@ export function MatchControls({
                   <option value="defender">Defensor</option>
                 </select>
               )}
-              {[
-                "mamoru-n-9-wonder-wall",
-                "mamoru-n-5-transferencia-espiritual",
-              ].includes(selectedCard.id) && (
+              {spellSpec?.amount && (
                 <label>
-                  {selectedCard.id === "mamoru-n-9-wonder-wall"
+                  {spellSpec?.amount === "energy"
                     ? "PE extra"
                     : "Dano transferido"}
                   <input
@@ -201,9 +198,7 @@ export function MatchControls({
           )}
           {selectedUnit &&
             selectedUnit.owner === seat &&
-            (abilitySpec ||
-              kw(selectedUnit, "Range") ||
-              selectedUnit.statuses?.range) && (
+            (abilitySpec || kw(selectedUnit, "Range")) && (
               <div className="target-controls">
                 <button
                   className="outline"
@@ -264,9 +259,7 @@ export function MatchControls({
                     {abilitySpec.label}
                   </button>
                 )}
-                {(kw(selectedUnit, "Range") ||
-                  selectedUnit.statuses?.range ||
-                  0) > 0 && (
+                {(kw(selectedUnit, "Range") || 0) > 0 && (
                   <button
                     className="outline"
                     disabled={!canPlay || !!rangedError}

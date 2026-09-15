@@ -1,4 +1,4 @@
-import type { StatusValue } from "../model.js";
+import { setEffect } from "../effects.js";
 import {
   type Game,
   type Seat,
@@ -28,7 +28,6 @@ import {
 import { cards } from "../cards.js";
 import { summonEffects, destroy, takeDamage, heal } from "./units.js";
 import { fight } from "./combat.js";
-import { baseKeywords } from "../keywords.js";
 
 export function spellError(
   g: Game,
@@ -169,19 +168,23 @@ export function spellError(
     return "Quantidade de PE ou dano inválida.";
 }
 
-export function resolveSpell(
-  g: Game,
-  seat: Seat,
-  cardId: string,
-  targetId?: string,
-  targetId2?: string,
-  x?: number,
-  y?: number,
-  extraPe = 0,
-  choice?: string,
-  x2?: number,
-  y2?: number,
-) {
+export type SpellResolution = Pick<
+  CommandDraft,
+  "targetId" | "targetId2" | "x" | "y" | "extraPe" | "choice" | "x2" | "y2"
+> & { cardId: string };
+
+export function resolveSpell(g: Game, seat: Seat, command: SpellResolution) {
+  const {
+    cardId,
+    targetId,
+    targetId2,
+    x,
+    y,
+    extraPe = 0,
+    choice,
+    x2,
+    y2,
+  } = command;
   const p = g.players[seat],
     card = cards.get(cardId)!;
   if (!card) return;
@@ -190,7 +193,7 @@ export function resolveSpell(
     st = t ? (t.statuses ??= {}) : {};
   const spec = spellSpecs[cardId];
   if (t?.cardId === "ichi-o-oni-chefe-do-sul") {
-    g.log.push(`${card.name}: alvo imune.`);
+    event(g, { type: "spell-result", seat, cardId, outcome: "immune" });
     return;
   }
   if (
@@ -208,7 +211,7 @@ export function resolveSpell(
     ].includes(spec.target) &&
     !t
   ) {
-    g.log.push(`${card.name}: o alvo saiu de campo.`);
+    event(g, { type: "spell-result", seat, cardId, outcome: "missingTarget" });
     return;
   }
   const beforeUnits = structuredClone(g.units);
@@ -222,15 +225,16 @@ export function resolveSpell(
     element: card.types[0],
     beforeTarget: t ? structuredClone(t) : undefined,
   });
-  const status = (key: string, value: StatusValue, until?: number) => {
-    st[key] = value;
-    if (until !== undefined) st[`${key}Until`] = until;
-  };
   switch (cardId) {
     case "mamoru-n-12-negacao": {
       const cancelled = g.stack.pop();
       if (cancelled)
-        g.log.push(`${cards.get(cancelled.cardId)?.name} foi anulada.`);
+        event(g, {
+          type: "spell-result",
+          seat: cancelled.seat,
+          cardId: cancelled.cardId,
+          outcome: "cancelled",
+        });
       break;
     }
     case "gishiki-n-13-fardo-espiritual":
@@ -289,7 +293,7 @@ export function resolveSpell(
       heal(g, t!, 2);
       break;
     case "gishikido-n-7-cura-da-agua":
-      status("healSplash", true);
+      setEffect(st, "healSplash", true);
       break;
     case "gishiki-n-20-transferencia-vital": {
       const n = p.discard.filter(
@@ -298,8 +302,12 @@ export function resolveSpell(
           cards.get(id)?.types.includes("terra"),
       ).length;
       t!.attack += n;
-      status("temporaryAttack", Number(st.temporaryAttack || 0) + n);
-      status("temporaryUntil", g.turn + 1);
+      setEffect(
+        st,
+        "temporaryAttack",
+        Number(st.temporaryAttack || 0) + n,
+        g.turn + 1,
+      );
       break;
     }
     case "mamoru-n-7-dispersar": {
@@ -378,54 +386,51 @@ export function resolveSpell(
       g.terrain.push({ kind: "wind", x: x!, y: y!, x2, y2, owner: seat });
       break;
     case "gishiki-n-16-ponte-magica":
-      status("construir", true);
+      setEffect(st, "construir", true);
       break;
     case "gishiki-n-17-renascer":
-      status("ressurgir", 2);
+      setEffect(st, "ressurgir", 2);
       break;
     case "gishikido-n-2-bencao-do-vento":
-      status("block", 1);
+      setEffect(st, "block", 1);
       break;
     case "gishikido-n-22-garras-de-fogo":
-      status("burnAttack", 1);
+      setEffect(st, "burnAttack", 1);
       break;
     case "mamoru-n-18-pele-de-ourico":
-      status("devolver", 2);
+      setEffect(st, "devolver", 2);
       break;
     case "mamoru-n-21-intocavel":
-      status("shield", true);
+      setEffect(st, "shield", true);
       break;
     case "mamoru-n-5-prisao-do-inferno":
-      status("softStun", 1, g.turn + 1);
+      setEffect(st, "softStun", 1, g.turn + 1);
       break;
     case "gishiki-n-3-intangibilidade":
-      status("intangivel", true, g.turn);
+      setEffect(st, "intangivel", true, g.turn);
       break;
     case "kogeki-n-1-fireball":
-      status("range", 2, g.turn + 1);
-      status("fireball", true, g.turn + 1);
+      setEffect(st, "range", 2, g.turn + 1);
+      setEffect(st, "fireball", true, g.turn + 1);
       break;
     case "shikigami-de-agua-vibora-bolha":
-      status("lifesteal", 2, g.turn);
-      status("range", 1, g.turn);
-      status("damageCap", 2, g.turn);
+      setEffect(st, "lifesteal", 2, g.turn);
+      setEffect(st, "range", 1, g.turn);
+      setEffect(st, "damageCap", 2, g.turn);
       break;
     case "cristal-primordial":
-      status("primordial", true);
+      setEffect(st, "primordial", true);
       break;
     case "gishiki-n-4-sacrificio":
-      status("sacrificeTurn", g.turn + 1);
+      setEffect(st, "sacrificeTurn", g.turn + 1);
       break;
     case "gishiki-n-9-mimetismo":
       if (t2) {
-        status("stolenKeyword", choice, g.turn + 1);
+        const value = kw(t!, choice!);
+        setEffect(st, "stolenKeyword", choice, g.turn + 1);
         const ts = (t2.statuses ??= {});
-        ts[choice!] = Math.max(
-          baseKeywords[t!.cardId]?.[choice!] || 0,
-          Number(st[choice!] || 0),
-        );
-        ts.borrowed = choice;
-        ts.borrowedUntil = g.turn + 1;
+        ts[choice!] = value;
+        setEffect(ts, "borrowed", choice, g.turn + 1);
       }
       break;
     case "kogekido-n-2-exorcismo":
@@ -434,8 +439,9 @@ export function resolveSpell(
     case "mamoru-n-24-conexao":
     case "mamoru-n-5-transferencia-espiritual":
       if (t2) {
-        status("redirect", t2.id);
-        status(
+        setEffect(st, "redirect", t2.id);
+        setEffect(
+          st,
           "redirectAmount",
           cardId === "mamoru-n-24-conexao"
             ? Infinity
@@ -464,7 +470,6 @@ export function resolveSpell(
       ? []
       : [{ before, after: after && structuredClone(after) }];
   });
-  g.log.push(`${card.name} resolveu.`);
 }
 
 export function ability(
@@ -485,7 +490,7 @@ export function ability(
     g.priority = g.combat.returnPriority;
     g.combat = undefined;
     g.passes = 0;
-    g.log.push("Cabra dos Alpes escapou do combate.");
+
     return;
   }
   if (g.combat?.defenderId === u.id && u.cardId === "javali-espinhoso") {
@@ -538,9 +543,12 @@ export function ability(
       return "Luna precisa de 2 de vida e 1 PE disponível.";
     u.hp--;
     t.attack++;
-    (t.statuses ??= {}).temporaryAttack =
-      Number(t.statuses.temporaryAttack || 0) + 1;
-    t.statuses.temporaryUntil = g.turn;
+    setEffect(
+      (t.statuses ??= {}),
+      "temporaryAttack",
+      Number(t.statuses.temporaryAttack || 0) + 1,
+      g.turn,
+    );
     return;
   }
   if (st.abilityTurn === g.turn) return "Efeito já usado neste turno.";
@@ -576,7 +584,7 @@ export function ability(
   } else {
     if (g.phase !== 3 || g.phaseOwner !== seat)
       return "Ative na sua fase de Magia.";
-    if (kw(u, "Construir") || st.construir) {
+    if (kw(u, "Construir")) {
       if (
         !valid(c.x!, c.y!) ||
         Math.abs(c.x! - u.x) + Math.abs(c.y! - u.y) !== 1 ||
@@ -602,5 +610,4 @@ export function ability(
   }
   st.abilityTurn = g.turn;
   event(g, { type: "ability", unit: u });
-  g.log.push(`${cardOf(u)?.name} ativou seu efeito.`);
 }

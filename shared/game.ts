@@ -1,3 +1,4 @@
+import { spellSpecs } from "./spells.js";
 import { type Game, type Seat, isCommand, type Unit } from "./model.js";
 import { RULES_VERSION } from "./rules/setup.js";
 import {
@@ -8,7 +9,6 @@ import {
   makeUnit,
   kw,
   typesOf,
-  phases,
 } from "./rules/core.js";
 import { shuffle } from "./random.js";
 import {
@@ -36,7 +36,7 @@ export function apply(g: Game, seat: Seat, c: unknown): string | undefined {
   if (c.type === "concede") {
     g.winner = (1 - seat) as Seat;
     event(g, { type: "concede", seat });
-    g.log.push(`Jogador ${seat + 1} concedeu.`);
+
     return;
   }
   if (c.type === "search") return resolveSearch(g, seat, c);
@@ -81,7 +81,6 @@ export function apply(g: Game, seat: Seat, c: unknown): string | undefined {
         g.phaseOwner = g.first;
         g.priority = g.first;
         startTurn(g);
-        g.log.push("Preparação concluída. A batalha começou.");
       }
       return;
     }
@@ -128,9 +127,6 @@ export function apply(g: Game, seat: Seat, c: unknown): string | undefined {
       }
       g.centerPending = false;
       g.centerChoices = {};
-      g.log.push(
-        "As escolhas foram reveladas e o avanço ao centro foi resolvido.",
-      );
     }
     return;
   }
@@ -267,11 +263,7 @@ export function apply(g: Game, seat: Seat, c: unknown): string | undefined {
     g.units.push(u);
     summonEffects(g, u, c.targetId2 || c.targetId);
     refreshAuras(g);
-    g.log.push(
-      u.statuses?.hidden
-        ? "Uma carta foi invocada oculta."
-        : `${card.name} invocado.`,
-    );
+
     return;
   }
   if (c.type === "move" || c.type === "attack") {
@@ -300,7 +292,7 @@ export function apply(g: Game, seat: Seat, c: unknown): string | undefined {
           Math.abs(u.x - flower.x),
           Math.abs(u.y - flower.y),
         ),
-        range = Math.max(kw(u, "Range"), Number(u.statuses?.range || 0));
+        range = kw(u, "Range");
       const path = route(g, u, flower.x, flower.y);
       if (
         !(range && distance <= range) &&
@@ -339,7 +331,7 @@ export function apply(g: Game, seat: Seat, c: unknown): string | undefined {
       g.moveCounts[seat]++;
       return;
     }
-    const range = Math.max(kw(u, "Range"), Number(u.statuses?.range || 0)),
+    const range = kw(u, "Range"),
       ranged = c.type === "attack";
     if (ranged) {
       if (
@@ -374,9 +366,6 @@ export function apply(g: Game, seat: Seat, c: unknown): string | undefined {
       };
       g.passes = 0;
       g.priority = (1 - seat) as Seat;
-      g.log.push(
-        "Combate anunciado. Use magias rápidas ou passe a prioridade.",
-      );
     } else {
       u.x = c.x!;
       u.y = c.y!;
@@ -400,7 +389,7 @@ export function apply(g: Game, seat: Seat, c: unknown): string | undefined {
       return "Magia lenta apenas na fase de Magia.";
     const error = spellError(g, seat, c);
     if (error) return error;
-    const extra = card.id === "mamoru-n-9-wonder-wall" ? c.extraPe || 0 : 0;
+    const extra = spellSpecs[card.id]?.amount === "energy" ? c.extraPe || 0 : 0;
     if (
       !spend(
         p,
@@ -420,25 +409,11 @@ export function apply(g: Game, seat: Seat, c: unknown): string | undefined {
       x: c.x,
       y: c.y,
     });
-    if (card.stats.speed === "instant")
-      resolveSpell(
-        g,
-        seat,
-        card.id,
-        c.targetId,
-        c.targetId2,
-        c.x,
-        c.y,
-        c.extraPe,
-        c.choice,
-        c.x2,
-        c.y2,
-      );
+    if (card.stats.speed === "instant") resolveSpell(g, seat, c);
     else {
       g.stack.push({ ...c, cardId: card.id, seat });
       g.priority = (1 - seat) as Seat;
       g.passes = 0;
-      g.log.push(`${card.name} na pilha. O oponente pode responder.`);
     }
     return;
   }
@@ -477,19 +452,7 @@ export function apply(g: Game, seat: Seat, c: unknown): string | undefined {
     g.passes = 0;
     if (g.stack.length) {
       const top = g.stack.pop()!;
-      resolveSpell(
-        g,
-        top.seat,
-        top.cardId,
-        top.targetId,
-        top.targetId2,
-        top.x,
-        top.y,
-        top.extraPe,
-        top.choice,
-        top.x2,
-        top.y2,
-      );
+      resolveSpell(g, top.seat, top);
       if (!g.duel)
         g.priority = g.stack.length
           ? ((1 - g.stack.at(-1)!.seat) as Seat)
@@ -504,7 +467,7 @@ export function apply(g: Game, seat: Seat, c: unknown): string | undefined {
     g.priority = g.phaseOwner!;
     return;
   }
-  g.log.push(`Jogador ${seat + 1} encerrou ${phases[g.phase]}.`);
+
   if (g.phase === 2) endMovement(g, seat);
   if (seat === g.first) {
     g.phaseOwner = (1 - g.first) as Seat;

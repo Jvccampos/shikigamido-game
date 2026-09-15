@@ -80,7 +80,7 @@ test("search selects one chosen copy, survives reconnect, and keeps choices priv
     const event = publicGame(restored, viewer).events.at(-1)!;
     assert(event.type === "search");
     assert.equal(event.cardId, undefined);
-    assert(!publicGame(restored, viewer).log.at(-1)!.includes("Ferreiro"));
+    assert.equal(publicGame(restored, viewer).log, undefined);
   }
   const ownEvent = publicGame(restored, 0).events.at(-1)!;
   assert(ownEvent.type === "search");
@@ -189,6 +189,6 @@ test("revival and a summoned copy also request their entry searches", () => {
   assert.equal(apply(g, 1, botCommand(g, 1)), undefined);
   const curador = makeUnit(g, 0, "taodu-curador", 2, 2);
   g.units.push(curador);
-  resolveSpell(g, 0, "kogeki-n-2-dualidade", curador.id);
+  resolveSpell(g, 0, { cardId: "kogeki-n-2-dualidade", targetId: curador.id });
   assert.equal(g.searches?.[0].sourceCardId, "taodu-curador");
 });

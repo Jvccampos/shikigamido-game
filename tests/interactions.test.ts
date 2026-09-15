@@ -123,7 +123,14 @@ test("a response that removes the combat target makes its queued buff fizzle", (
   assert(!g.units.some((u) => u.id === b.id));
   resolve(g);
   assert.equal(b.statuses?.devolver, undefined);
-  assert(g.log.some((l) => l.includes("alvo saiu")));
+  assert(
+    g.events?.some(
+      (e) =>
+        e.type === "spell-result" &&
+        e.cardId === buff &&
+        e.outcome === "missingTarget",
+    ),
+  );
   const hp = a.hp;
   resolve(g);
   assert.equal(g.combat, undefined);

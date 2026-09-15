@@ -1,3 +1,4 @@
+import { expireEffects } from "../effects.js";
 import { type Game, type Seat } from "../model.js";
 import { neighbors, valid, at } from "./board.js";
 import { random } from "../random.js";
@@ -111,22 +112,7 @@ export function startTurn(g: Game) {
       delete st.temporaryAttack;
       delete st.temporaryUntil;
     }
-    for (const key of [
-      "range",
-      "fireball",
-      "damageCap",
-      "lifesteal",
-      "intangivel",
-      "stun",
-      "softStun",
-      "stolenKeyword",
-      "borrowed",
-    ])
-      if ((st[`${key}Until`] ?? Infinity) < g.turn) {
-        if (key === "borrowed" && st.borrowed) delete st[st.borrowed];
-        delete st[key];
-        delete st[`${key}Until`];
-      }
+    expireEffects(st, g.turn);
     if (st.burn && (st.burnUntil ?? -Infinity) >= g.turn)
       takeDamage(g, u, st.burn);
     else delete st.burn;
@@ -163,13 +149,7 @@ export function startTurn(g: Game) {
     }
     g.centerPending = true;
     g.centerChoices = {};
-    g.log.push(
-      "Centro aberto. Escolham em segredo uma unidade para avançar em direção ao centro.",
-    );
   } else if (g.turn > 3) moveCurses(g);
-  g.log.push(
-    `Turno ${g.turn}: PE restaurado e uma carta comprada por jogador.`,
-  );
 }
 
 export function endMovement(g: Game, seat: Seat) {

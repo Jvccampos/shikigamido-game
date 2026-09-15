@@ -150,8 +150,5 @@ export function freshGame(
     moved: [],
     actions: 0,
     winner: null,
-    log: [
-      `Jogador ${first + 1} inicia. Ambos compraram 6 cartas; mulligan único disponível.`,
-    ],
   };
 }

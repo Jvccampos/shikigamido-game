@@ -1,3 +1,5 @@
+import { useArenaScene } from "./use-arena-scene.js";
+import { ArenaHand } from "./arena-hand.js";
 import type { Card } from "../shared/cards.js";
 import type { GameView, UnitView } from "../shared/room.js";
 import type { Selection } from "./match-interaction.js";
@@ -17,7 +19,7 @@ import { unitEffects } from "../shared/unit-insight.js";
 import { ArenaNotices } from "./arena-notices.js";
 import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import type { ComponentChildren } from "preact";
-import { ArenaScene, type Point, type Presentation } from "./arena-scene.js";
+import { type Point, type Presentation } from "./arena-scene.js";
 import { cards, type Cmd } from "../shared/game.js";
 type Props = {
   game: GameView;
@@ -80,13 +82,9 @@ export function Arena(p: Props) {
     window.addEventListener("resize", resize);
     return () => window.removeEventListener("resize", resize);
   }, []);
-  const host = useRef<HTMLDivElement>(null),
-    scene = useRef<ArenaScene | null>(null),
-    latest = useRef(p);
+  const latest = useRef(p);
   latest.current = p;
-  const [ready, setReady] = useState(false),
-    [hoverId, setHoverId] = useState<string | null>(null),
-    [handHover, setHandHover] = useState<number | null>(null),
+  const [hoverId, setHoverId] = useState<string | null>(null),
     [menu, setMenu] = useState(false),
     [elementsOpen, setElementsOpen] = useState(false),
     [discardOpen, setDiscardOpen] = useState(false),
@@ -98,17 +96,8 @@ export function Arena(p: Props) {
     [sound, setSound] = useState(
       () => localStorage.getItem("shiki-sound") === "true",
     ),
-    [dragging, setDragging] = useState<{
-      index: number;
-      x: number;
-      y: number;
-      moving: boolean;
-    } | null>(null),
-    [canvasError, setCanvasError] = useState("");
-  const hoveredRef = useRef<UnitView | null>(null),
-    handHoverRef = useRef<number | null>(null);
-  const dragRef = useRef(dragging);
-  dragRef.current = dragging;
+    [dragging, setDragging] = useState(false);
+  const hoveredRef = useRef<UnitView | null>(null);
   const g = p.game,
     me = p.seat >= 0 ? g.players[p.seat] : null,
     opponent = p.seat === 0 ? 1 : 0,
@@ -191,8 +180,8 @@ export function Arena(p: Props) {
       onAbility: (u: UnitView) => {
         v.onAbility(u);
       },
-      previewPath: v.preview?.error ? [] : v.preview?.path || [],
-      affected: v.preview?.affected || [],
+      previewPath: v.preview?.error ? undefined : v.preview?.path,
+      affected: v.preview?.affected,
       onAim: v.onAim,
       startY: v.startY,
       onCell: (x: number, y: number, u?: UnitView) => v.onCell(x, y, u),
@@ -212,44 +201,14 @@ export function Arena(p: Props) {
       onInspect: (u: UnitView) => v.onFocus(cards.get(u.cardId), u),
       onHover: (u: UnitView | null) => {
         hoveredRef.current = u;
-        if (u) handHoverRef.current = null;
         setHoverId(u?.id || null);
       },
     };
   }
-  useEffect(() => {
-    let closed = false;
-    const engine = new ArenaScene();
-    scene.current = engine;
-    engine
-      .init(host.current!, state())
-      .then(() => {
-        if (!closed) setReady(true);
-      })
-      .catch(() =>
-        setCanvasError(
-          "Não foi possível iniciar a arena gráfica. Ative a aceleração de hardware do navegador e recarregue.",
-        ),
-      );
-    return () => {
-      closed = true;
-      engine.destroy();
-      latest.current.onPresentationBusy(false);
-    };
-  }, []);
-  useEffect(() => {
-    if (ready) scene.current?.update(state());
-  }, [
-    ready,
-    g,
-    p.highlights,
-    p.selected,
-    p.targets,
-    p.startY,
-    p.preview,
-    p.validTargets,
-    p.readyAbilities,
-  ]);
+  const { host, ready, canvasError, cellAt } = useArenaScene(
+    state(),
+    p.onPresentationBusy,
+  );
   useEffect(() => {
     const key = (e: KeyboardEvent) => {
       if (document.querySelector("dialog[open]")) return;
@@ -257,11 +216,8 @@ export function Arena(p: Props) {
         return;
       if (e.key.toLowerCase() === "f") {
         const v = latest.current,
-          u = v.game.units.find((u) => u.id === hoveredRef.current?.id),
-          i = handHoverRef.current;
+          u = v.game.units.find((u) => u.id === hoveredRef.current?.id);
         if (u) v.onFocus(cards.get(u.cardId), u);
-        else if (i !== null && v.seat >= 0 && v.game.players[v.seat].hand[i])
-          v.onFocus(cards.get(v.game.players[v.seat].hand[i]));
       }
       if (e.key === "Escape") {
         setMenu(false);
@@ -269,70 +225,6 @@ export function Arena(p: Props) {
     };
     window.addEventListener("keydown", key);
     return () => window.removeEventListener("keydown", key);
-  }, [hover, handHover, me]);
-  useEffect(() => {
-    const move = (e: PointerEvent) => {
-      const d = dragRef.current;
-      if (!d) return;
-      const next = {
-        ...d,
-        x: e.clientX,
-        y: e.clientY,
-        moving: d.moving || Math.hypot(e.clientX - d.x, e.clientY - d.y) > 5,
-      };
-      dragRef.current = next;
-      setDragging(next);
-      if (next.moving && host.current) {
-        const rect = host.current.getBoundingClientRect();
-        latest.current.onAim(
-          scene.current?.cellAt(e.clientX - rect.left, e.clientY - rect.top) ||
-            null,
-        );
-      }
-    };
-    const end = (e: PointerEvent) => {
-      const d = dragRef.current;
-      if (!d) return;
-      dragRef.current = null;
-      setDragging(null);
-      const v = latest.current;
-      if (d.moving) {
-        const rect = host.current!.getBoundingClientRect(),
-          cell = scene.current?.cellAt(
-            e.clientX - rect.left,
-            e.clientY - rect.top,
-          );
-        if (cell)
-          v.onDrop(
-            cell.x,
-            cell.y,
-            v.game.units.find((u) => u.x === cell.x && u.y === cell.y),
-            {
-              kind: "hand",
-              cardId: v.game.players[v.seat].hand[d.index],
-              index: d.index,
-            },
-          );
-      } else if (v.game.phase === 4 && v.game.priority === v.seat)
-        setDiscardOpen(true);
-      else v.onHand(d.index);
-      v.onDrag(null);
-    };
-    const cancel = () => {
-      dragRef.current = null;
-      setDragging(null);
-      latest.current.onDrag(null);
-    };
-    window.addEventListener("pointercancel", cancel);
-    window.addEventListener("blur", cancel);
-    window.addEventListener("pointermove", move);
-    window.addEventListener("pointerup", end);
-    return () => {
-      window.removeEventListener("pointercancel", cancel);
-      window.removeEventListener("blur", cancel);
-      window.removeEventListener("pointermove", move);
-      window.removeEventListener("pointerup", end);
-    };
   }, []);
   useEffect(() => {
     if (!sound) return;
@@ -661,135 +553,31 @@ export function Arena(p: Props) {
         </div>
       )}
       {me && !g.setup && (
-        <div className={`arena-hand ${g.setup ? "choosing" : ""}`}>
-          <span className="hand-caption">
-            {g.setup
-              ? "ESCOLHA SUA MÃO"
-              : `${me.hand.length} CARTAS · ARRASTE PARA JOGAR`}
-          </span>
-          <div className="hand-fan">
-            {me.hand.map((id, index) => {
-              const c = cards.get(id)!,
-                plan = p.handPlans[index],
-                center = index - (me.hand.length - 1) / 2,
-                n = Math.min(
-                  80,
-                  (viewport > 1100
-                    ? Math.max(160, 2 * (railLeft - viewport / 2) - 240)
-                    : viewport - (viewport < 760 ? 115 : 560)) /
-                    Math.max(1, me.hand.length),
-                ),
-                angle = center * Math.min(4, 30 / me.hand.length),
-                lift = Math.abs(center) ** 2 * 2;
-              return (
-                <div
-                  key={`${index}-${id}`}
-                  className={`fan-card ${plan?.reason ? "not-playable" : "playable"} ${p.selected?.index === index && p.selected?.kind === "hand" ? "selected" : ""}  ${dragging?.index === index && dragging.moving ? "dragged" : ""}`}
-                  style={{
-                    "--offset": `${center * n}px`,
-                    "--angle": `${angle}deg`,
-                    "--lift": `${lift}px`,
-                    "--order": index,
-                  }}
-                >
-                  <button
-                    className="fan-art"
-                    onContextMenu={(e) => {
-                      e.preventDefault();
-                      p.onFocus(c);
-                    }}
-                    onPointerDown={(e) => {
-                      if (e.button !== 0 || p.busy || done) return;
-                      if (
-                        g.setup ||
-                        (p.handPlans[index]?.reason && g.phase !== 4)
-                      ) {
-                        p.onHand(index);
-                        return;
-                      }
-                      e.preventDefault();
-                      const d = {
-                        index,
-                        x: e.clientX,
-                        y: e.clientY,
-                        moving: false,
-                      };
-                      dragRef.current = d;
-                      setDragging(d);
-                      p.onDrag({ kind: "hand", cardId: id, index });
-                    }}
-                    onMouseEnter={() => {
-                      handHoverRef.current = index;
-                      hoveredRef.current = null;
-                      setHandHover(index);
-                    }}
-                    onMouseLeave={() => {
-                      handHoverRef.current = null;
-                      setHandHover(null);
-                    }}
-                    onFocus={() => {
-                      handHoverRef.current = index;
-                      setHandHover(index);
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" || e.key === " ") {
-                        e.preventDefault();
-                        p.onHand(index);
-                      }
-                    }}
-                    aria-label={`Selecionar ${c.name}, cópia ${index + 1}. ${plan?.reason || "Disponível"}`}
-                  >
-                    <img src={c.asset} alt={c.name} draggable={false} />
-                    <b
-                      className={`fan-cost ${(plan?.cost ?? c.stats.cost) > me.pe + me.permanentPe ? "unaffordable" : ""}`}
-                    >
-                      {plan?.cost ?? c.stats.cost}
-                    </b>
-                    {g.setup && !me.mulligan && p.mulligan.includes(index) && (
-                      <span className="fan-exchange">↻</span>
-                    )}
-                  </button>
-                  <button
-                    className="fan-zoom"
-                    aria-label={`Ler ${c.name}`}
-                    onClick={() => p.onFocus(c)}
-                  >
-                    <span aria-hidden="true">⤢</span> Ler
-                  </button>
-                </div>
-              );
-            })}
-          </div>
-        </div>
+        <ArenaHand
+          game={g}
+          seat={p.seat}
+          selected={p.selected}
+          handPlans={p.handPlans}
+          busy={p.busy}
+          viewport={viewport}
+          railLeft={railLeft}
+          obscured={discardOpen || !!presenting}
+          cellAt={cellAt}
+          onAim={p.onAim}
+          onDrop={p.onDrop}
+          onDrag={p.onDrag}
+          onHand={p.onHand}
+          onFocus={p.onFocus}
+          onDiscard={() => setDiscardOpen(true)}
+          onHover={() => {
+            hoveredRef.current = null;
+            setHoverId(null);
+          }}
+          onDragging={setDragging}
+        />
       )}
-      <div
-        className={`hand-action-hint ${!g.setup && !discardOpen && !presenting && handHover !== null && p.handPlans[handHover]?.reason ? "visible" : ""}`}
-        role="status"
-      >
-        <span className="hand-hint-icon" aria-hidden="true">
-          !
-        </span>
-        <div>
-          <small>
-            {handHover !== null
-              ? cards.get(me?.hand[handHover] || "")?.name
-              : ""}
-          </small>
-          <span>
-            {handHover !== null ? p.handPlans[handHover]?.reason : ""}
-          </span>
-        </div>
-      </div>
       {!g.setup && !discardOpen && !presenting && shownCombat?.combat && (
         <CombatForecast preview={shownCombat} game={g} />
-      )}
-      {dragging?.moving && me && (
-        <div
-          className="drag-ghost"
-          style={{ left: dragging.x, top: dragging.y }}
-        >
-          <img src={cards.get(me.hand[dragging.index])?.asset} alt="" />
-        </div>
       )}
       {me && g.phase === 4 && yourTurn && !g.setup && !done && (
         <button className="open-discard" onClick={() => setDiscardOpen(true)}>

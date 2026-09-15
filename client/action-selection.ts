@@ -68,37 +68,6 @@ export function selectionCommands(draft: SelectionDraft) {
 export function selectedAbility(unit?: UnitView) {
   return unit
     ? abilities[unit.cardId] ||
-        (unit.statuses?.construir || kw(unit, "Construir")
-          ? abilities["kuma-no-tsuno"]
-          : undefined)
+        (kw(unit, "Construir") ? abilities["kuma-no-tsuno"] : undefined)
     : undefined;
-}
-
-// Selection steps are UI metadata. The engine still decides which targets are legal.
-export function targetFlow(
-  target?: import("../shared/spells.js").SpellSpec["target"],
-) {
-  return {
-    multipleUnits:
-      target === "twoAllies" || target === "twoUnits" || target === "redirect",
-    multipleCells: target === "wind",
-    unitThenCell: target === "move",
-    needsUnit:
-      !!target &&
-      !["none", "cell", "lake", "wind", "discardVoid", "discardCat"].includes(
-        target,
-      ),
-    cellOnly: target === "cell" || target === "lake" || target === "wind",
-    submitOnDrop:
-      !!target &&
-      [
-        "unit",
-        "ally",
-        "windAlly",
-        "omionjiFire",
-        "combat",
-        "lake",
-        "none",
-      ].includes(target),
-  };
 }

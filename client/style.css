@@ -838,30 +838,6 @@ footer small {
   font-size: 9px;
   color: var(--muted);
 }
-.log {
-  max-height: 450px;
-  overflow: auto;
-  padding: 12px;
-  background: #0c1713;
-  border: 1px solid var(--line);
-  margin-top: 10px;
-}
-.log h3 {
-  font-size: 15px;
-  margin-top: 15px;
-}
-.log p {
-  font-size: 10px;
-  color: var(--muted);
-  padding-bottom: 10px;
-  border-bottom: 1px solid var(--line);
-}
-.log button {
-  display: block;
-  padding: 5px 0;
-  font-size: 10px;
-  text-align: left;
-}
 .concede {
   display: block;
   color: #ab837a;

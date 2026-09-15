@@ -27,6 +27,7 @@ export function publicGame(game: Game, viewer: Seat | -1): GameView {
   // Clone before redaction so no public view can mutate authoritative state.
   const g = structuredClone(game);
   delete g.random;
+  delete g.log;
   const conceal = (u: Unit): UnitView =>
     u.statuses?.hidden && u.owner !== viewer ? hiddenUnit(u) : u;
   const event = (e: GameEvent): GameEvent<UnitView> => {

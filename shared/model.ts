@@ -34,6 +34,7 @@ export type UnitStatuses = {
   burn?: number;
   burnAttack?: number;
   combatAttack?: number;
+  damageCap?: number;
   construir?: boolean;
   deathDrawTurn?: number;
   devolver?: number;
@@ -155,7 +156,8 @@ export type Game = {
   moved: string[];
   actions: number;
   winner: Seat | null;
-  log: string[];
+  /** Accepted from older saved rooms; new games use events only. */
+  log?: string[];
 };
 export const commandTypes = [
   "search",
@@ -213,6 +215,12 @@ export type Cmd = CommandDraft &
 /** Events describe completed commands. Unit snapshots must never share mutable state. */
 export type EventPayload<U = Unit> =
   | {
+      type: "spell-result";
+      seat: Seat;
+      cardId: string;
+      outcome: "missingTarget" | "immune" | "cancelled";
+    }
+  | {
       type: "search";
       seat: Seat;
       sourceCardId: string;
@@ -258,6 +266,7 @@ export type EventPayload<U = Unit> =
       type: "combat";
       attacker: U;
       defender: U;
+      missed?: boolean;
       attackDamage: number;
       defenseDamage: number;
       keyword: string;

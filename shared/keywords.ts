@@ -26,3 +26,18 @@ export const baseKeywords: Record<string, Record<string, number>> = {
   "yaksha-o-guardiao": { Ressurgir: 2 },
   "omionji-vento": { "Quick Attack": 1 },
 };
+
+// Older saved games use these fields for granted keywords. Keep their stacking
+// rules in one place rather than repeating them in combat, movement and the UI.
+export const keywordStatuses: Record<
+  string,
+  { field: string; stacks?: boolean }
+> = {
+  Block: { field: "block", stacks: true },
+  Devolver: { field: "devolver", stacks: true },
+  Lifesteal: { field: "lifesteal" },
+  Burn: { field: "burnAttack" },
+  Range: { field: "range" },
+  Ressurgir: { field: "ressurgir" },
+  Construir: { field: "construir" },
+};
