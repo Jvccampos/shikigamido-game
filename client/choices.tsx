@@ -115,11 +115,12 @@ export function OpeningHand(
       </div>
       <ChoiceCards {...p} />
       <div className="choice-footer">
-        <p>
-          {p.selected.length
-            ? `${p.selected.length} carta(s) voltam para o baralho e serão substituídas.`
-            : "Gostou da mão? Mantenha as seis cartas."}
-        </p>
+        {p.selected.length > 0 && (
+          <p>
+            {p.selected.length} carta(s) voltam para o baralho e serão
+            substituídas.
+          </p>
+        )}
         <button
           className="choice-confirm"
           disabled={p.disabled}

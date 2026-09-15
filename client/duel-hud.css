@@ -57,8 +57,7 @@
 .elements-toggle small {
   font-size: 12px;
 }
-.arena-notice,
-.field-event.curse-notice {
+.arena-notice {
   position: absolute;
   left: 50%;
   top: 40%;
@@ -110,17 +109,6 @@
   margin-top: 14px;
   color: #b7c6aa;
   font-size: 12px;
-}
-.field-event.curse-notice {
-  color: #e2bcff;
-  font-size: 23px;
-  justify-content: center;
-  white-space: normal;
-  border-color: #ce96ff88;
-}
-.curse-notice .event-pulse {
-  background: #ce96ff;
-  flex-shrink: 0;
 }
 .stat-attack {
   --attribute: #f57b62;
@@ -303,8 +291,7 @@
     translate: 0 0;
   }
 }
-.arena-notice.leaving,
-.field-event.leaving {
+.arena-notice.leaving {
   animation: notice-depart 450ms ease-in forwards;
 }
 @keyframes notice-depart {
@@ -363,10 +350,6 @@
   .notice-mana {
     font-size: 15px;
   }
-  .field-event.curse-notice {
-    font-size: 18px;
-    padding: 18px;
-  }
 }
 @media (max-width: 759px) {
   .elements-guide section {
@@ -385,8 +368,7 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .mana-total b,
-  .arena-notice,
-  .field-event.curse-notice {
+  .arena-notice {
     animation: none;
   }
 }

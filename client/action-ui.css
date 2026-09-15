@@ -1,0 +1,203 @@
+/* Actions stay within reach of the board; reading belongs to the card viewer. */
+.action-dock {
+  position: absolute;
+  z-index: 44;
+  bottom: auto;
+  left: 0;
+  transform: none;
+  width: min(510px, calc(100vw - 32px));
+  padding: 10px 16px;
+  background: #10251ff5;
+  border: 1px solid #bdaa7066;
+  border-radius: 14px;
+  box-shadow: 0 10px 35px #0008;
+}
+.action-dock-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+.action-dock-head b {
+  font:
+    18px Georgia,
+    serif;
+  color: #efdfb1;
+}
+.action-dock-head button {
+  background: transparent;
+  border: 0;
+  color: #e0d4b8;
+  font-size: 24px;
+  padding: 0 6px;
+  min-height: 30px;
+}
+.action-dock .target-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  padding: 0;
+  margin: 0;
+}
+.action-dock .target-controls > button {
+  min-height: 40px;
+  padding: 10px 16px;
+  margin: 0;
+  font-size: 14px;
+}
+.action-dock .target-controls > .gold {
+  margin-left: auto;
+}
+.action-dock .target-controls small {
+  font-size: 13px;
+  color: #d0ded0;
+}
+.action-dock .action-requirement {
+  flex-basis: 100%;
+  font-size: 13px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+}
+.action-dock .action-requirement:empty {
+  display: none;
+}
+.action-dock .target-feedback {
+  color: #ffd1a8;
+  font-size: 13px;
+  margin: 0 0 8px;
+}
+.action-dock select {
+  max-width: 100%;
+}
+.action-dock input {
+  width: 65px;
+}
+.hand-action-hint {
+  position: fixed;
+  bottom: auto;
+  transform: none;
+  z-index: 46;
+  width: 210px;
+  max-width: calc(100vw - 16px);
+  padding: 9px 12px;
+  border: 1px solid #c99564;
+  border-radius: 10px;
+  background: #3b231cf5;
+  color: #ffe0bd;
+  box-shadow: 0 4px 16px #0008;
+  font:
+    14px/1.35 Arial,
+    sans-serif;
+  text-align: center;
+  pointer-events: none;
+}
+.rule-hint {
+  display: inline;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  border-radius: 2px;
+  border-bottom: 1px dotted #e5c680;
+  background: transparent;
+  color: #f0d49b;
+  font: inherit;
+  font-weight: 600;
+  cursor: help;
+}
+.rule-hint:hover,
+.rule-hint:focus-visible {
+  color: #fff1cb;
+  background: #e0c47818;
+}
+.rule-tooltip {
+  position: fixed;
+  z-index: 500;
+  width: 280px;
+  max-width: calc(100vw - 24px);
+  padding: 14px 16px;
+  border: 1px solid #b6a477;
+  border-radius: 10px;
+  background: #142820;
+  color: #e5ebdf;
+  box-shadow: 0 10px 32px #0009;
+  font:
+    14px/1.5 Arial,
+    sans-serif;
+  pointer-events: none;
+}
+.rule-tooltip b,
+.rule-tooltip span {
+  display: block;
+}
+.rule-tooltip b {
+  color: #f1d298;
+  margin-bottom: 6px;
+}
+.active-effects {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 18px 0;
+}
+.active-effects .rule-hint {
+  display: inline-block;
+  padding: 7px 11px;
+  border: 1px solid #a58bc27a;
+  border-radius: 8px;
+  background: #392949;
+  color: #e8d4ff;
+  font-size: 14px;
+}
+.active-effects .rule-hint.bad {
+  background: #452723;
+  border-color: #cf8279;
+  color: #ffbeb3;
+}
+
+.action-dock {
+  max-height: min(330px, calc(100vh - 100px));
+  overflow-y: auto;
+}
+.arena-shell:has(.action-dock) .arena-hover {
+  display: none;
+}
+@media (max-width: 759px) {
+  .action-dock {
+    width: 190px;
+    padding: 8px 10px;
+  }
+  .action-dock-head {
+    gap: 6px;
+    margin-bottom: 4px;
+  }
+  .action-dock-head b {
+    font-size: 14px;
+  }
+  .action-dock .target-controls {
+    gap: 6px;
+  }
+  .action-dock .target-controls small {
+    font-size: 12px;
+  }
+  .action-dock .target-controls > button {
+    width: 100%;
+    padding: 8px;
+  }
+}
+@media (max-height: 560px) and (orientation: landscape) {
+  .action-dock {
+    width: 230px;
+    padding: 8px 12px;
+  }
+  .action-dock-head b {
+    font-size: 15px;
+  }
+  .action-dock .target-controls > button {
+    padding: 6px 10px;
+    min-height: 32px;
+  }
+}

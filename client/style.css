@@ -792,37 +792,11 @@ footer small {
   overflow: visible;
   pointer-events: none;
 }
-.selection-panel,
 .stack-panel {
   background: #111d19;
   border: 1px solid var(--line);
   border-radius: 6px;
   padding: 16px;
-}
-.selection-panel > .eyebrow {
-  font-size: 8px;
-}
-.selection-panel > button:first-of-type {
-  display: block;
-  max-width: 140px;
-  margin: 0 auto 15px;
-  padding: 0;
-}
-.selection-panel h3 {
-  font-size: 19px;
-  margin: 0 0 12px;
-}
-.selection-panel p:not(.eyebrow) {
-  font-size: 11px;
-  color: #a9b9a9;
-  line-height: 1.7;
-}
-.selection-seal {
-  display: block;
-  text-align: center;
-  font-size: 60px;
-  color: #b6a56a55;
-  padding: 25px 0;
 }
 .target-controls {
   display: grid;
@@ -1129,23 +1103,6 @@ footer small {
     right: -15px;
     width: 12px;
   }
-  .selection-panel {
-    grid-column: 1;
-    display: flow-root;
-  }
-  .selection-panel > button:first-of-type {
-    float: left;
-    width: 90px;
-    margin: 0 15px 10px 0;
-  }
-  .selection-panel .selection-seal {
-    float: left;
-    padding: 0 20px 0 0;
-    font-size: 42px;
-  }
-  .selection-panel .target-controls {
-    clear: both;
-  }
   .stack-panel {
     margin: 0;
   }
@@ -1309,9 +1266,6 @@ footer small {
   .pe > b {
     font-size: 18px;
   }
-  .selection-panel > button:first-of-type {
-    width: 95px;
-  }
   .lobby {
     padding: 35px 18px;
   }
@@ -1404,7 +1358,6 @@ footer small {
 }
 .seal,
 .hero-kanji,
-.selection-seal,
 .elements button,
 .card-placeholder > span {
   font-family: ShikigamidoJP, Georgia, serif;

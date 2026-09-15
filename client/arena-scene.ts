@@ -1,4 +1,4 @@
-import { movementMarker } from "../shared/unit-insight.js";
+import { movementMarker, unitEffects } from "../shared/unit-insight.js";
 import type { GameView, UnitView } from "../shared/room.js";
 import type { GameEvent } from "../shared/model.js";
 import { layout } from "../shared/arena-layout.js";
@@ -570,9 +570,9 @@ export class ArenaScene {
       if (view.destroyed || art.destroyed) return;
       this.clear(art);
       const sprite = new Sprite(texture);
-      sprite.anchor.set(0.5, 0.38);
+      sprite.anchor.set(0.5, 0.48);
       const scale = w / texture.width;
-      sprite.scale.set(scale * 1.8);
+      sprite.scale.set(scale * 1.25);
       sprite.position.set(0, -h * 0.02);
       art.addChild(sprite);
     };
@@ -722,6 +722,30 @@ export class ArenaScene {
       const t = label("♨", 14, 0xff8c57);
       t.position.set(w * 0.3, -h * 0.5);
       view.addChild(t);
+    }
+    const effects = unitEffects(this.state.game, u);
+    if (effects.length) {
+      const badge = new Container();
+      badge.position.set(w / 2 - 5, -h * 0.12);
+      badge.scale.set(Math.min(1, size / 70));
+      badge.addChild(
+        new Graphics()
+          .roundRect(-4, -10, 32, 20, 8)
+          .fill(0x271d43)
+          .stroke({ color: 0xd1b2ff, width: 1.5 }),
+      );
+      const text = label(`✦${effects.length}`, 11, 0xf0deff);
+      text.position.set(1, -7);
+      badge.addChild(text);
+      badge.eventMode = "static";
+      badge.cursor = "help";
+      badge.on("pointerdown", (e) => e.stopPropagation());
+      badge.on("pointertap", (e) => {
+        e.stopPropagation();
+        this.state.onInspect(u);
+      });
+      badge.on("pointerover", () => this.state.onHover(u));
+      view.addChild(badge);
     }
     const targetIndex = this.state.targets.indexOf(u.id);
     if (targetIndex >= 0) {

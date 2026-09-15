@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "preact/hooks";
+import { useEffect, useId, useRef, useState } from "preact/hooks";
 import type {
   ActionPreview,
   CombatantPreview,
@@ -84,6 +84,7 @@ export function CombatForecast({
   preview: ActionPreview;
   game: GameView;
 }) {
+  const maskId = useId();
   const combat = preview.combat!;
   const ref = useRef<HTMLElement>(null);
   const [screen, setScreen] = useState({ w: innerWidth, h: innerHeight });
@@ -154,11 +155,40 @@ export function CombatForecast({
   return (
     <>
       <svg className="forecast-links" width={w} height={h} aria-hidden="true">
-        <path d={`M ${a.x} ${a.y} L ${d.x} ${d.y}`} />
-        <path
-          className="forecast-tether"
-          d={`M ${mx} ${my} L ${lineEnd.x} ${lineEnd.y}`}
-        />
+        <defs>
+          <mask
+            id={maskId}
+            maskUnits="userSpaceOnUse"
+            x="0"
+            y="0"
+            width={w}
+            height={h}
+          >
+            <rect width={w} height={h} fill="white" />
+            {game.units.map((u) => {
+              const p = l.point(u.x, u.y),
+                size = Math.min(l.dx * 0.76, l.dy * 0.9);
+              return (
+                <rect
+                  key={u.id}
+                  x={p.x - size * 0.44 - 5}
+                  y={p.y - size * 0.465 - 5}
+                  width={size * 0.88 + 10}
+                  height={size * 0.93 + 10}
+                  rx="8"
+                  fill="black"
+                />
+              );
+            })}
+          </mask>
+        </defs>
+        <g mask={`url(#${maskId})`}>
+          <path d={`M ${a.x} ${a.y} L ${d.x} ${d.y}`} />
+          <path
+            className="forecast-tether"
+            d={`M ${mx} ${my} L ${lineEnd.x} ${lineEnd.y}`}
+          />
+        </g>
         <circle cx={a.x} cy={a.y} r={l.dx * 0.48} />
         <circle cx={d.x} cy={d.y} r={l.dx * 0.48} />
       </svg>
@@ -210,15 +240,15 @@ export function CombatForecast({
             role="Defensor"
           />
         </div>
-        <div className="forecast-note">
-          {!combat.resolved
-            ? preview.uncertain?.includes("pilha")
+        {!combat.resolved && (
+          <div className="forecast-note">
+            {preview.uncertain?.includes("pilha")
               ? "Magias pendentes · resultado incerto"
               : preview.uncertain?.includes("ocultas")
                 ? "Carta oculta · resultado incerto"
-                : "Resultado depende de sorteio ou efeito"
-            : "Previsão · respostas podem mudar o resultado"}
-        </div>
+                : "Resultado depende de sorteio ou efeito"}
+          </div>
+        )}
       </section>
     </>
   );

@@ -1,4 +1,5 @@
 import type { GameView, UnitView } from "./room.js";
+import { keywordHelp } from "./keyword-help.js";
 import { cards } from "./cards.js";
 import { movementReason } from "./action-advice.js";
 export type UnitInsight = {
@@ -118,7 +119,7 @@ export function unitInsights(
   if (st.borrowed)
     add(
       String(st.borrowed),
-      `Keyword recebida. ${expires("borrowed")}`,
+      ` ${keywordHelp[String(st.borrowed)] || "Keyword recebida."} ${expires("borrowed")}`.trim(),
       "good",
     );
   if (st.primordial)
@@ -127,10 +128,60 @@ export function unitInsights(
       `Ataque ganho por cura: +${st.primordialBoost || 0}, até +3.`,
       "good",
     );
-  if (st.block || st.devolver)
+  if (st.block)
     add(
-      "Defesa de combate",
-      `Bloqueio ${st.block || 0}; dano adicional no contra-ataque ${st.devolver || 0}.`,
+      `Block ${st.block}`,
+      `Recebe ${st.block} a menos de dano em cada combate. ${expires("block") || "Permanece enquanto a carta estiver em campo."}`,
+      "good",
+    );
+  if (st.devolver)
+    add(
+      `Devolver ${st.devolver}`,
+      `Ao ser atacada, recebe +${st.devolver} de ataque para o contra-ataque. ${expires("devolver") || "Permanece enquanto a carta estiver em campo."}`,
+      "good",
+    );
+  if (st.healSplash)
+    add(
+      "Cura da Água",
+      "Na próxima cura recebida, cura 2 de vida dos monstros adjacentes. Consumido após ativar.",
+      "good",
+    );
+  if (st.ressurgir)
+    add(
+      `Ressurgir ${st.ressurgir}`,
+      `Após ser destruída, retorna em ${st.ressurgir} turnos. Se a casa estiver ocupada, retorna à mão.`,
+      "good",
+    );
+  if (st.burnAttack)
+    add(
+      `Burn ${st.burnAttack}`,
+      `Aplica ${st.burnAttack} de queimadura ao inimigo após combater, durante dois turnos.`,
+      "good",
+    );
+  if (st.damageCap !== undefined)
+    add(
+      "Dano limitado",
+      `Causa no máximo ${st.damageCap} de dano. ${expires("damageCap")}`,
+      "bad",
+    );
+  if (st.redirect)
+    add(
+      "Proteção",
+      `Até ${st.redirectAmount || "todo o"} dano será transferido para outra carta neste combate.`,
+      "good",
+    );
+  for (const key of ["Quick Attack", "Alimentar", "Lifesteal", "Construir"]) {
+    if (st[key] && st.borrowed !== key)
+      add(
+        `${key}${Number(st[key]) > 1 ? ` ${st[key]}` : ""}`,
+        keywordHelp[key].replace(/\bX\b/g, String(st[key])),
+        "good",
+      );
+  }
+  if (st.construir && !st.Construir)
+    add(
+      "Construir",
+      "Pode criar um caminho ortogonal na fase de Magia.",
       "good",
     );
   for (const item of u.equipment || [])
@@ -171,4 +222,16 @@ export function movementMarker(g: GameView, u: UnitView) {
     label: u.kind === "curse" ? "Avanço automático" : "Movimento disponível",
     color: 0x8edfc0,
   };
+}
+
+export function unitEffects(g: Pick<GameView, "turn" | "moved">, u: UnitView) {
+  const movement = new Set([
+    "Invocado agora",
+    "Movimento usado",
+    "Habilidade usada",
+    "Efeito único usado",
+    "Sem velocidade",
+    "Carta oculta",
+  ]);
+  return unitInsights(g, u).filter((e) => !movement.has(e.label));
 }

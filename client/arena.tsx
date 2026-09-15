@@ -5,16 +5,15 @@ import { OpeningHand, DiscardChoice } from "./choices.js";
 import { Journal } from "./journal.js";
 import { ElementsGuide } from "./elements-guide.js";
 import { DuelContext } from "./duel-context.js";
-import { ActionPreview } from "./action-preview.js";
 import { CombatForecast } from "./combat-preview.js";
 import { SearchChoice } from "./search-choice.js";
 import type {
   ActionPlan,
   ActionPreview as Preview,
 } from "../shared/action-advice.js";
-import { movementReason, previewAction } from "../shared/action-advice.js";
-import { unitInsights } from "../shared/unit-insight.js";
-import { ArenaNotices, FieldEvent } from "./arena-notices.js";
+import { previewAction } from "../shared/action-advice.js";
+import { unitEffects } from "../shared/unit-insight.js";
+import { ArenaNotices } from "./arena-notices.js";
 import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import type { ComponentChildren } from "preact";
 import { ArenaScene, type Point } from "./arena-scene.js";
@@ -78,13 +77,11 @@ export function Arena(p: Props) {
   const [ready, setReady] = useState(false),
     [hoverId, setHoverId] = useState<string | null>(null),
     [handHover, setHandHover] = useState<number | null>(null),
-    [drawer, setDrawer] = useState(false),
     [menu, setMenu] = useState(false),
     [elementsOpen, setElementsOpen] = useState(false),
     [discardOpen, setDiscardOpen] = useState(false),
     [drawing, setDrawing] = useState(false),
     [presenting, setPresenting] = useState<string | null>(null),
-    [fieldVisible, setFieldVisible] = useState(false),
     [visibleUnits, setVisibleUnits] = useState<UnitView[]>(p.game.units),
     [settledRevision, setSettledRevision] = useState(p.game.revision),
     [log, setLog] = useState(false),
@@ -106,13 +103,11 @@ export function Arena(p: Props) {
     me = p.seat >= 0 ? g.players[p.seat] : null,
     opponent = p.seat === 0 ? 1 : 0,
     yourTurn = p.seat === g.priority,
-    done = g.winner !== null || g.draw,
-    card = p.selected?.kind === "hand" ? cards.get(p.selected?.cardId) : null;
+    done = g.winner !== null || g.draw;
   const combatPreview = useMemo(
     () => (g.combat ? previewAction(g, g.priority, { type: "pass" }) : null),
     [g.revision],
   );
-  const decisionPreview = p.preview || combatPreview;
   const shownCombat = combatPreview || (p.preview?.combat ? p.preview : null);
   const hover = g.units.find((u) => u.id === hoverId) || null;
   const previousHand = useRef<{
@@ -120,6 +115,28 @@ export function Arena(p: Props) {
     library: number;
     turn: number;
   } | null>(null);
+  const [handHint, setHandHint] = useState<{
+    left: number;
+    top: number;
+  } | null>(null);
+  useEffect(() => {
+    if (handHover === null) {
+      setHandHint(null);
+      return;
+    }
+    const update = () => {
+      const el =
+        host.current?.parentElement?.querySelectorAll(".fan-art")[handHover];
+      if (!el) return;
+      const r = el.getBoundingClientRect();
+      const width = 210;
+      const left = Math.max(8, Math.min(innerWidth - width - 8, r.left));
+      setHandHint({ left, top: Math.max(70, r.top - 88) });
+    };
+    update();
+    const timer = setInterval(update, 80);
+    return () => clearInterval(timer);
+  }, [handHover, viewport]);
   const reserveBefore = useRef(me?.permanentPe || 0),
     [reserveGain, setReserveGain] = useState(0);
   useEffect(() => {
@@ -185,7 +202,6 @@ export function Arena(p: Props) {
       readyAbilities: v.readyAbilities,
       onAbility: (u: UnitView) => {
         v.onAbility(u);
-        setDrawer(true);
       },
       previewPath: v.preview?.error ? [] : v.preview?.path || [],
       affected: v.preview?.affected || [],
@@ -244,10 +260,6 @@ export function Arena(p: Props) {
     p.readyAbilities,
   ]);
   useEffect(() => {
-    if (card?.kind === "spell" || g.duel) setDrawer(true);
-    if (!p.selected && !g.duel) setDrawer(false);
-  }, [card?.id, !!g.duel, !!p.selected, p.targets.join("|")]);
-  useEffect(() => {
     const key = (e: KeyboardEvent) => {
       if (document.querySelector("dialog[open]")) return;
       if (["INPUT", "SELECT"].includes((e.target as HTMLElement)?.tagName))
@@ -261,7 +273,6 @@ export function Arena(p: Props) {
           v.onFocus(cards.get(v.game.players[v.seat].hand[i]));
       }
       if (e.key === "Escape") {
-        setDrawer(false);
         setMenu(false);
       }
     };
@@ -311,10 +322,6 @@ export function Arena(p: Props) {
               index: d.index,
             },
           );
-        else if (
-          cards.get(v.game.players[v.seat].hand[d.index])?.kind === "spell"
-        )
-          setDrawer(true);
       } else if (v.game.phase === 4 && v.game.priority === v.seat)
         setDiscardOpen(true);
       else v.onHand(d.index);
@@ -628,11 +635,7 @@ export function Arena(p: Props) {
       </div>
       <button
         className="arena-deck"
-        onClick={() =>
-          me?.summonableDeck?.length && g.phase === 1
-            ? setDrawer(true)
-            : setLog(!log)
-        }
+        onClick={() => setLog(!log)}
         title="Baralho e descarte"
       >
         <i />
@@ -842,25 +845,19 @@ export function Arena(p: Props) {
       {!g.setup &&
         !discardOpen &&
         !presenting &&
-        (handHover !== null || p.selected?.kind === "hand") && (
-          <div className="hand-action-hint" role="status">
-            {p.handPlans[handHover ?? p.selected?.index ?? -1]?.reason ||
-              "Disponível · escolha um alvo iluminado"}
+        handHover !== null &&
+        p.handPlans[handHover]?.reason && (
+          <div
+            className="hand-action-hint"
+            role="status"
+            style={handHint || undefined}
+          >
+            {p.handPlans[handHover].reason}
           </div>
         )}
       {!g.setup && !discardOpen && !presenting && shownCombat?.combat && (
         <CombatForecast preview={shownCombat} game={g} />
       )}
-      {!g.setup &&
-        !discardOpen &&
-        !response &&
-        p.preview &&
-        !p.preview.combat &&
-        !presenting && (
-          <div className="arena-action-preview">
-            <ActionPreview preview={p.preview} />
-          </div>
-        )}
       {dragging?.moving && me && (
         <div
           className="drag-ghost"
@@ -896,32 +893,13 @@ export function Arena(p: Props) {
           +{reserveGain} Reserva
         </div>
       )}
-      {p.selected && !g.setup && !g.centerPending && (
-        <button className="arena-context" onClick={() => setDrawer(!drawer)}>
-          {card?.name ||
-            cards.get(
-              g.units.find((u) => u.id === p.selected?.unitId)?.cardId || "",
-            )?.name ||
-            "Unidade"}{" "}
-          <span>{drawer ? "×" : "Efeitos ↗"}</span>
-        </button>
-      )}
-      {drawer && !g.setup && (
-        <div className="arena-drawer">
-          <button
-            className="drawer-close"
-            onClick={() => setDrawer(false)}
-            aria-label="Fechar controles"
-          >
-            ×
-          </button>
-          <button className="drawer-aim" onClick={() => setDrawer(false)}>
-            Escolher alvos no tabuleiro ↗
-          </button>
-          {p.controls}
-        </div>
-      )}
-      {hover && !dragging && !drawer && (
+      {!g.setup &&
+        !g.centerPending &&
+        !discardOpen &&
+        !presenting &&
+        !g.searches?.length &&
+        p.controls}
+      {hover && !dragging && !discardOpen && (
         <div className="arena-hover">
           <b>
             {cards.get(hover.cardId)?.name ||
@@ -931,12 +909,11 @@ export function Arena(p: Props) {
                   ? `Maldição nível ${hover.level}`
                   : "Carta oculta")}
           </b>
-          <small>{movementReason(g, hover) || "Movimento disponível"}</small>
           <div className="hover-effects">
             {p.readyAbilities.includes(hover.id) && (
               <span>✦ Habilidade disponível</span>
             )}
-            {unitInsights(g, hover)
+            {unitEffects(g, hover)
               .slice(0, 3)
               .map((entry) => (
                 <span key={entry.label} title={entry.detail}>
@@ -944,11 +921,6 @@ export function Arena(p: Props) {
                 </span>
               ))}
           </div>
-          <small>
-            {hover.cardId !== "hidden"
-              ? "F ou botão direito para detalhes"
-              : ""}
-          </small>
         </div>
       )}
       {response &&
@@ -1009,9 +981,6 @@ export function Arena(p: Props) {
                 );
               })}
             </div>
-            {decisionPreview && !decisionPreview.combat && (
-              <ActionPreview preview={decisionPreview} />
-            )}
             <p>
               {g.passes === 1
                 ? "Um passe confirmado. O próximo passe resolve."
@@ -1021,7 +990,6 @@ export function Arena(p: Props) {
             </p>
           </aside>
         )}
-      <FieldEvent label={presenting} onVisible={setFieldVisible} />
       {!done && !presenting && !drawing && g.searches?.[0]?.seat === p.seat && (
         <SearchChoice
           key={g.searches[0].id}
@@ -1039,7 +1007,6 @@ export function Arena(p: Props) {
         waiting={
           !ready ||
           !!presenting ||
-          fieldVisible ||
           drawing ||
           settledRevision !== g.revision ||
           discardOpen ||

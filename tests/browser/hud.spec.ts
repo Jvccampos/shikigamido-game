@@ -73,14 +73,15 @@ test("mana, phase announcements and elemental reference remain readable during a
         g = await game(contexts[0].request, code);
       }
       expect(g.turn).toBe(3);
-      await expect(page.locator(".curse-notice")).toContainText(
-        "Uma maldição foi invocada!",
-        { timeout: 20000 },
+      expect(g.units.some((u) => u.kind === "curse")).toBe(true);
+      await expect(page.locator(".arena-accessibility button")).toHaveCount(
+        g.units.length,
       );
-      await page.screenshot({ path: ".sited/qa/curse-notice.png" });
+      await expect(page.locator(".field-event")).toHaveCount(0);
       await idle(page);
       await expect(page.locator(".notice-mana")).toContainText(
         "Mana máxima aumentou para 2 PE!",
+        { timeout: 20000 },
       );
       await page.screenshot({ path: ".sited/qa/mana-notice.png" });
       await expect(page.locator(".duelist-self .mana-total b")).toHaveText("2");

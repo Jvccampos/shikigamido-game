@@ -1,5 +1,6 @@
+import { KeywordText, RuleHint } from "./rule-hint.js";
 import type { Card } from "../shared/cards.js";
-import { unitInsights } from "../shared/unit-insight.js";
+import { unitEffects } from "../shared/unit-insight.js";
 import type { GameView } from "../shared/room.js";
 import type { UnitView } from "../shared/room.js";
 export type CardFocus = { card: Card | undefined; unit?: UnitView };
@@ -144,7 +145,18 @@ export function Focus({
       if (e.key === "Escape") onClose();
       if (e.key === "Tab") {
         e.preventDefault();
-        close.current?.focus();
+        const buttons = Array.from(
+          close.current
+            ?.closest(".card-focus")
+            ?.querySelectorAll<HTMLButtonElement>("button:not(:disabled)") ||
+            [],
+        );
+        const index = buttons.indexOf(
+          document.activeElement as HTMLButtonElement,
+        );
+        buttons[
+          (index + (e.shiftKey ? buttons.length - 1 : 1)) % buttons.length
+        ]?.focus();
       }
     };
     window.addEventListener("keydown", key);
@@ -184,25 +196,22 @@ export function Focus({
           {card?.kind === "curse" && (
             <p className="eyebrow">
               Maldição · Nível{" "}
-              {card.stats.cost <= 1 ? 1 : card.stats.cost <= 3 ? 2 : 3} · Fora
-              dos baralhos
+              {card.stats.cost <= 1 ? 1 : card.stats.cost <= 3 ? 2 : 3}
             </p>
           )}
           <Stats unit={unit} card={card} />
           <p>
-            {card?.effect_text ||
-              (unit?.kind === "crystal"
-                ? "Tem 3 de vida. Invoque monstros nos espaços conectados a este cristal."
-                : unit?.kind === "curse"
-                  ? "Avança automaticamente até o Omionji mais próximo. Ao ser destruída, retorna ao portal com um nível a mais, até nível 3."
-                  : "")}
+            <KeywordText
+              text={
+                card?.effect_text ||
+                (unit?.kind === "crystal"
+                  ? "Tem 3 de vida. Invoque monstros nos espaços conectados a este cristal."
+                  : unit?.kind === "curse"
+                    ? "Avança automaticamente até o Omionji mais próximo. Ao ser destruída, retorna ao portal com um nível a mais, até nível 3."
+                    : "")
+              }
+            />
           </p>
-          {unit && (
-            <p className="muted">
-              Atributos atuais. <span className="up">Verde ↑ acima</span> ·{" "}
-              <span className="down">vermelho ↓ abaixo</span> do valor original.
-            </p>
-          )}
           {(yokaiIds.has(card?.id || "") ||
             masculineIds.has(card?.id || "")) && (
             <p className="muted">
@@ -215,13 +224,15 @@ export function Focus({
                 .join(" · ")}
             </p>
           )}
-          {unit && game && (
-            <div className="unit-insights">
-              {unitInsights(game, unit).map((entry) => (
-                <p key={entry.label} className={entry.tone}>
-                  <b>{entry.label}</b>
-                  <span>{entry.detail}</span>
-                </p>
+          {unit && game && unitEffects(game, unit).length > 0 && (
+            <div className="active-effects" aria-label="Efeitos ativos">
+              {unitEffects(game, unit).map((entry) => (
+                <RuleHint
+                  key={entry.label}
+                  label={entry.label}
+                  detail={entry.detail}
+                  tone={entry.tone}
+                />
               ))}
             </div>
           )}

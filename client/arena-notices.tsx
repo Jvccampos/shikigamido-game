@@ -146,33 +146,3 @@ export function ArenaNotices({
     </div>
   );
 }
-
-export function FieldEvent({
-  label,
-  onVisible,
-}: {
-  label: string | null;
-  onVisible: (visible: boolean) => void;
-}) {
-  const [displayed, setDisplayed] = useState(label);
-  useEffect(() => onVisible(!!displayed), [displayed, onVisible]);
-  useEffect(() => () => onVisible(false), [onVisible]);
-  useEffect(() => {
-    if (label) {
-      setDisplayed(label);
-      return;
-    }
-    const timer = setTimeout(() => setDisplayed(null), exitMs);
-    return () => clearTimeout(timer);
-  }, [label]);
-  if (!displayed) return null;
-  return (
-    <div
-      className={`field-event ${displayed.startsWith("Uma maldição") ? "curse-notice" : ""} ${!label ? "leaving" : ""}`}
-      role="status"
-    >
-      <span className="event-pulse" />
-      {displayed}
-    </div>
-  );
-}

@@ -4,7 +4,7 @@ import { layout } from "../../shared/arena-layout.js";
 import { idle } from "./fixtures.js";
 import { mkdir } from "node:fs/promises";
 
-test("legal actions, movement previews and unit explanations stay usable across viewports", async ({
+test("legal actions and movement remain clear without redundant panels across viewports", async ({
   page,
 }) => {
   const errors: string[] = [];
@@ -49,6 +49,21 @@ test("legal actions, movement previews and unit explanations stay usable across 
     "Magia lenta · fase de Magia",
   );
   await expect(crystal).toHaveAttribute("title", "Magia lenta · fase de Magia");
+  await crystal.hover();
+  await expect(page.locator(".hand-action-hint")).toBeVisible();
+  await expect(async () => {
+    const hint = (await page.locator(".hand-action-hint").boundingBox())!;
+    for (const art of await page.locator(".fan-art").all()) {
+      const card = (await art.boundingBox())!;
+      expect(
+        hint.y + hint.height <= card.y ||
+          hint.x + hint.width <= card.x ||
+          hint.x >= card.x + card.width,
+      ).toBe(true);
+    }
+  }).toPass();
+  await mkdir(".sited/qa-tactics", { recursive: true });
+  await page.screenshot({ path: ".sited/qa-tactics/unavailable-card.png" });
   await page.keyboard.press("Escape");
   const snake = page.getByRole("button", {
     name: /^Selecionar Serpente de Gelo/,
@@ -57,18 +72,16 @@ test("legal actions, movement previews and unit explanations stay usable across 
   await snake.click({ position: { x: 14, y: 70 } });
   const point = layout(1440, 1000).point(0, 0);
   await page.mouse.move(point.x, point.y);
-  await expect(
-    page.getByRole("region", { name: "Prévia da ação" }),
-  ).toContainText("Invocar");
-  await expect(page.locator(".preview-cost")).toContainText("1 PE");
+  await expect(page.locator(".action-preview")).toHaveCount(0);
   await page.mouse.click(point.x, point.y);
   await idle(page);
   await page.mouse.move(point.x, point.y);
-  await expect(page.locator(".arena-hover")).toContainText("Invocado");
+  await expect(page.locator(".arena-hover")).toContainText("Serpente de Gelo");
+  await expect(page.locator(".arena-hover")).not.toContainText("Invocado");
   await page.keyboard.press("f");
   await expect(
     page.getByRole("dialog", { name: "Serpente de Gelo" }),
-  ).toContainText("Movimento liberado no próximo turno");
+  ).toBeVisible();
   await page.keyboard.press("Escape");
   await page.getByRole("button", { name: "Concluir invocações" }).click();
   await expect(
@@ -79,8 +92,7 @@ test("legal actions, movement previews and unit explanations stay usable across 
     to = layout(1440, 1000).point(0, 3);
   await page.mouse.click(from.x, from.y);
   await page.mouse.move(to.x, to.y);
-  await expect(page.locator(".preview-cost")).toContainText("Sem custo");
-  await expect(page.locator(".action-preview")).toContainText("Destino A4");
+  await expect(page.locator(".action-preview")).toHaveCount(0);
   await mkdir(".sited/qa-tactics", { recursive: true });
   for (const [width, height] of [
     [1440, 1000],
@@ -96,19 +108,8 @@ test("legal actions, movement previews and unit explanations stay usable across 
     await page.mouse.move(1, height / 2);
     const aim = layout(width, height).point(0, 3);
     await page.mouse.move(aim.x, aim.y);
-    await expect(page.locator(".action-preview")).toBeVisible();
+    await expect(page.locator(".action-preview")).toHaveCount(0);
     await page.screenshot({ path: `.sited/qa-tactics/preview-${width}.png` });
-    const preview = (await page
-        .locator(".arena-action-preview")
-        .boundingBox())!,
-      button = (await page.locator(".arena-pass").boundingBox())!;
-    expect(
-      preview.y + preview.height <= button.y ||
-        preview.x + preview.width <= button.x ||
-        button.x + button.width <= preview.x ||
-        button.y + button.height <= preview.y,
-      "Preview must not cover the phase action",
-    ).toBe(true);
     expect(
       await page.evaluate(
         () => document.documentElement.scrollWidth <= innerWidth,
@@ -200,7 +201,7 @@ test("spell outcomes, pending combat and status sources are readable in a contro
   const from = layout(1440, 1000).point(2, 2),
     to = layout(1440, 1000).point(3, 2);
   await page.mouse.click(from.x, from.y);
-  await expect(page.locator(".action-preview")).toContainText("Vida 1 → 2");
+  await expect(page.locator(".action-preview")).toHaveCount(0);
   await expect(
     page.getByRole("button", { name: "Conjurar · 1 PE" }),
   ).toBeEnabled();
@@ -294,9 +295,12 @@ test("spell outcomes, pending combat and status sources are readable in a contro
   send();
   await idle(page);
   await page.mouse.move(to.x, to.y);
-  await expect(page.locator(".arena-hover")).toContainText("Sem velocidade");
+  await expect(page.locator(".arena-hover")).toContainText("Velocidade −1");
   await page.keyboard.press("f");
-  await expect(page.getByRole("dialog", { name: "Lobo Branco" })).toContainText(
+  await page
+    .getByRole("button", { name: "Velocidade −1", exact: true })
+    .hover();
+  await expect(page.getByRole("tooltip")).toContainText(
     "Redução permanente causada por Serpente de Gelo",
   );
   await page.screenshot({ path: ".sited/qa-tactics/unit-source.png" });
