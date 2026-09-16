@@ -18,10 +18,10 @@
 }
 /* The compact view shares the action rail's flow, outside the board. */
 .turn-timeline-bar {
-  align-self: flex-end;
-  width: 154px;
-  margin-right: 8px;
-  padding: 0;
+  container: turn-timeline / inline-size;
+  align-self: stretch;
+  width: 100%;
+  padding: 0 12px;
   color: #c2cbb7;
   text-shadow: 0 1px 5px #07120d;
 }
@@ -316,6 +316,64 @@
   border-radius: 6px;
   padding: 10px 14px;
   font-size: 12px;
+}
+@media (min-width: 1201px) and (min-height: 701px) {
+  .turn-timeline-bar {
+    padding: 0 18px;
+  }
+}
+@container turn-timeline (min-width: 240px) {
+  .timeline-bar-heading {
+    padding-bottom: 12px;
+  }
+  .timeline-bar-heading > span {
+    font-size: 11px;
+  }
+  .timeline-bar-heading > button {
+    font-size: 19px;
+  }
+  .turn-timeline-bar .timeline-stop {
+    height: 48px;
+    gap: 10px;
+  }
+  .turn-timeline-bar .timeline-node {
+    flex-basis: 64px;
+    width: 64px;
+    height: 46px;
+  }
+  .turn-timeline-bar .timeline-turn-label {
+    top: 8px;
+    min-width: 32px;
+    font-size: 14px;
+    gap: 2px;
+  }
+  .turn-timeline-bar .timeline-turn-label small {
+    font-size: 9px;
+  }
+  .turn-timeline-bar .timeline-node:not([aria-current]) .timeline-turn-label {
+    top: 15px;
+  }
+  .turn-timeline-bar .timeline-stop::before {
+    left: 51px;
+  }
+  .turn-timeline-bar .timeline-dot {
+    top: 19px;
+    left: 47px;
+    width: 9px;
+    height: 9px;
+  }
+  .turn-timeline-bar .timeline-markers {
+    gap: 5px;
+  }
+  .turn-timeline-bar .timeline-icon {
+    flex-basis: 30px;
+    width: 30px;
+    height: 32px;
+  }
+  .turn-timeline-bar .timeline-icon svg {
+    width: 22px;
+    height: 22px;
+  }
 }
 @media (max-width: 759px), (max-height: 559px) {
   .turn-timeline-bar {

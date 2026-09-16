@@ -39,6 +39,7 @@ test("compact timeline stays outside the board and explains each icon without a 
   for (const [width, height] of [
     [1920, 1080],
     [1440, 1000],
+    [1440, 1200],
     [1024, 768],
     [390, 844],
     [844, 390],
@@ -47,12 +48,35 @@ test("compact timeline stays outside the board and explains each icon without a 
     if (width >= 760 && height >= 560) {
       await expect(bar).toBeVisible();
       const box = (await bar.boundingBox())!;
-      expect(box.width).toBeLessThanOrEqual(168);
-      expect(box.height).toBeLessThanOrEqual(220);
+      expect(box.width).toBeLessThanOrEqual(320);
+      expect(box.height).toBeLessThanOrEqual(280);
       expect(box.x).toBeGreaterThan(layout(width, height).point(7, 3).x + 20);
       expect(box.x + box.width).toBeLessThanOrEqual(width);
       const pass = (await page.locator(".arena-pass").boundingBox())!;
+      expect(box.x).toBeCloseTo(pass.x, 0);
+      expect(box.width).toBeCloseTo(pass.width, 0);
       expect(box.y + box.height).toBeLessThanOrEqual(pass.y);
+      const lastIcon = (await bar
+        .locator(".timeline-stop")
+        .nth(2)
+        .locator(".timeline-icon")
+        .last()
+        .boundingBox())!;
+      expect(lastIcon.x + lastIcon.width).toBeLessThanOrEqual(
+        box.x + box.width,
+      );
+      if (box.width >= 276) {
+        expect(
+          await bar
+            .locator(".timeline-turn-label")
+            .first()
+            .evaluate((el) => parseFloat(getComputedStyle(el).fontSize)),
+        ).toBeGreaterThanOrEqual(14);
+        expect(
+          (await bar.locator(".timeline-icon svg").first().boundingBox())!
+            .width,
+        ).toBeGreaterThanOrEqual(22);
+      }
       expect(
         await bar.evaluate((el) => getComputedStyle(el).backgroundColor),
       ).toBe("rgba(0, 0, 0, 0)");
