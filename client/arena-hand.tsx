@@ -204,7 +204,9 @@ export function ArenaHand(p: Props) {
                   <b
                     className={`fan-cost ${(plan?.cost ?? c.stats.cost) > me.pe + me.permanentPe ? "unaffordable" : ""}`}
                   >
-                    {plan?.cost ?? c.stats.cost}
+                    {c.kind === "spell" && c.stats.variable
+                      ? "X"
+                      : plan?.cost ?? c.stats.cost}
                   </b>
                 </button>
                 <button

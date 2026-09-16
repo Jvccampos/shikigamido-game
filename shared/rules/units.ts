@@ -90,7 +90,7 @@ export function destroy(g: Game, u: Unit, killer?: Unit) {
 
     return;
   }
-  if (u.kind === "crystal" || u.kind === "wall") return;
+  if (u.kind === "crystal" || u.kind === "wall" || u.kind === "rift") return;
   const cho = g.units.find(
     (o) => o.cardId === "omionji-vazio" && o.owner === u.owner,
   );

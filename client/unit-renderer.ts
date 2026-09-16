@@ -66,6 +66,23 @@ export function drawUnit(
     view.on("pointerout", () => getState().onHover(null));
     return;
   }
+  if (u.kind === "rift") {
+    frame.clear();
+    const portal = new Graphics()
+      .ellipse(0, 0, w * 0.27, h * 0.37)
+      .fill({ color: 0x26104a, alpha: 0.95 })
+      .stroke({ color: 0xd39cff, width: 3, alpha: 0.95 })
+      .ellipse(0, 0, w * 0.17, h * 0.27)
+      .stroke({ color: 0x6f3bc1, width: 2, alpha: 0.9 });
+    view.addChild(portal);
+    const icon = label("裂", Math.max(14, size * 0.28), 0xe6c5ff);
+    icon.anchor.set(0.5);
+    view.addChild(icon);
+    view.on("pointertap", () => getState().onCell(u.x, u.y, u));
+    view.on("pointerover", () => getState().onHover(u));
+    view.on("pointerout", () => getState().onHover(null));
+    return;
+  }
   const art = new Container();
   view.addChild(art);
   const mask = new Graphics()

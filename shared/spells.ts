@@ -2,6 +2,7 @@ export type SpellSpec = {
   target:
     | "none"
     | "unit"
+    | "enemyUnit"
     | "ally"
     | "windAlly"
     | "omionjiFire"
@@ -15,7 +16,8 @@ export type SpellSpec = {
     | "discardCat"
     | "discardVoid"
     | "combat"
-    | "redirect";
+    | "redirect"
+    | "rift";
   hint: string;
   choice?: "keyword" | "combatRole";
   amount?: "energy" | "redirectDamage";
@@ -57,11 +59,15 @@ add(
     "mamoru-n-5-prisao-do-inferno",
     "mamoru-n-7-dispersar",
     "shikigami-de-agua-vibora-bolha",
-    "kogekido-n-42-obliterar",
     "kogeki-n-2-dualidade",
   ],
   "unit",
   "Solte sobre um monstro. Omionjis e maldições não são monstros.",
+);
+add(
+  ["kogekido-n-42-obliterar"],
+  "enemyUnit",
+  "Cause X de dano a um monstro inimigo.",
 );
 add(
   [
@@ -100,6 +106,11 @@ add(
   "Escolha um espaço vazio e quanto PE extra investir.",
 );
 add(
+  ["fenda-do-vazio"],
+  "rift",
+  "Escolha um espaço vazio adjacente a uma carta sua.",
+);
+add(
   ["magia-de-sangue"],
   "lake",
   "Escolha uma casa com uma carta de Água ou adjacente a ela.",
@@ -127,6 +138,7 @@ add(
 entries["gishiki-n-9-mimetismo"].choice = "keyword";
 entries["mamorudo-n-17-defesa-da-fagulha"].choice = "combatRole";
 entries["mamoru-n-9-wonder-wall"].amount = "energy";
+entries["kogekido-n-42-obliterar"].amount = "energy";
 entries["mamoru-n-5-transferencia-espiritual"].amount = "redirectDamage";
 export const spellSpecs = entries;
 export const transferableKeywords = [
@@ -154,10 +166,20 @@ export function targetFlow(target?: SpellSpec["target"]) {
     unitThenCell: target === "move",
     needsUnit:
       !!target &&
-      !["none", "cell", "lake", "wind", "discardVoid", "discardCat"].includes(
-        target,
-      ),
-    cellOnly: target === "cell" || target === "lake" || target === "wind",
+      ![
+        "none",
+        "cell",
+        "lake",
+        "wind",
+        "rift",
+        "discardVoid",
+        "discardCat",
+      ].includes(target),
+      cellOnly:
+        target === "cell" ||
+        target === "lake" ||
+        target === "wind" ||
+        target === "rift",
     submitOnDrop:
       !!target &&
       [
@@ -166,6 +188,7 @@ export function targetFlow(target?: SpellSpec["target"]) {
         "windAlly",
         "omionjiFire",
         "combat",
+        "enemyUnit",
         "lake",
         "none",
       ].includes(target),

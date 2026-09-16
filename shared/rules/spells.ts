@@ -53,6 +53,7 @@ export function spellError(
   if (
     [
       "unit",
+      "enemyUnit",
       "ally",
       "windAlly",
       "twoAllies",
@@ -72,6 +73,8 @@ export function spellError(
     t?.owner !== seat
   )
     return "Escolha um monstro seu.";
+  if (spec.target === "enemyUnit" && (!t || t.owner === seat))
+    return "Escolha um monstro inimigo.";
   if (spec.target === "windAlly" && t && !typesOf(t).includes("vento"))
     return "O monstro deve ser de Vento.";
   if (
@@ -87,11 +90,11 @@ export function spellError(
   if (["twoAllies", "redirect"].includes(spec.target) && t2?.owner !== seat)
     return "O segundo monstro deve ser seu.";
   if (
-    ["cell", "lake", "wind", "move", "discardCat"].includes(spec.target) &&
+    ["cell", "lake", "wind", "rift", "move", "discardCat"].includes(spec.target) &&
     !cell
   )
     return "Escolha uma casa válida.";
-  if (["cell", "move", "discardCat"].includes(spec.target) && at(g, c.x!, c.y!))
+  if (["cell", "rift", "move", "discardCat"].includes(spec.target) && at(g, c.x!, c.y!))
     return "A casa deve estar vazia.";
   if (spec.target === "move" && t && !connected(g, t.x, t.y, c.x!, c.y!))
     return "Escolha uma casa conectada ao monstro.";
@@ -104,6 +107,11 @@ export function spellError(
     )
   )
     return "O lago deve ficar junto de uma carta de Água.";
+  if (
+    spec.target === "rift" &&
+    !g.units.some((u) => u.owner === seat && adjacent(u, { x: c.x!, y: c.y! }))
+  )
+    return "A Fenda deve ficar adjacente a uma carta sua.";
   if (
     spec.target === "wind" &&
     !(
@@ -138,6 +146,10 @@ export function spellError(
     return "Essa magia exige um monstro no combate anunciado.";
   if (id === "mamoru-n-24-conexao" && t && t2 && !adjacent(t, t2))
     return "O aliado deve ser adjacente.";
+  if (id === "kogekido-n-42-obliterar" && (c.extraPe || 0) < 1)
+    return "Escolha X maior que zero.";
+  if (id === "mamoru-n-9-wonder-wall" && (c.extraPe || 0) < 1)
+    return "Escolha X maior que zero.";
   if (id === "mamoru-n-12-negacao" && !g.stack.length)
     return "Negação precisa responder a outra magia.";
   if (
@@ -199,6 +211,7 @@ export function resolveSpell(g: Game, seat: Seat, command: SpellResolution) {
   if (
     [
       "unit",
+      "enemyUnit",
       "ally",
       "windAlly",
       "omionjiFire",
@@ -274,7 +287,7 @@ export function resolveSpell(g: Game, seat: Seat, command: SpellResolution) {
       break;
     }
     case "kogekido-n-42-obliterar":
-      destroy(g, t!);
+      takeDamage(g, t!, extraPe);
       break;
     case "gishiki-n-20-tributo":
       if (t?.owner === seat) {
@@ -370,8 +383,8 @@ export function resolveSpell(g: Game, seat: Seat, command: SpellResolution) {
           owner: seat,
           x: x!,
           y: y!,
-          hp: 2 + extraPe,
-          maxHp: 2 + extraPe,
+          hp: extraPe,
+          maxHp: extraPe,
           attack: 0,
           speed: 0,
           summonedTurn: g.turn,
@@ -379,6 +392,30 @@ export function resolveSpell(g: Game, seat: Seat, command: SpellResolution) {
           statuses: {},
         });
       break;
+    case "fenda-do-vazio": {
+      const rift = {
+        id: uid(g),
+        cardId: "fenda-do-vazio",
+        owner: seat,
+        x: x!,
+        y: y!,
+        hp: 1,
+        maxHp: 1,
+        attack: 0,
+        speed: 0,
+        summonedTurn: g.turn,
+        kind: "rift" as const,
+        statuses: {},
+      };
+      g.units.push(rift);
+      const other = g.units.find(
+        (u) => u.kind === "rift" && u.id !== rift.id,
+      );
+      if (other) (g.edges ??= []).push([rift.x, rift.y, other.x, other.y]);
+      const i = p.library.indexOf("fenda-do-vazio");
+      if (i >= 0) p.hand.push(p.library.splice(i, 1)[0]);
+      break;
+    }
     case "magia-de-sangue":
       g.terrain.push({ kind: "lake", x: x!, y: y!, owner: seat });
       break;

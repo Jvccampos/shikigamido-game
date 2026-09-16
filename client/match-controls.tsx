@@ -118,7 +118,9 @@ export function MatchControls({ view }: { view: SelectionControls }) {
               {spellSpec?.amount && (
                 <label>
                   {spellSpec?.amount === "energy"
-                    ? "PE extra"
+                    ? selectedCard?.stats.variable
+                      ? "X (PE)"
+                      : "PE extra"
                     : "Dano transferido"}
                   <input
                     type="number"

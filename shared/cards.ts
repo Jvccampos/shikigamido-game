@@ -18,6 +18,7 @@ export type Card = {
       stats: {
         cost: number;
         speed: "slow" | "fast" | "instant";
+        variable?: boolean;
         attack?: never;
         health?: never;
       };

@@ -88,7 +88,7 @@ export type Unit = {
   attack: number;
   speed: number;
   summonedTurn: number;
-  kind: "unit" | "omionji" | "curse" | "crystal" | "wall";
+  kind: "unit" | "omionji" | "curse" | "crystal" | "wall" | "rift";
   level?: number;
   statuses?: UnitStatuses;
   captured?: Unit[];

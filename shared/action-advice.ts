@@ -25,6 +25,8 @@ export const pieceName = (u?: UnitView) =>
       ? "Cristal"
       : u?.kind === "wall"
         ? "Parede"
+        : u?.kind === "rift"
+          ? "Fenda do Vazio"
         : "Carta oculta");
 
 export function actionCost(g: GameView, seat: number, c: CommandDraft) {
@@ -71,29 +73,31 @@ function* spellCandidates(
   if (!spec) return;
   const units = g.units;
   const target = spec.target;
+  const candidateBase =
+    spec.amount === "energy" ? { ...base, extraPe: 1 } : base;
   if (target === "none") {
-    yield base;
+    yield candidateBase;
     return;
   }
   if (target === "discardVoid" || target === "discardCat") {
     for (const choice of new Set(g.players[seat].discard)) {
-      if (target === "discardVoid") yield { ...base, choice };
+      if (target === "discardVoid") yield { ...candidateBase, choice };
       else
         for (const cell of summonCells(g, seat))
-          yield { ...base, choice, ...cell };
+          yield { ...candidateBase, choice, ...cell };
     }
     return;
   }
-  if (["cell", "lake", "wind"].includes(target)) {
+  if (["cell", "lake", "wind", "rift"].includes(target)) {
     for (const cell of boardCells) {
-      if (target !== "wind") yield { ...base, ...cell };
+      if (target !== "wind") yield { ...candidateBase, ...cell };
       else
         for (const end of boardCells.filter(
           (v) =>
             (v.x === cell.x || v.y === cell.y) &&
             connected(g, cell.x, cell.y, v.x, v.y),
         ))
-          yield { ...base, ...cell, x2: end.x, y2: end.y };
+          yield { ...candidateBase, ...cell, x2: end.x, y2: end.y };
     }
     return;
   }
@@ -103,7 +107,7 @@ function* spellCandidates(
       for (const cell of boardCells.filter((v) =>
         connected(g, u.x, u.y, v.x, v.y),
       ))
-        yield { ...base, targetId: u.id, ...cell };
+        yield { ...candidateBase, targetId: u.id, ...cell };
     } else if (["twoAllies", "twoUnits", "redirect"].includes(target)) {
       if (u.kind !== "unit") continue;
       for (const other of units.filter(
@@ -111,10 +115,15 @@ function* spellCandidates(
       )) {
         if (spec.choice === "keyword") {
           for (const choice of transferableKeywords.filter((k) => kw(u, k)))
-            yield { ...base, targetId: u.id, targetId2: other.id, choice };
-        } else yield { ...base, targetId: u.id, targetId2: other.id };
+            yield {
+              ...candidateBase,
+              targetId: u.id,
+              targetId2: other.id,
+              choice,
+            };
+        } else yield { ...candidateBase, targetId: u.id, targetId2: other.id };
       }
-    } else yield { ...base, targetId: u.id };
+    } else yield { ...candidateBase, targetId: u.id };
   }
 }
 export function* abilityCandidates(

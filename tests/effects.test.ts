@@ -4,14 +4,15 @@ import assert from "node:assert/strict";
 import { kw, makeUnit } from "../shared/rules/core.js";
 import { freshGame } from "../shared/game.js";
 import { starterDeck } from "../shared/practice.js";
-import { resolveSpell } from "../shared/rules/spells.js";
+import { resolveSpell, spellError } from "../shared/rules/spells.js";
+import { connected } from "../shared/rules/board.js";
 import { startTurn } from "../shared/rules/turns.js";
 import { publicGame } from "../shared/visibility.js";
 import { unitEffects } from "../shared/unit-insight.js";
 import type { UnitStatuses, Game } from "../shared/model.js";
 
-const game = () =>
-  freshGame("a", "b", starterDeck("agua"), starterDeck("fogo"), 42);
+const game = (element = "agua") =>
+  freshGame("a", "b", starterDeck(element), starterDeck("fogo"), 42);
 
 test("saved keyword fields preserve additive and maximum stacking", () => {
   const statuses: UnitStatuses = JSON.parse(
@@ -120,4 +121,86 @@ test("Mimetismo transfers a granted keyword and restores it when the effect expi
   expireEffects(receiver.statuses!, 3);
   assert.equal(kw(donor, "Range"), 2);
   assert.equal(kw(receiver, "Range"), 0);
+});
+
+test("variable damage and wall spells use the chosen X", () => {
+  const g = game();
+  const enemy = makeUnit(g, 1, "lobo-branco", 2, 2);
+  enemy.hp = 7;
+  g.units.push(enemy);
+  resolveSpell(g, 0, {
+    cardId: "kogekido-n-42-obliterar",
+    targetId: enemy.id,
+    extraPe: 3,
+  });
+  assert.equal(enemy.hp, 4);
+
+  resolveSpell(g, 0, {
+    cardId: "mamoru-n-9-wonder-wall",
+    x: 4,
+    y: 4,
+    extraPe: 5,
+  });
+  const wall = g.units.find((u) => u.kind === "wall");
+  assert.equal(wall?.hp, 5);
+  assert.equal(wall?.maxHp, 5);
+});
+
+test("Void Rift returns another copy and connects distant spaces", () => {
+  const g = game("vazio");
+  const anchorA = makeUnit(g, 0, "lobo-branco", 1, 1);
+  const anchorB = makeUnit(g, 0, "lobo-branco", 4, 4);
+  g.units.push(anchorA, anchorB);
+  g.players[0].library = ["fenda-do-vazio", "taodu-katana"];
+
+  assert.equal(
+    spellError(g, 0, {
+      type: "cast",
+      cardId: "fenda-do-vazio",
+      x: 2,
+      y: 2,
+      extraPe: 0,
+    }),
+    undefined,
+  );
+  resolveSpell(g, 0, { cardId: "fenda-do-vazio", x: 2, y: 2 });
+  const first = g.units.find((u) => u.kind === "rift");
+  assert(first);
+  assert(g.players[0].hand.includes("fenda-do-vazio"));
+
+  resolveSpell(g, 0, { cardId: "fenda-do-vazio", x: 5, y: 5 });
+  const rifts = g.units.filter((u) => u.kind === "rift");
+  assert.equal(rifts.length, 2);
+  assert(connected(g, rifts[0].x, rifts[0].y, rifts[1].x, rifts[1].y));
+});
+
+test("Transferência Espiritual can redirect to any allied monster", () => {
+  const g = game();
+  const inCombat = makeUnit(g, 0, "lobo-branco", 1, 1);
+  const distantAlly = makeUnit(g, 0, "lobo-branco", 6, 6);
+  g.units.push(inCombat, distantAlly);
+  g.combat = {
+    attackerId: inCombat.id,
+    defenderId: "defender",
+    x: 2,
+    y: 2,
+    returnPriority: 0,
+  };
+  assert.equal(
+    spellError(g, 0, {
+      type: "cast",
+      cardId: "mamoru-n-5-transferencia-espiritual",
+      targetId: inCombat.id,
+      targetId2: distantAlly.id,
+      extraPe: 1,
+    }),
+    undefined,
+  );
+  resolveSpell(g, 0, {
+    cardId: "mamoru-n-5-transferencia-espiritual",
+    targetId: inCombat.id,
+    targetId2: distantAlly.id,
+    extraPe: 1,
+  });
+  assert.equal(inCombat.statuses?.redirect, distantAlly.id);
 });
