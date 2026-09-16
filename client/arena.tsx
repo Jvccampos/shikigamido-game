@@ -6,6 +6,7 @@ import type { Selection } from "./match-interaction.js";
 import { OpeningHand, DiscardChoice } from "./choices.js";
 import { Journal } from "./journal.js";
 import { ElementsGuide } from "./elements-guide.js";
+import { TurnTimeline } from "./turn-timeline.js";
 import { DuelContext } from "./duel-context.js";
 import { layout } from "../shared/arena-layout.js";
 import { CombatForecast } from "./combat-preview.js";
@@ -87,6 +88,7 @@ export function Arena(p: Props) {
   const [hoverId, setHoverId] = useState<string | null>(null),
     [menu, setMenu] = useState(false),
     [elementsOpen, setElementsOpen] = useState(false),
+    [timelineOpen, setTimelineOpen] = useState(false),
     [discardOpen, setDiscardOpen] = useState(false),
     [log, setLog] = useState(false),
     [sound, setSound] = useState(
@@ -141,10 +143,16 @@ export function Arena(p: Props) {
   useEffect(() => {
     p.presentation.onOverlays({
       discard: discardOpen,
-      elements: elementsOpen,
+      elements: elementsOpen || timelineOpen,
       menu,
     });
-  }, [discardOpen, elementsOpen, menu, p.presentation.onOverlays]);
+  }, [
+    discardOpen,
+    elementsOpen,
+    timelineOpen,
+    menu,
+    p.presentation.onOverlays,
+  ]);
   const opening = !!g.setup && !!me && !me.mulligan && !me.ready;
   function state() {
     const v = latest.current;
@@ -317,6 +325,7 @@ export function Arena(p: Props) {
       style={{
         "--action-rail-left": `${railLeft}px`,
         "--action-rail-width": `${railWidth}px`,
+        "--timeline-width": `${Math.min(200, layout(screen.width, screen.height).point(-0.85, 3).x - 52)}px`,
       }}
     >
       <div className="arena-environment" />
@@ -358,6 +367,14 @@ export function Arena(p: Props) {
             <path d="m12 2 10 7-4 12H6L2 9 12 2Zm0 0 6 19L2 9h20L6 21 12 2Z" />
           </svg>
           <small>Elementos</small>
+        </button>
+        <button
+          className="timeline-toggle"
+          aria-label="Linha do tempo de turnos"
+          disabled={done}
+          onClick={() => setTimelineOpen(true)}
+        >
+          Turnos
         </button>
         <button
           className="history-toggle"
@@ -695,6 +712,13 @@ export function Arena(p: Props) {
         leaving={p.presentation.noticeLeaving}
       />
       {elementsOpen && <ElementsGuide onClose={() => setElementsOpen(false)} />}
+      <TurnTimeline
+        game={g}
+        names={p.names}
+        open={timelineOpen}
+        onOpen={() => setTimelineOpen(true)}
+        onClose={() => setTimelineOpen(false)}
+      />
       {menu && (
         <div className="arena-menu-panel">
           <h2>Shikigamido</h2>

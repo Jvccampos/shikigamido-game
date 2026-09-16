@@ -90,11 +90,16 @@ export function spellError(
   if (["twoAllies", "redirect"].includes(spec.target) && t2?.owner !== seat)
     return "O segundo monstro deve ser seu.";
   if (
-    ["cell", "lake", "wind", "rift", "move", "discardCat"].includes(spec.target) &&
+    ["cell", "lake", "wind", "rift", "move", "discardCat"].includes(
+      spec.target,
+    ) &&
     !cell
   )
     return "Escolha uma casa válida.";
-  if (["cell", "rift", "move", "discardCat"].includes(spec.target) && at(g, c.x!, c.y!))
+  if (
+    ["cell", "rift", "move", "discardCat"].includes(spec.target) &&
+    at(g, c.x!, c.y!)
+  )
     return "A casa deve estar vazia.";
   if (spec.target === "move" && t && !connected(g, t.x, t.y, c.x!, c.y!))
     return "Escolha uma casa conectada ao monstro.";
@@ -408,9 +413,7 @@ export function resolveSpell(g: Game, seat: Seat, command: SpellResolution) {
         statuses: {},
       };
       g.units.push(rift);
-      const other = g.units.find(
-        (u) => u.kind === "rift" && u.id !== rift.id,
-      );
+      const other = g.units.find((u) => u.kind === "rift" && u.id !== rift.id);
       if (other) (g.edges ??= []).push([rift.x, rift.y, other.x, other.y]);
       const i = p.library.indexOf("fenda-do-vazio");
       if (i >= 0) p.hand.push(p.library.splice(i, 1)[0]);

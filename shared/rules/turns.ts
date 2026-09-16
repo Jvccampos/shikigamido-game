@@ -6,6 +6,7 @@ import { event, draw, alive, typesOf, adjacent } from "./core.js";
 import { fight } from "./combat.js";
 import { takeDamage, heal, summonEffects } from "./units.js";
 import { spawnCurse } from "./curses.js";
+import { CENTER_OPEN_TURN, maxManaAtTurn } from "../turn-schedule.js";
 
 function moveCurses(g: Game) {
   const distance = (sx: number, sy: number, tx: number, ty: number) => {
@@ -71,7 +72,7 @@ export function startTurn(g: Game) {
   g.moveCounts = [0, 0];
   g.actions = 0;
   for (const p of g.players) {
-    p.maxPe = 1 + Math.floor((g.turn - 1) / 2);
+    p.maxPe = maxManaAtTurn(g.turn);
     p.pe = p.maxPe;
     draw(p);
   }
@@ -143,13 +144,13 @@ export function startTurn(g: Game) {
       for (const other of [...g.units].filter((x) => adjacent(u, x)))
         takeDamage(g, other, 2, u);
   }
-  if (g.turn === 3) {
+  if (g.turn === CENTER_OPEN_TURN) {
     for (const owner of [0, 1] as Seat[]) {
       spawnCurse(g, owner, 1);
     }
     g.centerPending = true;
     g.centerChoices = {};
-  } else if (g.turn > 3) moveCurses(g);
+  } else if (g.turn > CENTER_OPEN_TURN) moveCurses(g);
 }
 
 export function endMovement(g: Game, seat: Seat) {

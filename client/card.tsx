@@ -31,7 +31,7 @@ export function unitName(u: UnitView | null | undefined) {
             ? "Parede de terra"
             : u?.kind === "rift"
               ? "Fenda do Vazio"
-            : "Carta oculta")
+              : "Carta oculta")
   );
 }
 function Stat({
@@ -62,7 +62,8 @@ function Stat({
 function Stats({ unit, card }: { unit?: UnitView; card: Card | undefined }) {
   return card?.kind === "spell" ? (
     <span className="spell-speed">
-      {SPEED[card.stats.speed]} · {card.stats.variable ? "X" : card.stats.cost} PE
+      {SPEED[card.stats.speed]} · {card.stats.variable ? "X" : card.stats.cost}{" "}
+      PE
     </span>
   ) : (
     <div className="stats">

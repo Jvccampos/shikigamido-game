@@ -206,7 +206,7 @@ export function ArenaHand(p: Props) {
                   >
                     {c.kind === "spell" && c.stats.variable
                       ? "X"
-                      : plan?.cost ?? c.stats.cost}
+                      : (plan?.cost ?? c.stats.cost)}
                   </b>
                 </button>
                 <button

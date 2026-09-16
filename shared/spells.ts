@@ -175,11 +175,11 @@ export function targetFlow(target?: SpellSpec["target"]) {
         "discardVoid",
         "discardCat",
       ].includes(target),
-      cellOnly:
-        target === "cell" ||
-        target === "lake" ||
-        target === "wind" ||
-        target === "rift",
+    cellOnly:
+      target === "cell" ||
+      target === "lake" ||
+      target === "wind" ||
+      target === "rift",
     submitOnDrop:
       !!target &&
       [

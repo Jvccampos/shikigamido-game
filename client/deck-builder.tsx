@@ -275,8 +275,8 @@ export function DeckBuilder({
               <div className="catalog-meta">
                 <b>{c.name}</b>
                 <small>
-                  {c.kind === "spell" && c.stats.variable ? "X" : c.stats.cost} PE ·{" "}
-                  {c.kind === "spell" ? SPEED[c.stats.speed] : "Monstro"}
+                  {c.kind === "spell" && c.stats.variable ? "X" : c.stats.cost}{" "}
+                  PE · {c.kind === "spell" ? SPEED[c.stats.speed] : "Monstro"}
                 </small>
               </div>
               <button

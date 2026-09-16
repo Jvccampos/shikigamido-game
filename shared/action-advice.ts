@@ -27,7 +27,7 @@ export const pieceName = (u?: UnitView) =>
         ? "Parede"
         : u?.kind === "rift"
           ? "Fenda do Vazio"
-        : "Carta oculta");
+          : "Carta oculta");
 
 export function actionCost(g: GameView, seat: number, c: CommandDraft) {
   const p = g.players[seat];
