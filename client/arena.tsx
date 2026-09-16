@@ -325,7 +325,6 @@ export function Arena(p: Props) {
       style={{
         "--action-rail-left": `${railLeft}px`,
         "--action-rail-width": `${railWidth}px`,
-        "--timeline-width": `${Math.min(200, layout(screen.width, screen.height).point(-0.85, 3).x - 52)}px`,
       }}
     >
       <div className="arena-environment" />

@@ -56,7 +56,8 @@ test("opening, card reading and arena controls fit desktop and mobile", async ({
   ]) {
     await page.setViewportSize({ width, height });
     const card = page.locator(".fan-card").nth(2);
-    await card.locator(".fan-art").hover();
+    // Cards overlap in the fan; hover the exposed edge.
+    await card.locator(".fan-art").hover({ position: { x: 14, y: 70 } });
     await expect(card.locator(".fan-zoom")).toBeVisible();
     await card.locator(".fan-zoom").click();
     await expect(page.locator(".card-focus")).toBeVisible();

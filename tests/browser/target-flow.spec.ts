@@ -41,7 +41,7 @@ test("multi-step spells reset old choices and submit the selected units or cells
   await page.getByRole("button", { name: /^Selecionar Ventos/ }).click();
   await expect(page.locator(".action-target")).toHaveCount(0);
   await expect(
-    page.getByRole("button", { name: "Conjurar · 4 PE" }),
+    page.getByRole("button", { name: "Conjurar · 2 PE" }),
   ).toBeDisabled();
   await page.getByRole("button", { name: /^Selecionar Gishiki/ }).click();
   await expect(
@@ -68,9 +68,9 @@ test("multi-step spells reset old choices and submit the selected units or cells
   await page.getByRole("button", { name: /^Selecionar Ventos/ }).click();
   await click(3, 4);
   await expect(
-    page.getByRole("button", { name: "Conjurar · 4 PE" }),
+    page.getByRole("button", { name: "Conjurar · 2 PE" }),
   ).toBeDisabled();
   await click(4, 4);
-  await page.getByRole("button", { name: "Conjurar · 4 PE" }).click();
+  await page.getByRole("button", { name: "Conjurar · 2 PE" }).click();
   expect(g.stack[0]).toMatchObject({ x: 3, y: 4, x2: 4, y2: 4 });
 });

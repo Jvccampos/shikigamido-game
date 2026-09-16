@@ -1,6 +1,212 @@
-import { useEffect, useRef, useState } from "preact/hooks";
+import { useEffect, useId, useRef, useState } from "preact/hooks";
 import type { GameView } from "../shared/room.js";
-import { turnTimeline } from "../shared/turn-timeline.js";
+import {
+  turnTimeline,
+  type TimelineTurn,
+  type TurnEvent,
+} from "../shared/turn-timeline.js";
+
+const kinds: Record<TurnEvent["kind"], { label: string; symbol: string }> = {
+  mana: { label: "Mana", symbol: "+" },
+  curse: { label: "Maldições", symbol: "◆" },
+  center: { label: "Centro", symbol: "◎" },
+  effect: { label: "Magias", symbol: "✦" },
+};
+
+function TimelineTrack({
+  turns,
+  current,
+  setup,
+}: {
+  turns: TimelineTurn[];
+  current: number;
+  setup?: boolean;
+}) {
+  const id = useId();
+  const group = useRef<HTMLDivElement>(null);
+  const scroller = useRef<HTMLOListElement>(null);
+  const [active, setActive] = useState<{
+    turn: number;
+    left: number;
+    top: number;
+    maxHeight: number;
+  } | null>(null);
+  const pinned = useRef(false);
+  const leaveTimer = useRef<ReturnType<typeof setTimeout>>();
+  const selected = turns.find((t) => t.turn === active?.turn);
+  const dismiss = () => {
+    clearTimeout(leaveTimer.current);
+    pinned.current = false;
+    setActive(null);
+  };
+  useEffect(() => {
+    dismiss();
+    if (scroller.current) scroller.current.scrollLeft = 0;
+  }, [current]);
+  useEffect(() => {
+    const outside = (event: PointerEvent) => {
+      if (!group.current?.contains(event.target as Node)) dismiss();
+    };
+    document.addEventListener("pointerdown", outside);
+    window.addEventListener("resize", dismiss);
+    return () => {
+      clearTimeout(leaveTimer.current);
+      document.removeEventListener("pointerdown", outside);
+      window.removeEventListener("resize", dismiss);
+    };
+  }, []);
+  function show(turn: number, button: HTMLButtonElement) {
+    clearTimeout(leaveTimer.current);
+    const rect = button.getBoundingClientRect();
+    const below = innerHeight - rect.bottom - 20;
+    const above = rect.top - 24;
+    const useBelow = below >= 120 || below >= above;
+    setActive({
+      turn,
+      left: Math.max(
+        12,
+        Math.min(
+          innerWidth - Math.min(340, innerWidth - 24) - 12,
+          rect.left + rect.width / 2 - 170,
+        ),
+      ),
+      top: useBelow
+        ? rect.bottom + 8
+        : Math.max(12, rect.top - Math.min(380, above) - 8),
+      maxHeight: Math.min(380, useBelow ? below : above),
+    });
+  }
+  return (
+    <div
+      ref={group}
+      className="timeline-track-group"
+      onMouseEnter={() => clearTimeout(leaveTimer.current)}
+      onMouseLeave={() => {
+        if (!pinned.current)
+          leaveTimer.current = setTimeout(() => setActive(null), 160);
+      }}
+      onKeyDown={(event) => {
+        if (event.key === "Escape" && active) {
+          event.preventDefault();
+          event.stopPropagation();
+          dismiss();
+        }
+      }}
+    >
+      <ol
+        ref={scroller}
+        className="timeline-track"
+        aria-label="Turnos da partida"
+        onScroll={dismiss}
+      >
+        {turns.map(({ turn, events }) => {
+          const markers = (Object.keys(kinds) as TurnEvent["kind"][]).filter(
+            (kind) => events.some((event) => event.kind === kind),
+          );
+          return (
+            <li key={turn} className="timeline-stop">
+              <button
+                className="timeline-node"
+                aria-current={turn === current ? "step" : undefined}
+                aria-label={`Turno ${turn}${turn === current ? ", atual" : ""}. ${markers.length ? markers.map((kind) => kinds[kind].label).join(", ") : "Renovação de energia e compra"}`}
+                aria-describedby={active?.turn === turn ? id : undefined}
+                onMouseEnter={(event) => {
+                  pinned.current = false;
+                  show(turn, event.currentTarget);
+                }}
+                onFocus={(event) => show(turn, event.currentTarget)}
+                onBlur={() => {
+                  if (!pinned.current) setActive(null);
+                }}
+                onClick={(event) => {
+                  pinned.current = true;
+                  show(turn, event.currentTarget);
+                }}
+              >
+                <span className="timeline-turn-label">
+                  T{turn}
+                  {turn === current && <small>Atual</small>}
+                </span>
+                <span className="timeline-dot" aria-hidden="true" />
+                <span className="timeline-markers" aria-hidden="true">
+                  {markers.map((kind) => (
+                    <i key={kind} className={`timeline-${kind}`}>
+                      {kinds[kind].symbol}
+                    </i>
+                  ))}
+                </span>
+              </button>
+            </li>
+          );
+        })}
+      </ol>
+      {selected && active && (
+        <div
+          id={id}
+          role="tooltip"
+          className="timeline-tooltip"
+          style={{
+            left: active.left,
+            top: active.top,
+            maxHeight: active.maxHeight,
+          }}
+        >
+          <div className="timeline-tooltip-heading">
+            <b>
+              Turno {selected.turn}
+              {selected.turn === current ? " · Atual" : ""}
+            </b>
+            <span>{selected.mana} PE máximos</span>
+          </div>
+          {(["start", "end"] as const).map((timing) => {
+            const events = selected.events.filter(
+              (event) => event.timing === timing,
+            );
+            if (!events.length && timing === "end") return null;
+            return (
+              <div key={timing}>
+                <h4>
+                  {timing === "end"
+                    ? "No fim do turno"
+                    : selected.turn === current && !setup
+                      ? "Início deste turno · já ocorreu"
+                      : "No início do turno"}
+                </h4>
+                {!events.length && (
+                  <p>Renovação de energia e compra de carta.</p>
+                )}
+                {events.map((event, i) => (
+                  <div
+                    key={i}
+                    className={`timeline-event timeline-${event.kind}`}
+                  >
+                    <strong>{event.label}</strong>
+                    <p>{event.detail}</p>
+                  </div>
+                ))}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Legend() {
+  return (
+    <div className="timeline-legend" aria-label="Cores dos eventos">
+      {Object.entries(kinds).map(([kind, { label, symbol }]) => (
+        <span key={kind}>
+          <i className={`timeline-${kind}`} aria-hidden="true">
+            {symbol}
+          </i>
+          {label}
+        </span>
+      ))}
+    </div>
+  );
+}
 
 export function TurnTimeline({
   game,
@@ -24,36 +230,15 @@ export function TurnTimeline({
   if (!turns.length) return null;
   return (
     <>
-      <aside className="turn-timeline-preview" aria-label="Próximos turnos">
-        <button onClick={onOpen} aria-label="Abrir linha do tempo de turnos">
-          <span>Linha do tempo</span>
-          <span aria-hidden="true">↗</span>
-        </button>
-        <ol>
-          {turns.slice(0, 4).map(({ turn, mana, events }) => (
-            <li
-              key={turn}
-              aria-current={turn === game.turn ? "step" : undefined}
-            >
-              <b>T{turn}</b>
-              <div>
-                <strong>
-                  {turn === game.turn ? "Agora" : `${mana} PE máximos`}
-                </strong>
-                {events.length ? (
-                  events
-                    .slice(0, 3)
-                    .map((event, i) => <span key={i}>{event.label}</span>)
-                ) : (
-                  <span>Renovação de energia e compra</span>
-                )}
-                {events.length > 3 && (
-                  <small>+{events.length - 3} eventos</small>
-                )}
-              </div>
-            </li>
-          ))}
-        </ol>
+      <aside className="turn-timeline-bar" aria-label="Linha do tempo">
+        <div className="timeline-bar-heading">
+          <span>TURNOS</span>
+          <Legend />
+          <button onClick={onOpen} aria-label="Ampliar linha do tempo">
+            ↗
+          </button>
+        </div>
+        <TimelineTrack turns={turns} current={game.turn} setup={game.setup} />
       </aside>
       {open && (
         <dialog
@@ -65,7 +250,7 @@ export function TurnTimeline({
             if (event.target === dialog.current) dialog.current?.close();
           }}
         >
-          <header>
+          <div className="timeline-dialog-heading">
             <div>
               <small>
                 TURNO {game.turn} · {game.setup ? "PREPARAÇÃO" : "EM CURSO"}
@@ -79,73 +264,22 @@ export function TurnTimeline({
             >
               ×
             </button>
-          </header>
+          </div>
           <p>
-            A energia renova e cada jogador compra uma carta no início de cada
-            turno. A mana máxima aumenta a cada dois turnos.
+            Passe o mouse, selecione pelo teclado ou toque em um turno para ver
+            os eventos.
           </p>
-          <p className="timeline-note">
-            Efeitos previstos enquanto as cartas permanecerem em campo. Novas
-            jogadas podem mudar os prazos.
-          </p>
-          <ol className="timeline-turns">
-            {turns.map(({ turn, mana, events }) => (
-              <li
-                key={turn}
-                className="timeline-turn"
-                aria-current={turn === game.turn ? "step" : undefined}
-              >
-                <div className="timeline-turn-heading">
-                  <h3>Turno {turn}</h3>
-                  {turn === game.turn && (
-                    <span>{game.setup ? "Preparação" : "Atual"}</span>
-                  )}
-                  <b>{mana} PE máximos</b>
-                </div>
-                <ol className="timeline-events">
-                  {(["start", "end"] as const).map((timing) => {
-                    const entries = events.filter((e) => e.timing === timing);
-                    if (!entries.length && timing === "end") return null;
-                    return (
-                      <li key={timing}>
-                        <h4>
-                          {timing === "start"
-                            ? turn === game.turn && !game.setup
-                              ? "Início deste turno · já ocorreu"
-                              : "No início do turno"
-                            : "No fim do turno"}
-                        </h4>
-                        {entries.length ? (
-                          entries.map((entry, i) => (
-                            <div
-                              key={i}
-                              className={`timeline-event timeline-${entry.kind}`}
-                            >
-                              <strong>{entry.label}</strong>
-                              <p>{entry.detail}</p>
-                            </div>
-                          ))
-                        ) : (
-                          <p className="timeline-empty">
-                            Renovação de energia e compra de carta.
-                          </p>
-                        )}
-                      </li>
-                    );
-                  })}
-                </ol>
-              </li>
-            ))}
-          </ol>
-          <footer>
-            <p>
-              Após o turno 3, as maldições avançam no início dos turnos. Outras
-              podem surgir conforme os combates.
-            </p>
+          <Legend />
+          <TimelineTrack turns={turns} current={game.turn} setup={game.setup} />
+          <div className="timeline-dialog-footer">
+            <span>
+              A energia renova e cada jogador compra uma carta no início de cada
+              turno. Os efeitos previstos podem mudar com novas jogadas.
+            </span>
             <button onClick={() => setCount(count + 6)}>
               Ver mais 6 turnos
             </button>
-          </footer>
+          </div>
         </dialog>
       )}
     </>
