@@ -696,6 +696,13 @@ export function Arena(p: Props) {
               </p>
             </aside>
           )}
+        <TurnTimeline
+          game={g}
+          names={p.names}
+          open={timelineOpen}
+          onOpen={() => setTimelineOpen(true)}
+          onClose={() => setTimelineOpen(false)}
+        />
       </div>
       {!done && !presenting && !drawing && g.searches?.[0]?.seat === p.seat && (
         <SearchChoice
@@ -711,13 +718,6 @@ export function Arena(p: Props) {
         leaving={p.presentation.noticeLeaving}
       />
       {elementsOpen && <ElementsGuide onClose={() => setElementsOpen(false)} />}
-      <TurnTimeline
-        game={g}
-        names={p.names}
-        open={timelineOpen}
-        onOpen={() => setTimelineOpen(true)}
-        onClose={() => setTimelineOpen(false)}
-      />
       {menu && (
         <div className="arena-menu-panel">
           <h2>Shikigamido</h2>

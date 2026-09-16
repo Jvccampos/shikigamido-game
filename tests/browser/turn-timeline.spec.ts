@@ -8,13 +8,15 @@ import { startTurn } from "../../shared/rules/turns.js";
 import { layout } from "../../shared/arena-layout.js";
 import { idle, scenario } from "./fixtures.js";
 
-test("horizontal timeline exposes colored milestones by hover, focus and touch and follows the current turn", async ({
+test("compact timeline stays outside the board and explains each icon without a permanent legend", async ({
   page,
 }) => {
   const g = freshGame("a", "b", starterDeck("agua"), starterDeck("fogo"), 42);
   g.setup = false;
   g.phase = 3;
   g.phaseOwner = g.priority = 0;
+  g.players[0].hand = ["kogeki-n-1-fireball"];
+  g.players[0].pe = 20;
   const u = makeUnit(g, 0, "lobo-branco", 2, 2);
   g.units.push(u);
   resolveSpell(g, 0, { cardId: "kogeki-n-1-fireball", targetId: u.id });
@@ -22,6 +24,7 @@ test("horizontal timeline exposes colored milestones by hover, focus and touch a
   await page.goto("/");
   await page.getByRole("button", { name: /TURNS/ }).click();
   await idle(page);
+  await page.keyboard.press("Escape");
   const bar = page.getByRole("complementary", {
     name: "Linha do tempo",
     exact: true,
@@ -34,74 +37,91 @@ test("horizontal timeline exposes colored milestones by hover, focus and touch a
   const tooltip = page.getByRole("tooltip");
   await mkdir(".sited/qa-timeline", { recursive: true });
   for (const [width, height] of [
+    [1920, 1080],
     [1440, 1000],
     [1024, 768],
     [390, 844],
     [844, 390],
   ]) {
     await page.setViewportSize({ width, height });
-    await expect(bar).toBeVisible();
-    await expect(bar.locator('[aria-current="step"]')).toContainText("T1");
-    const box = (await bar.boundingBox())!;
-    expect(box.x).toBeGreaterThanOrEqual(0);
-    expect(box.x + box.width).toBeLessThanOrEqual(width);
-    const topRow = layout(width, height).point(3, 0);
-    if (width > height && height < 560)
-      expect(box.x + box.width).toBeLessThan(
-        layout(width, height).point(0, 0).x - 8,
-      );
-    else expect(box.y + box.height).toBeLessThanOrEqual(topRow.y - 8);
-    const third = bar.getByRole("button", { name: /^Turno 3\./ });
-    await third.scrollIntoViewIfNeeded();
-    const firstBox = (await bar
-      .locator(".timeline-node")
-      .first()
-      .boundingBox())!;
-    const thirdBox = (await third.boundingBox())!;
-    expect(thirdBox.x).toBeGreaterThan(firstBox.x);
-    expect(thirdBox.y).toBe(firstBox.y);
-    expect(await third.locator(".timeline-markers i").count()).toBe(4);
-    const colors = await third
-      .locator(".timeline-markers i")
-      .evaluateAll((nodes) => nodes.map((n) => getComputedStyle(n).color));
-    expect(new Set(colors).size).toBe(4);
-    await page.screenshot({
-      path: `.sited/qa-timeline/horizontal-${width}.png`,
+    if (width >= 760 && height >= 560) {
+      await expect(bar).toBeVisible();
+      const box = (await bar.boundingBox())!;
+      expect(box.width).toBeLessThanOrEqual(168);
+      expect(box.height).toBeLessThanOrEqual(220);
+      expect(box.x).toBeGreaterThan(layout(width, height).point(7, 3).x + 20);
+      expect(box.x + box.width).toBeLessThanOrEqual(width);
+      const pass = (await page.locator(".arena-pass").boundingBox())!;
+      expect(box.y + box.height).toBeLessThanOrEqual(pass.y);
+      expect(
+        await bar.evaluate((el) => getComputedStyle(el).backgroundColor),
+      ).toBe("rgba(0, 0, 0, 0)");
+      expect(
+        await bar.evaluate((el) => getComputedStyle(el).borderTopWidth),
+      ).toBe("0px");
+      await expect(bar.locator(".timeline-legend")).toHaveCount(0);
+      await expect(bar.locator('[aria-current="step"]')).toContainText("T1");
+      const first = (await bar
+        .locator(".timeline-node")
+        .first()
+        .boundingBox())!;
+      const third = (await bar
+        .getByRole("button", { name: /^Turno 3\./ })
+        .boundingBox())!;
+      expect(third.y).toBeGreaterThan(first.y);
+      expect(third.x).toBe(first.x);
+      for (const [kind, text] of [
+        ["Mana", "Mana máxima +1"],
+        ["Maldições", "Surgem 2 maldições"],
+        ["Centro", "Abertura do centro"],
+        ["Magias", "Fireball termina"],
+      ]) {
+        await bar
+          .getByRole("button", { name: `${kind} no turno 3`, exact: true })
+          .hover();
+        await expect(tooltip).toContainText(text);
+        if (kind === "Mana")
+          await expect(tooltip).not.toContainText("Surgem 2 maldições");
+        if (kind === "Magias")
+          await expect(tooltip).toContainText("Vigora até o fim do turno 2");
+      }
+      await tooltip.hover();
+      await expect(tooltip).toBeVisible();
+      await page.screenshot({
+        path: `.sited/qa-timeline/compact-hover-${width}.png`,
+      });
+      await page.mouse.move(1, 1);
+      await expect(tooltip).toHaveCount(0);
+    } else {
+      await expect(bar).toBeHidden();
+    }
+    await page.screenshot({ path: `.sited/qa-timeline/compact-${width}.png` });
+    await toggle.click();
+    await expect(dialog).toBeVisible();
+    const mana = dialog.getByRole("button", {
+      name: "Mana no turno 3",
+      exact: true,
     });
-    if (width === 390) await third.click();
-    else await third.hover();
-    await expect(tooltip).toBeVisible();
-    for (const label of [
-      "Mana máxima +1 · 2 PE",
-      "Abertura do centro",
-      "Surgem 2 maldições",
-      "Fireball termina",
-      "Vigora até o fim do turno 2",
-    ])
-      await expect(tooltip).toContainText(label);
+    if (width === 390) await mana.click();
+    else await mana.focus();
+    await expect(tooltip).toContainText("Mana máxima +1");
     const tip = (await tooltip.boundingBox())!;
     expect(tip.x).toBeGreaterThanOrEqual(0);
     expect(tip.x + tip.width).toBeLessThanOrEqual(width);
     expect(tip.y + tip.height).toBeLessThanOrEqual(height);
-    await page.screenshot({ path: `.sited/qa-timeline/hover-${width}.png` });
-    if (width === 1440) {
-      await tooltip.hover();
-      await expect(tooltip).toBeVisible();
-      await page.mouse.move(1, 1);
-      await expect(tooltip).toHaveCount(0);
-    }
-    await toggle.click();
-    await expect(dialog).toBeVisible();
-    const dialogThird = dialog.getByRole("button", { name: /^Turno 3\./ });
-    await dialogThird.focus();
-    await expect(dialog.getByRole("tooltip")).toContainText("Fireball termina");
     await page.keyboard.press("Escape");
-    await expect(dialog.getByRole("tooltip")).toHaveCount(0);
+    await expect(tooltip).toHaveCount(0);
     await expect(dialog).toBeVisible();
     await page.keyboard.press("Escape");
     await expect(dialog).toHaveCount(0);
     await expect(toggle).toBeFocused();
   }
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.getByRole("button", { name: /^Selecionar Kogeki/ }).click();
+  const dock = (await page.locator(".action-dock").boundingBox())!;
+  const compact = (await bar.boundingBox())!;
+  expect(compact.y).toBeGreaterThanOrEqual(dock.y + dock.height);
+  await page.getByRole("button", { name: "Cancelar seleção" }).click();
   await toggle.click();
   await dialog.getByRole("button", { name: "Ver mais 6 turnos" }).click();
   await dialog
@@ -116,9 +136,7 @@ test("horizontal timeline exposes colored milestones by hover, focus and touch a
   send();
   await expect(dialog.locator('[aria-current="step"]')).toContainText("T3");
   await dialog.locator('[aria-current="step"]').focus();
-  await expect(dialog.getByRole("tooltip")).not.toContainText(
-    "Fireball termina",
-  );
-  await expect(dialog.getByRole("tooltip")).toContainText("já ocorreu");
+  await expect(tooltip).not.toContainText("Fireball termina");
+  await expect(tooltip).toContainText("já ocorreu");
   await expect(dialog.locator('[aria-current="step"]')).toBeInViewport();
 });
