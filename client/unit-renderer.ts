@@ -134,56 +134,49 @@ export function drawUnit(
     icon.y = -5;
     art.addChild(icon);
   }
-  const marker = !getState().game.setup && movementMarker(getState().game, u);
+  // Movement readiness only matters while its owner is moving pieces.
+  const game = getState().game;
+  const marker =
+    !game.setup &&
+    game.phase === 2 &&
+    game.phaseOwner === u.owner &&
+    movementMarker(game, u);
   if (marker && marker.state !== "ready") {
-    // Dim only the illustration. Stats, targeting, inspection and usable
-    // abilities remain bright and interactive even after movement is spent.
+    // Soften only the illustration so the piece stays recognizable. Stats,
+    // targeting, inspection and usable abilities remain bright.
     view.addChild(
       new Graphics()
         .roundRect(-w / 2, -h / 2, w, h - 21, 5)
-        .fill({ color: 0x03100f, alpha: 0.66 }),
+        .fill({ color: 0x03100f, alpha: 0.42 }),
     );
-    const radius = Math.max(4, Math.min(w * 0.17, (h - 26) * 0.24));
-    const cy = -h * 0.13;
+    const radius = Math.max(5, Math.min(10, w * 0.14));
+    const cx = -w * 0.4,
+      cy = -h * 0.48;
     const emblem = new Graphics()
-      .circle(0, cy, radius)
-      .fill({ color: 0x0b211b, alpha: 0.94 })
+      .circle(cx, cy, radius)
+      .fill({ color: 0x0b211b, alpha: 0.96 })
       .stroke({ color: marker.color, width: 1.5 });
     if (marker.state === "waiting") {
       emblem
-        .moveTo(0, cy - radius * 0.6)
-        .lineTo(0, cy)
-        .lineTo(radius * 0.45, cy + radius * 0.22)
-        .stroke({ color: marker.color, width: 1.8 });
+        .moveTo(cx, cy - radius * 0.6)
+        .lineTo(cx, cy)
+        .lineTo(cx + radius * 0.45, cy + radius * 0.22)
+        .stroke({ color: marker.color, width: 1.6 });
     } else if (marker.state === "moved") {
       emblem
-        .moveTo(-radius * 0.5, cy)
-        .lineTo(-radius * 0.1, cy + radius * 0.4)
-        .lineTo(radius * 0.55, cy - radius * 0.4)
-        .stroke({ color: marker.color, width: 2 });
+        .moveTo(cx - radius * 0.5, cy)
+        .lineTo(cx - radius * 0.1, cy + radius * 0.4)
+        .lineTo(cx + radius * 0.55, cy - radius * 0.4)
+        .stroke({ color: marker.color, width: 1.8 });
     } else {
       emblem
-        .moveTo(-radius * 0.38, cy - radius * 0.38)
-        .lineTo(radius * 0.38, cy + radius * 0.38)
-        .moveTo(radius * 0.38, cy - radius * 0.38)
-        .lineTo(-radius * 0.38, cy + radius * 0.38)
-        .stroke({ color: marker.color, width: 2 });
+        .moveTo(cx - radius * 0.38, cy - radius * 0.38)
+        .lineTo(cx + radius * 0.38, cy + radius * 0.38)
+        .moveTo(cx + radius * 0.38, cy - radius * 0.38)
+        .lineTo(cx - radius * 0.38, cy + radius * 0.38)
+        .stroke({ color: marker.color, width: 1.8 });
     }
     view.addChild(emblem);
-    if (w >= 50) {
-      const caption = label(
-        marker.state === "waiting"
-          ? "AGUARDE"
-          : marker.state === "moved"
-            ? "MOVEU"
-            : "BLOQUEADO",
-        Math.min(10, w * 0.135),
-        marker.color,
-      );
-      caption.anchor.set(0.5);
-      caption.position.set(0, h / 2 - 27);
-      view.addChild(caption);
-    }
   }
   const strip = new Graphics()
     .roundRect(-w / 2, h / 2 - 21, w, 24, 3)
@@ -271,14 +264,6 @@ export function drawUnit(
     view.addChild(badge);
   }
   const targetIndex = getState().targets.indexOf(u.id);
-  if (targetIndex >= 0) {
-    const badge = new Graphics().circle(-w * 0.5, -h * 0.5, 10).fill(0xe6ce83);
-    view.addChild(badge);
-    const number = label(String(targetIndex + 1), 12, 0x17261a);
-    number.anchor.set(0.5);
-    number.position.set(-w * 0.5, -h * 0.5);
-    view.addChild(number);
-  }
   if (marker && marker.state === "ready") {
     const badge = label(
       marker.symbol,
@@ -295,17 +280,39 @@ export function drawUnit(
       badge,
     );
   }
-  if (
-    getState().validTargets?.includes(u.id) ||
-    getState().affected?.includes(u.id)
-  ) {
-    view.addChild(
-      new Graphics().roundRect(-w / 2 - 4, -h / 2 - 4, w + 8, h + 8, 6).stroke({
-        color: getState().affected?.includes(u.id) ? 0xf2c983 : 0x8ee8cc,
-        width: 3,
-        alpha: 0.9,
-      }),
+  const chosen = targetIndex >= 0,
+    valid = getState().validTargets?.includes(u.id),
+    affected = getState().affected?.includes(u.id);
+  if (chosen || valid || affected) {
+    // Chosen targets are gold; still-selectable targets glow in the seat's
+    // teal; pieces a preview would change get a warm outline.
+    const color = chosen ? 0xf3d27f : affected ? 0xf2c983 : 0x8ee8cc;
+    view.addChildAt(
+      new Graphics()
+        .roundRect(-w / 2 - 7, -h / 2 - 7, w + 14, h + 14, 10)
+        .fill({ color, alpha: chosen ? 0.28 : 0.16 }),
+      1,
     );
+    view.addChild(
+      new Graphics()
+        .roundRect(-w / 2 - 4, -h / 2 - 4, w + 8, h + 8, 7)
+        .stroke({ color, width: chosen ? 3.5 : 2.5, alpha: 0.95 }),
+    );
+  }
+  if (chosen) {
+    // Number the pick in the top-right, clear of every other badge.
+    const x = w / 2 + 6,
+      y = -h / 2 - 6;
+    view.addChild(
+      new Graphics()
+        .circle(x, y, 11)
+        .fill(0xf3d27f)
+        .stroke({ color: 0x17261a, width: 2 }),
+    );
+    const number = label(String(targetIndex + 1), 13, 0x17261a);
+    number.anchor.set(0.5);
+    number.position.set(x, y);
+    view.addChild(number);
   }
   if (getState().readyAbilities?.includes(u.id)) {
     const ability = new Container();

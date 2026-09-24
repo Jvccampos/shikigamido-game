@@ -1,147 +1,79 @@
 /* Decision information stays in the rails; board paths remain unobstructed. */
-.context-origin {
-  color: #b7cbbd;
-  font-size: 12px;
-  letter-spacing: 0.9px;
-}
-.duel-context h1 {
-  margin: 7px 0;
-}
-.context-phases {
-  display: flex;
-  justify-content: center;
-  gap: 18px;
-  font-size: 13px;
-}
-.context-phases span {
-  color: #9daf9f;
-  padding-bottom: 5px;
-  border-bottom: 2px solid transparent;
-}
-.context-phases .current {
-  color: #f1da95;
-  border-color: #d7b961;
-}
-.context-detail {
-  font:
-    15px/1.4 Arial,
-    sans-serif;
-  color: #d7e6d7;
-  margin: 8px auto 4px;
-  max-width: 550px;
-}
-.context-next {
-  font:
-    12px/1.4 Arial,
-    sans-serif;
-  color: #a9c2b4;
-  display: block;
-}
-.is-response .context-detail {
-  color: #ffd2aa;
-}
-.action-requirement.unavailable {
-  color: #f2b4a2;
-}
-.arena-stack-panel {
-  overflow-y: auto;
-}
 .action-requirement {
-  font: 13px/1.5 Arial !important;
+  font: 14px/1.5 var(--font-ui) !important;
   padding: 9px 10px;
   background: #071d19;
   border-radius: 4px;
   color: #cbdccc;
 }
-.action-requirement.available {
-  color: #a6e5c5;
+.action-requirement.unavailable {
+  color: var(--warn);
 }
+.action-requirement.available {
+  color: var(--ok);
+}
+
+/* Playable cards glow and sit higher; the rest recede until inspected. */
 .fan-card.playable .fan-art {
+  border-color: #cdebc9;
   box-shadow:
-    0 0 0 1px #a8e6ce99,
-    0 0 12px #5abe9d44;
+    0 0 0 1px #b9f0d6cc,
+    0 0 16px #6fe0b577,
+    0 0 34px #6fe0b533;
+}
+.fan-card.playable {
+  --lift-extra: -12px;
+}
+.fan-card.not-playable .fan-art {
+  border-color: #56655a;
 }
 .fan-card.not-playable .fan-art > img {
-  filter: saturate(0.55) brightness(0.72);
+  filter: grayscale(0.55) brightness(0.55);
 }
 .fan-card.not-playable:hover .fan-art > img,
 .fan-card.not-playable.selected .fan-art > img {
   filter: saturate(0.85) brightness(0.92);
 }
-.card-focus .focus-text {
-  max-height: 82dvh;
-  overflow-y: auto;
-  padding-right: 10px;
+.fan-card.selected .fan-art {
+  border-color: #f3dd98;
+  box-shadow:
+    0 0 0 2px #f3dd98,
+    0 0 26px #e8d38aaa;
 }
+
+/* Piece hover: state chips under the name. */
 .hover-effects {
   display: flex;
   gap: 6px;
   justify-content: center;
-  margin-top: 5px;
+  margin-top: 7px;
   flex-wrap: wrap;
 }
+.hover-effects:empty {
+  display: none;
+}
 .hover-effects span {
-  font: 11px Arial;
-  padding: 3px 6px;
-  background: #142d26ed;
-  border: 1px solid #81a49366;
-  border-radius: 4px;
+  padding: 3px 8px;
+  border-radius: 3px;
+  background: #ffffff0a;
+  border: 1px solid #81a49355;
+  color: var(--mist);
+  font:
+    500 12px var(--font-ui),
+    sans-serif;
+  letter-spacing: 0.03em;
 }
-@media (max-width: 1100px) {
-  .context-phases {
-    gap: 12px;
-  }
-  .context-detail {
-    font-size: 14px;
-  }
+.hover-effects .hover-marker.ready {
+  color: var(--ok);
+  border-color: #9fe3bd55;
 }
-@media (max-width: 759px) {
-  .context-origin {
-    font-size: 10px;
-  }
-  .context-phases {
-    font-size: 10px;
-    gap: 10px;
-  }
-  .context-detail {
-    font-size: 12px;
-    max-width: 310px;
-  }
-  .context-next {
-    font-size: 10px;
-  }
+.hover-effects .hover-marker.waiting {
+  color: #efd9a0;
+  border-color: #efd9a055;
 }
-@media (max-height: 559px) and (orientation: landscape) {
-  .context-origin {
-    font-size: 9px;
-  }
-  .duel-context h1 {
-    font-size: 20px;
-    margin: 3px;
-  }
-  .context-phases {
-    font-size: 10px;
-    gap: 10px;
-  }
-  .context-detail {
-    font-size: 11px;
-    margin: 3px 0;
-  }
-  .context-next {
-    display: none;
-  }
-}
-@media (max-width: 759px) and (orientation: portrait) {
-  .arena-stack-panel {
-    top: 174px;
-    width: 174px;
-    max-height: 116px;
-  }
-  .stack-heading > span {
-    display: block;
-    font-size: 10px;
-    letter-spacing: 0;
-  }
+.hover-effects .hover-marker.blocked {
+  color: var(--warn);
+  border-color: #f0a29a66;
 }
 .piece-state-key {
   margin-top: 12px;
@@ -149,7 +81,7 @@
   border: 1px solid #91b2a144;
   border-radius: 5px;
   color: #bdd6c6;
-  font: 13px/1.5 Arial;
+  font: 14px/1.5 var(--font-ui);
 }
 .piece-state-key summary {
   cursor: pointer;

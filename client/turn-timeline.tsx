@@ -15,7 +15,7 @@ const kinds: Record<TurnEvent["kind"], { label: string }> = {
   effect: { label: "Magias" },
 };
 
-function EventIcon({ kind }: { kind: TurnEvent["kind"] }) {
+export function EventIcon({ kind }: { kind: TurnEvent["kind"] }) {
   const paths = {
     mana: "M12 3C10 7 5 11 5 15a7 7 0 0 0 14 0C19 11 14 7 12 3ZM9 15c0 2 1 3 3 3",
     curse: "m5 8-1-5 5 3h6l5-3-1 5v6l-4 6H9l-4-6V8Zm3 3 2 2m6-2-2 2m-4 3h4",
@@ -67,9 +67,15 @@ function TimelineTrack({
     pinned.current = false;
     setActive(null);
   };
+  // Resetting the scroll position fires a scroll event a frame later; it must
+  // not dismiss a tooltip opened in the meantime.
+  const resetting = useRef(false);
   useEffect(() => {
     dismiss();
-    if (scroller.current) scroller.current.scrollLeft = 0;
+    if (scroller.current?.scrollLeft) {
+      resetting.current = true;
+      scroller.current.scrollLeft = 0;
+    }
   }, [current]);
   useEffect(() => {
     const outside = (event: PointerEvent) => {
@@ -122,11 +128,16 @@ function TimelineTrack({
         : Math.max(12, rect.top - Math.min(380, above) - 8),
       maxHeight: Math.min(380, useBelow ? below : above),
     });
-    if (compact && rect.left >= 360)
+    // The compact track sits at the screen edge: open its details toward
+    // the board so they never run off-screen.
+    if (compact)
       setActive({
         turn,
         kind,
-        left: rect.left - 350,
+        left:
+          rect.left < innerWidth / 2
+            ? Math.min(rect.right + 14, innerWidth - 352)
+            : Math.max(12, rect.left - 350),
         top: Math.max(12, Math.min(rect.top - 8, innerHeight - 332)),
         maxHeight: Math.min(320, innerHeight - 24),
       });
@@ -178,7 +189,13 @@ function TimelineTrack({
         ref={scroller}
         className="timeline-track"
         aria-label="Turnos da partida"
-        onScroll={dismiss}
+        onScroll={() => {
+          if (resetting.current) {
+            resetting.current = false;
+            return;
+          }
+          dismiss();
+        }}
       >
         {turns.map(({ turn, events }) => {
           const markers = (Object.keys(kinds) as TurnEvent["kind"][]).filter(
@@ -303,17 +320,26 @@ export function TurnTimeline({
   return (
     <>
       {!game.setup && (
-        <aside className="turn-timeline-bar" aria-label="Linha do tempo">
-          <div className="timeline-bar-heading">
-            <span>TURNOS</span>
+        <aside className="turn-track" aria-label="Linha do tempo">
+          <div className="turn-track-heading">
+            <span>Próximos turnos</span>
             <button onClick={onOpen} aria-label="Ampliar linha do tempo">
-              ↗
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.6"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M14 4h6v6M20 4l-7 7M10 20H4v-6M4 20l7-7" />
+              </svg>
             </button>
           </div>
           <TimelineTrack
             turns={turns.slice(0, 5)}
             current={game.turn}
-            setup={game.setup}
             compact
           />
         </aside>

@@ -29,7 +29,7 @@ test("opponent combat stays visible while a selected defender is aimed elsewhere
   ).toBeUndefined();
   g.revision = (g.revision || 0) + 1;
   send();
-  await expect(page.locator(".duel-context h1")).toHaveText("Sua resposta");
+  await expect(page.locator(".duel-context h1")).toContainText("Sua resposta");
   for (const point of [layout(1440, 1000).point(4, 4), { x: 120, y: 400 }, d]) {
     await page.mouse.move(point.x, point.y);
     await expect(

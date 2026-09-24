@@ -3,7 +3,7 @@ import { freshGame, apply } from "../../shared/game.js";
 import { makeUnit } from "../../shared/rules/core.js";
 import { starterDeck } from "../../shared/practice.js";
 import { layout } from "../../shared/arena-layout.js";
-import { idle, scenario } from "./fixtures.js";
+import { idle, scenario, settled } from "./fixtures.js";
 import { mkdir } from "node:fs/promises";
 
 test("spell targeting rejects Omionjis and exposes granted effects on the affected card", async ({
@@ -32,9 +32,8 @@ test("spell targeting rejects Omionjis and exposes granted effects on the affect
   const om = layout(1920, 1080).point(0, 2),
     target = layout(1920, 1080).point(2, 2);
   await page.mouse.click(om.x, om.y);
-  await expect(
-    page.getByText("Alvo 1: Takaya Isen", { exact: true }),
-  ).toHaveCount(0);
+  // Omionjis are not monsters, so clicking one picks nothing.
+  await expect(page.locator(".spell-step.done")).toHaveCount(0);
   expect(g.players[0].hand).toHaveLength(2);
   await page.mouse.click(target.x, target.y);
   await mkdir(".sited/qa-spell-ux", { recursive: true });
@@ -64,6 +63,8 @@ test("spell targeting rejects Omionjis and exposes granted effects on the affect
   await page.getByRole("button", { name: "Conjurar · 2 PE" }).click();
   await expect(page.locator(".stack-card")).toHaveCount(1);
   await page.getByRole("button", { name: /^Selecionar Mamoru/ }).click();
+  await settled(page.locator(".action-dock"));
+  await settled(page.locator(".arena-stack-panel"));
   const selectedBox = (await page.locator(".action-dock").boundingBox())!;
   const stackBox = (await page.locator(".arena-stack-panel").boundingBox())!;
   const passBox = (await page.locator(".arena-pass").boundingBox())!;
@@ -135,6 +136,9 @@ test("spell targeting rejects Omionjis and exposes granted effects on the affect
   await expect(unavailable).toHaveAttribute("aria-label", /Faltam/);
   await page.mouse.move(100, 600);
   await unavailable.hover();
+  // The hint rides on the hovered card; once the lift settles it must hold still.
+  await expect(page.locator(".hand-action-hint")).toBeVisible();
+  await settled(page.locator(".fan-card", { has: unavailable }));
   const positions = await page.evaluate(async () => {
     const positions: { x: number; y: number }[] = [];
     const start = performance.now();
@@ -154,9 +158,8 @@ test("spell targeting rejects Omionjis and exposes granted effects on the affect
     Math.max(...positions.map((p) => p.y)) -
       Math.min(...positions.map((p) => p.y)),
   ).toBeLessThan(1);
-  expect(Math.min(...positions.map((p) => p.x))).toBeGreaterThan(
-    layout(1920, 1080).point(6.85, 3).x,
-  );
+  const card = (await unavailable.boundingBox())!;
+  expect(Math.max(...positions.map((p) => p.y))).toBeLessThan(card.y);
   await expect(page.locator(".hand-action-hint")).toContainText("Faltam 2 PE");
   await page.screenshot({ path: ".sited/qa-spell-ux/fixed-hand-feedback.png" });
 });

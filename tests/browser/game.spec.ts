@@ -45,7 +45,7 @@ test("opening, card reading and arena controls fit desktop and mobile", async ({
   await expect(page.locator(".card-focus")).toBeVisible();
   await page.getByRole("button", { name: "Fechar carta", exact: true }).click();
   await page.getByRole("button", { name: "Manter estas cartas" }).click();
-  await page.getByRole("button", { name: "Começar neste selo" }).click();
+  await page.getByRole("button", { name: /^Começar no selo/ }).click();
   await expect(page.locator(".position-guide")).toHaveCount(0);
   await idle(page);
   for (const [width, height] of [

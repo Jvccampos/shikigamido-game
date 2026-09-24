@@ -2,8 +2,14 @@ import { isCommand, type Cmd, type CommandDraft } from "../shared/model.js";
 import type { GameView, UnitView } from "../shared/room.js";
 import { abilities } from "../shared/abilities.js";
 import { cards as catalog, moveOptions, route, kw } from "../shared/game.js";
-import { spellSpecs, targetFlow } from "../shared/spells.js";
 import {
+  spellSpecs,
+  targetFlow,
+  transferableKeywords,
+} from "../shared/spells.js";
+import { amountLabel, spellSteps } from "./spell-steps.js";
+import {
+  pieceName,
   hasAbility,
   cardPlan,
   abilityPlan,
@@ -158,7 +164,17 @@ export function actionSelection(
   const select = (selected: Selection | null, targetMode = false) => {
     update((previous) => ({
       ...previous,
-      draft: { ...emptySelection(), selected, targetMode },
+      draft: {
+        ...emptySelection(),
+        selected,
+        targetMode,
+        // Variable spells start at the smallest legal X.
+        extra: (() => {
+          const card =
+            selected?.kind === "hand" ? catalog.get(selected.cardId) : null;
+          return card?.kind === "spell" && card.stats.variable ? 1 : 0;
+        })(),
+      },
       pending: null,
       aim: null,
       feedback: "",
@@ -262,7 +278,12 @@ export function actionSelection(
       )
         validTargets.push(u.id);
   const highlights = (() => {
-    if (seat < 0 || finished || g.setup) return [];
+    // Both starting seals stay lit so hovering and clicking them feels live.
+    if (g.setup)
+      return me?.mulligan && !me.ready
+        ? [2, 4].map((y) => ({ x: seat ? 6 : 0, y }))
+        : [];
+    if (seat < 0 || finished) return [];
     if (g.followup?.seat === seat) {
       const u = g.units.find((u) => u.id === g.followup!.unitId);
       return u
@@ -387,7 +408,10 @@ export function actionSelection(
       return;
     }
     if (g.centerPending) {
-      if (u && u.owner === seat) select({ kind: "unit", unitId: u.id });
+      if (u && centerCandidates.includes(u))
+        select(
+          selected?.unitId === u.id ? null : { kind: "unit", unitId: u.id },
+        );
       return;
     }
     if (selectedCard?.kind === "spell") {
@@ -427,14 +451,41 @@ export function actionSelection(
       ) {
         if (chooseTarget(u)) change({ cells: [{ x, y }] });
       } else {
-        select({ kind: "unit", unitId: u.id });
+        select(
+          { kind: "unit", unitId: u.id },
+          u.owner === seat && g.phase !== 2,
+        );
       }
     } else change({ cells: [...cells.slice(-1), { x, y }] });
   }
   const abilitySpec = selectedAbility(selectedUnit);
   const canPlay = !!me && !g.setup && !g.centerPending && !finished && !busy;
 
+  // Pieces that may take the secret step toward the opened center.
+  const centerCandidates = g.centerPending
+    ? g.units.filter(
+        (u) =>
+          u.owner === seat &&
+          ["unit", "omionji"].includes(u.kind) &&
+          !u.statuses?.stun &&
+          !u.statuses?.softStun &&
+          (u.summonedTurn ?? 0) < g.turn,
+      )
+    : [];
   const preview = (() => {
+    if (g.centerPending) {
+      const u = centerCandidates.find((u) => u.id === selected?.unitId);
+      const path = u ? (route(g, u, 3, 3) || []).slice(0, u.speed ?? 0) : [];
+      return u
+        ? {
+            title: "Avançar ao centro",
+            cost: 0,
+            affected: [],
+            outcomes: [],
+            path: [[u.x, u.y], ...path] as [number, number][],
+          }
+        : null;
+    }
     if (!active || g.setup || finished) return null;
     if (feedback)
       return {
@@ -442,6 +493,7 @@ export function actionSelection(
         cost: 0,
         error: feedback,
         affected: [],
+        outcomes: [],
         path: [],
       };
     const atAim = aim && g.units.find((u) => u.x === aim.x && u.y === aim.y);
@@ -500,6 +552,22 @@ export function actionSelection(
       submit: () => act(command),
     };
   }
+  const steps =
+    selectedCard?.kind === "spell"
+      ? spellSteps(spellSpec, { targetIds, cells, choice }, g.units, {
+          unit: pieceName,
+          card: (id) => catalog.get(id)?.name || id,
+        })
+      : [];
+  // Variable spells need a positive X before they can be cast.
+  if (selectedCard?.kind === "spell" && selectedCard.stats.variable)
+    steps.push({
+      kind: "amount",
+      label: amountLabel(selectedCard.id, spellSpec),
+      done: extra > 0,
+      value: extra > 0 ? String(extra) : undefined,
+    });
+  const nextStep = steps.find((step) => !step.done);
   const cast = prepared(castCommand, selectedCard?.kind === "spell"),
     ability = prepared(abilityCommand, !!selectedUnit),
     ranged = prepared(rangedCommand, !!selectedUnit);
@@ -516,7 +584,30 @@ export function actionSelection(
   const canUseUnit =
     selectedUnit?.owner === seat &&
     !!(abilitySpec || kw(selectedUnit, "Range"));
+  const donor = g.units.find((u) => u.id === targetIds[0]);
   const controls = {
+    steps,
+    nextStep,
+    // Forecast only complete, legal casts; partial choices have nothing to show.
+    castOutcome:
+      selectedCard?.kind === "spell" && !cast.error
+        ? previewAction(g, seat, castCommand)
+        : null,
+    abilityOutcome:
+      selectedUnit && abilitySpec && targetIds[0] && !ability.error
+        ? previewAction(g, seat, abilityCommand)
+        : null,
+    // Nothing on the board can be targeted, so explain instead of waiting.
+    noTargets:
+      !!selectedUnit &&
+      targetMode &&
+      !validTargets.length &&
+      !highlights.length &&
+      !targetIds.length,
+    keywordOptions: donor
+      ? transferableKeywords.filter((k) => kw(donor, k))
+      : [],
+    energy: me ? me.pe + me.permanentPe : 0,
     selectedCard,
     selectedUnit,
     abilitySpec,
@@ -535,12 +626,15 @@ export function actionSelection(
       canUseUnit
     ),
     canUseUnit,
+    inMovement: g.phase === 2 && g.phaseOwner === seat && myTurn,
     hasRange: !!selectedUnit && kw(selectedUnit, "Range") > 0,
     cast,
     ability,
     ranged,
     sacrifice,
     castHint: activePlan?.reason || (cast.error ? spellSpec?.hint : ""),
+    // Why the selected card cannot be played at all right now.
+    unavailable: activePlan?.reason,
     discardOptions: [...new Set(me?.discard || [])].filter((id) =>
       selectedCard?.id === "ritual-do-gato-sete-vidas"
         ? /gato|neko/.test(id)
@@ -579,10 +673,22 @@ export function actionSelection(
         .map(([id]) => id),
       onAbility: (u: UnitView) => select({ kind: "unit", unitId: u.id }, true),
       preview,
-      validTargets,
+      validTargets: g.centerPending
+        ? centerCandidates
+            .filter((u) => u.id !== selected?.unitId)
+            .map((u) => u.id)
+        : validTargets,
       onAim: (cell: Point | null) => {
         if (aim?.x !== cell?.x || aim?.y !== cell?.y) setAim(cell);
       },
+      aim,
+      spellStep: nextStep,
+      noTargets:
+        !!selectedUnit &&
+        targetMode &&
+        !validTargets.length &&
+        !highlights.length &&
+        !targetIds.length,
       highlights,
       targets: targetIds,
       mulligan,
@@ -591,8 +697,10 @@ export function actionSelection(
       onHand: pickHand,
       onCell: cellClick,
       onSelect: (u: UnitView) => {
+        // Outside Movement, picking your piece means using it: go straight to
+        // choosing a target instead of asking for an extra mode switch.
         if (u.owner === seat && !targetMode && selected?.kind !== "hand")
-          select({ kind: "unit", unitId: u.id });
+          select({ kind: "unit", unitId: u.id }, g.phase !== 2);
       },
       onDrag: setDrag,
       onDrop: dropAt,

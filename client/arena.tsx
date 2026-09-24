@@ -7,7 +7,9 @@ import { OpeningHand, DiscardChoice } from "./choices.js";
 import { Journal } from "./journal.js";
 import { ElementsGuide } from "./elements-guide.js";
 import { TurnTimeline } from "./turn-timeline.js";
-import { DuelContext } from "./duel-context.js";
+import { DuelContext, SetupContext } from "./duel-context.js";
+import type { GuideInput } from "./duel-guide.js";
+import type { SpellStep } from "./spell-steps.js";
 import { layout } from "../shared/arena-layout.js";
 import { CombatForecast } from "./combat-preview.js";
 import { SearchChoice } from "./search-choice.js";
@@ -15,20 +17,25 @@ import type {
   ActionPlan,
   ActionPreview as Preview,
 } from "../shared/action-advice.js";
-import { previewAction } from "../shared/action-advice.js";
-import { unitEffects } from "../shared/unit-insight.js";
+import { pieceName, previewAction } from "../shared/action-advice.js";
+import { movementMarker, unitEffects } from "../shared/unit-insight.js";
 import { ArenaNotices } from "./arena-notices.js";
+import { ValueDelta } from "./value-delta.js";
+import { CenterAdvance } from "./center-advance.js";
 import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import type { ComponentChildren } from "preact";
 import type { Point } from "./arena-scene.js";
 import type { DuelPresentationState } from "./use-duel-presentation.js";
-import { cards, type Cmd } from "../shared/game.js";
+import { cards, phases, type Cmd } from "../shared/game.js";
 type Props = {
   game: GameView;
   seat: number;
   code: string;
   names: string[];
   highlights: Point[];
+  aim: Point | null;
+  spellStep?: SpellStep;
+  noTargets?: boolean;
   handPlans: ActionPlan[];
   readyAbilities: string[];
   onAbility: (unit: UnitView) => void;
@@ -78,6 +85,8 @@ export function Arena(p: Props) {
     viewport - 212,
   );
   const railWidth = Math.min(320, viewport - railLeft - 28);
+  // The left column ends where the board's outer portal begins.
+  const boardLeft = layout(screen.width, screen.height).point(-0.85, 3).x - 28;
   useEffect(() => {
     const resize = () => setScreen({ width: innerWidth, height: innerHeight });
     window.addEventListener("resize", resize);
@@ -107,6 +116,7 @@ export function Arena(p: Props) {
   );
   const shownCombat = combatPreview || (p.preview?.combat ? p.preview : null);
   const hover = g.units.find((u) => u.id === hoverId) || null;
+  const hoverMarker = hover && !g.setup ? movementMarker(g, hover) : null;
   const reserveBefore = useRef(me?.permanentPe || 0),
     [reserveGain, setReserveGain] = useState(0);
   useEffect(() => {
@@ -154,12 +164,19 @@ export function Arena(p: Props) {
     p.presentation.onOverlays,
   ]);
   const opening = !!g.setup && !!me && !me.mulligan && !me.ready;
+  // The hand is dealt only when the duel begins in this session, not when a
+  // match already in progress is opened.
+  const sawSetup = useRef(!!g.setup);
+  if (g.setup) sawSetup.current = true;
+  // Each player's curse portal sits beside one of their two starting seals.
+  const portalSeal = p.seat === 1 ? 2 : 4;
   function state() {
     const v = latest.current;
     return {
       game: v.game,
       seat: v.seat,
       highlights: v.highlights,
+      aim: v.aim,
       selectedId: v.selected?.unitId,
       targets: v.targets,
       validTargets: v.validTargets,
@@ -243,16 +260,18 @@ export function Arena(p: Props) {
         <button
           className="duelist-portrait"
           onClick={() => p.onFocus(leader, u)}
-          title={leader?.name}
+          aria-label={`Ler ${leader?.name || "Omionji"}`}
         >
           <img src={leader?.asset} alt={leader?.name} />
           <span
+            key={u?.hp ?? 0}
             className="duelist-life"
-            title="Vida do Omionji"
             aria-label={`Vida: ${u?.hp ?? 0}`}
           >
-            ♥ {u?.hp ?? 0}
+            <i aria-hidden="true">♥</i>
+            {u?.hp ?? 0}
           </span>
+          <ValueDelta value={u?.hp ?? 0} />
         </button>
         <div className="duelist-info">
           <small>
@@ -269,31 +288,43 @@ export function Arena(p: Props) {
           <div className="player-resources">
             <div
               className="mana-total"
-              title="Total para pagar custos: energia do turno + reserva."
               aria-label={`${v.pe + v.permanentPe} PE disponíveis. ${v.pe} energia e ${v.permanentPe} reserva.`}
             >
               <b key={`${v.pe}:${v.permanentPe}`}>{v.pe + v.permanentPe}</b>
-              <span>PE disponíveis</span>
+              <span>PE</span>
+              <ValueDelta value={v.pe + v.permanentPe} />
             </div>
-            <div
-              className="energy-resource"
-              title="Energia elemental (PE): renova no início de cada turno."
-            >
-              <span>Energia</span>
-              <b>
-                {v.pe}
-                <small> / {v.maxPe}</small>
-              </b>
-            </div>
-            <div
-              className="reserve-resource"
-              title="Reserva: ganha ao descartar cartas. Permanece entre turnos e é consumida ao pagar custos."
-            >
-              <span>Reserva</span>
-              <b>
-                {v.permanentPe}
-                <small> / 3</small>
-              </b>
+            <div className="mana-pools">
+              <div
+                className="energy-resource"
+                aria-label={`Energia ${v.pe} de ${v.maxPe}. Renova a cada turno.`}
+              >
+                <span>Energia</span>
+                <i className="pips" aria-hidden="true">
+                  {Array.from({ length: Math.min(10, v.maxPe) }, (_, i) => (
+                    <em key={i} className={i < v.pe ? "lit" : ""} />
+                  ))}
+                </i>
+                <b>
+                  {v.pe}
+                  <small>/{v.maxPe}</small>
+                </b>
+              </div>
+              <div
+                className="reserve-resource"
+                aria-label={`Reserva ${v.permanentPe} de 3. Ganha ao descartar cartas e permanece entre turnos.`}
+              >
+                <span>Reserva</span>
+                <i className="pips reserve" aria-hidden="true">
+                  {Array.from({ length: 3 }, (_, i) => (
+                    <em key={i} className={i < v.permanentPe ? "lit" : ""} />
+                  ))}
+                </i>
+                <b>
+                  {v.permanentPe}
+                  <small>/3</small>
+                </b>
+              </div>
             </div>
           </div>
         </div>
@@ -301,6 +332,40 @@ export function Arena(p: Props) {
     );
   }
   const response = !!(g.combat || g.stack.length);
+  const selectedCard =
+      p.selected?.kind === "hand" ? cards.get(p.selected.cardId) : null,
+    selectedUnit = g.units.find((u) => u.id === p.selected?.unitId);
+  const guideInput: GuideInput = {
+    selection: selectedCard
+      ? {
+          name: selectedCard.name,
+          kind: selectedCard.kind === "unit" ? "unit" : "spell",
+          step: p.spellStep,
+          reason:
+            p.selected?.kind === "hand" && !p.selected.fromDeck
+              ? p.handPlans[p.selected.index]?.reason
+              : undefined,
+        }
+      : selectedUnit
+        ? {
+            name: pieceName(selectedUnit),
+            kind: "piece",
+            noTargets: p.noTargets,
+          }
+        : undefined,
+    playableCards: p.handPlans.filter((plan) => !plan?.reason).length,
+    readyAbilities: p.readyAbilities.length,
+  };
+  // Nudge the phase forward once the hand and abilities offer nothing to do.
+  const nothingToPlay =
+    yourTurn &&
+    !response &&
+    !g.followup &&
+    !presenting &&
+    !p.selected &&
+    (g.phase === 1 || g.phase === 3) &&
+    p.handPlans.every((plan) => plan?.reason) &&
+    (g.phase === 1 ? !me?.summonableDeck?.length : !p.readyAbilities.length);
   const resolvingCombat = presenting?.kind === "combat";
   const resolvingSpell = presenting?.kind === "spell";
   const responseContext = response || resolvingCombat || resolvingSpell;
@@ -317,6 +382,20 @@ export function Arena(p: Props) {
           "Concluir magias",
           "Concluir descarte",
         ][g.phase] || "Continuar";
+  // Say what the main button hands over to, so passing never feels like a leap.
+  const actionNext = (() => {
+    if (!yourTurn || g.followup) return "";
+    if (response)
+      return g.passes === 1
+        ? g.stack.length
+          ? "A magia do topo resolve"
+          : "O combate acontece"
+        : `${p.names[opponent]} decide em seguida`;
+    if (g.phaseOwner === g.first) return `Vez de ${p.names[opponent]}`;
+    return g.phase < 4
+      ? `Próximo: ${phases[g.phase + 1]}`
+      : "Próximo: novo turno";
+  })();
   return (
     <section
       aria-busy={p.busy || !ready}
@@ -325,6 +404,7 @@ export function Arena(p: Props) {
       style={{
         "--action-rail-left": `${railLeft}px`,
         "--action-rail-width": `${railWidth}px`,
+        "--board-left": `${boardLeft}px`,
       }}
     >
       <div className="arena-environment" />
@@ -338,60 +418,68 @@ export function Arena(p: Props) {
       {canvasError && <div className="arena-error">{canvasError}</div>}
       <div className="arena-top">
         <button
-          className="arena-menu"
+          className="arena-menu stud"
           onClick={() => setMenu(!menu)}
           aria-label="Menu da partida"
+          aria-expanded={menu}
+          data-tip="Menu"
         >
-          ☰
+          <span className="glyph" aria-hidden="true">
+            式
+          </span>
         </button>
-        <span className="arena-wordmark">SHIKIGAMIDO</span>
-        <span className="arena-room">
-          {p.code === "TREINO" ? "TREINO" : `SALA ${p.code}`}
+        <span className="arena-wordmark">
+          Shikigamido
+          <span className="arena-room">
+            {p.code === "TREINO" ? "Treino" : `Sala ${p.code}`}
+          </span>
         </span>
-        <button
-          className="elements-toggle"
-          aria-label="Vantagens elementais"
-          title="Vantagens elementais e legenda dos atributos"
-          onClick={() => setElementsOpen(true)}
-        >
-          <svg
-            width="21"
-            height="21"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="1.3"
-            aria-hidden="true"
+        <div className="arena-tools">
+          <button
+            className="arena-tool stud elements-toggle"
+            aria-label="Vantagens elementais"
+            data-tip="Elementos"
+            onClick={() => setElementsOpen(true)}
           >
-            <path d="m12 2 10 7-4 12H6L2 9 12 2Zm0 0 6 19L2 9h20L6 21 12 2Z" />
-          </svg>
-          <small>Elementos</small>
-        </button>
-        <button
-          className="timeline-toggle"
-          aria-label="Linha do tempo de turnos"
-          disabled={done}
-          onClick={() => setTimelineOpen(true)}
-        >
-          Turnos
-        </button>
-        <button
-          className="history-toggle"
-          aria-label="Abrir histórico"
-          onClick={() => setLog(!log)}
-        >
-          ◷
-        </button>
-        <button
-          className="arena-audio"
-          aria-label={sound ? "Desativar som" : "Ativar som"}
-          onClick={() => {
-            setSound(!sound);
-            localStorage.setItem("shiki-sound", String(!sound));
-          }}
-        >
-          {sound ? "♪" : "♫"}
-        </button>
+            <ToolIcon d="m12 2 10 7-4 12H6L2 9 12 2Zm0 0 6 19L2 9h20L6 21 12 2Z" />
+          </button>
+          <button
+            className="arena-tool stud timeline-toggle"
+            aria-label="Linha do tempo de turnos"
+            data-tip="Turnos"
+            disabled={done}
+            onClick={() => setTimelineOpen(true)}
+          >
+            <ToolIcon d="M3 12h18M6 8v8M12 8v8M18 8v8" />
+          </button>
+          <button
+            className={`arena-tool stud history-toggle ${log ? "on" : ""}`}
+            aria-label="Abrir histórico"
+            aria-pressed={log}
+            data-tip="Histórico"
+            onClick={() => setLog(!log)}
+          >
+            <ToolIcon d="M12 7v5l3 2M3.5 12a8.5 8.5 0 1 0 2.5-6M3 4v4h4" />
+          </button>
+          <button
+            className={`arena-tool stud arena-audio ${sound ? "on" : ""}`}
+            aria-label={sound ? "Desativar som" : "Ativar som"}
+            aria-pressed={sound}
+            data-tip={sound ? "Som ligado" : "Som desligado"}
+            onClick={() => {
+              setSound(!sound);
+              localStorage.setItem("shiki-sound", String(!sound));
+            }}
+          >
+            <ToolIcon
+              d={
+                sound
+                  ? "M4 9h4l5-4v14l-5-4H4zM16 9a4 4 0 0 1 0 6M18.5 6.5a8 8 0 0 1 0 11"
+                  : "M4 9h4l5-4v14l-5-4H4zM17 9l5 6M22 9l-5 6"
+              }
+            />
+          </button>
+        </div>
       </div>
       {player(opponent, "duelist-opponent")}
       {p.seat >= 0 && player(p.seat, "duelist-self")}
@@ -404,14 +492,16 @@ export function Arena(p: Props) {
             names={p.names}
             presenting={
               presenting?.label ||
-              (drawing ? "Compra automática · carta vindo para a mão" : null)
+              (drawing ? "Compra automática · uma carta vem para a mão" : null)
             }
+            input={guideInput}
           />
         ) : (
-          <>
-            <small>TURNO {String(g.turn).padStart(2, "0")} · PREPARAÇÃO</small>
-            <h1>Prepare seu espírito</h1>
-          </>
+          <SetupContext
+            step={opening ? 1 : 2}
+            waiting={!me || !!me.ready}
+            spectator={!me}
+          />
         )}
       </div>
       <div
@@ -431,11 +521,17 @@ export function Arena(p: Props) {
             </i>
           ),
         )}
+        <b
+          className="opponent-hand-count"
+          key={g.players[opponent].handCount ?? g.players[opponent].hand.length}
+        >
+          {g.players[opponent].handCount ?? g.players[opponent].hand.length}
+        </b>
       </div>
       <button
         className="arena-deck"
         onClick={() => setLog(!log)}
-        title="Baralho e descarte"
+        aria-label="Baralho e descarte"
       >
         <i />
         <i />
@@ -444,7 +540,7 @@ export function Arena(p: Props) {
       </button>
       {!g.setup && !g.centerPending && !done && (
         <button
-          className={`arena-pass ${yourTurn ? "enabled" : ""}`}
+          className={`arena-pass ${yourTurn ? "enabled" : ""} ${nothingToPlay ? "suggested" : ""}`}
           disabled={
             !yourTurn ||
             p.busy ||
@@ -460,7 +556,10 @@ export function Arena(p: Props) {
               ? "Resolvendo…"
               : yourTurn
                 ? actionText
-                : "Aguardando oponente"}
+                : `Vez de ${p.names[g.priority]}`}
+            {yourTurn && !presenting && actionNext && (
+              <small>{actionNext}</small>
+            )}
           </span>
           <b>➜</b>
         </button>
@@ -479,65 +578,43 @@ export function Arena(p: Props) {
         />
       )}
       {g.setup && me && !opening && !me.ready && (
-        <section className="position-guide">
-          <small>PREPARAÇÃO · 2 DE 2</small>
-          <h2>Escolha onde começar</h2>
-          <p>
-            Toque em um dos dois selos iluminados para posicionar seu Omionji.
-          </p>
-          <div className="position-options">
-            <button
-              className={p.startY === 2 ? "active" : ""}
-              onClick={() => p.onStartY(2)}
-            >
-              A <span>Selo superior</span>
-            </button>
-            <button
-              className={p.startY === 4 ? "active" : ""}
-              onClick={() => p.onStartY(4)}
-            >
-              B <span>Selo inferior</span>
-            </button>
+        <section className="position-guide plaque" aria-label="Posição inicial">
+          <small className="rune-label">Seu Omionji começa em</small>
+          <div className="position-options" role="radiogroup">
+            {([2, 4] as const).map((y) => (
+              <button
+                key={y}
+                role="radio"
+                aria-checked={p.startY === y}
+                className={p.startY === y ? "active" : ""}
+                onClick={() => p.onStartY(y)}
+              >
+                <b>{y === 2 ? "A" : "B"}</b>
+                <span>{y === 2 ? "Selo superior" : "Selo inferior"}</span>
+                {y === portalSeal && (
+                  <em>
+                    Perto do portal <span className="glyph">禍</span>
+                  </em>
+                )}
+              </button>
+            ))}
           </div>
+          <p className="position-note">
+            No turno 3 uma maldição surge no seu portal{" "}
+            <span className="glyph">禍</span> e avança até o Omionji mais
+            próximo. O selo {portalSeal === 2 ? "A" : "B"} fica no caminho dela.
+          </p>
           <button
             className="choice-confirm"
             disabled={p.busy}
             onClick={() => p.onAct({ type: "ready", y: p.startY })}
           >
-            Começar neste selo →
+            Começar no selo {p.startY === 2 ? "A" : "B"} →
           </button>
+          <small className="position-hint">
+            Você também pode clicar nos selos do tabuleiro.
+          </small>
         </section>
-      )}
-      {g.setup && (!me || me.ready) && (
-        <div className="preparation-wait">
-          <span className="waiting-pulse" />
-          <b>{me ? "Tudo pronto" : "Preparação da partida"}</b>
-          <p>
-            {me
-              ? "Aguardando o oponente escolher seu selo…"
-              : "Os jogadores estão escolhendo suas mãos e posições."}
-          </p>
-        </div>
-      )}
-      {g.centerPending && me && (
-        <div className="arena-preparation">
-          <p>
-            Selecione uma unidade no campo. As escolhas serão reveladas juntas.
-          </p>
-          <button
-            className="ready-button"
-            disabled={p.busy || Object.hasOwn(g.centerChoices || {}, p.seat)}
-            onClick={() =>
-              p.onAct({ type: "center", unitId: p.selected?.unitId })
-            }
-          >
-            {Object.hasOwn(g.centerChoices || {}, p.seat)
-              ? "Escolha confirmada"
-              : p.selected?.unitId
-                ? "Confirmar avanço"
-                : "Não avançar"}
-          </button>
-        </div>
       )}
       {me && !g.setup && (
         <ArenaHand
@@ -548,6 +625,7 @@ export function Arena(p: Props) {
           busy={p.busy}
           viewport={viewport}
           railLeft={railLeft}
+          deal={sawSetup.current}
           obscured={discardOpen || !!presenting}
           cellAt={cellAt}
           onAim={p.onAim}
@@ -594,7 +672,7 @@ export function Arena(p: Props) {
         </div>
       )}
       {hover && !dragging && !discardOpen && (
-        <div className="arena-hover">
+        <div className="arena-hover plaque">
           <b>
             {cards.get(hover.cardId)?.name ||
               (hover.kind === "crystal"
@@ -604,6 +682,11 @@ export function Arena(p: Props) {
                   : "Carta oculta")}
           </b>
           <div className="hover-effects">
+            {hoverMarker && (
+              <span className={`hover-marker ${hoverMarker.state}`}>
+                {hoverMarker.symbol} {hoverMarker.label}
+              </span>
+            )}
             {p.readyAbilities.includes(hover.id) && (
               <span>✦ Habilidade disponível</span>
             )}
@@ -618,6 +701,16 @@ export function Arena(p: Props) {
         </div>
       )}
       <div className="arena-action-rail">
+        {g.centerPending && me && (
+          <CenterAdvance
+            game={g}
+            seat={p.seat}
+            selected={selectedUnit}
+            busy={p.busy}
+            onAct={p.onAct}
+            onClear={p.onClear}
+          />
+        )}
         {!g.setup &&
           !g.centerPending &&
           !discardOpen &&
@@ -632,17 +725,19 @@ export function Arena(p: Props) {
               className="arena-stack-panel"
               aria-label="Pilha de respostas"
             >
-              <div className="stack-heading">
-                <b>
-                  {g.stack.length
-                    ? "✧ Magias em resposta"
-                    : "⚔ Combate anunciado"}
-                </b>
-                <span>
-                  {yourTurn
-                    ? "VOCÊ TEM A PRIORIDADE"
-                    : `PRIORIDADE · ${p.names[g.priority]}`}
-                </span>
+              <div className="action-dock-head">
+                <div className="action-card-title">
+                  <small>
+                    {g.stack.length ? "PILHA DE MAGIAS" : "COMBATE"}
+                  </small>
+                  <b>
+                    {g.stack.length
+                      ? g.stack.length === 1
+                        ? "Uma magia aguarda"
+                        : `${g.stack.length} magias aguardam`
+                      : "Combate anunciado"}
+                  </b>
+                </div>
               </div>
               {g.combat && !shownCombat && (
                 <div className="pending-combat">
@@ -670,40 +765,38 @@ export function Arena(p: Props) {
                       key={`${entry.cardId}-${i}`}
                       onClick={() => p.onFocus(c)}
                     >
-                      <img src={c.asset} alt={c.name} />
+                      <img src={c.asset} alt="" />
                       <div>
                         <small>
-                          {i === 0
-                            ? "PRÓXIMA A RESOLVER"
-                            : `NA FILA · ${i + 1}`}
+                          {i === 0 ? "Resolve primeiro" : `Depois · ${i + 1}ª`}
                         </small>
                         <b>{c.name}</b>
-                        <span>
-                          {p.names[entry.seat]} ·{" "}
-                          {c.stats.speed === "fast" ? "Rápida" : "Lenta"}
+                        <span className={`stack-owner seat-${entry.seat}`}>
+                          {entry.seat === p.seat ? "Sua" : p.names[entry.seat]}{" "}
+                          · {c.stats.speed === "fast" ? "Rápida" : "Lenta"}
                         </span>
                       </div>
                     </button>
                   );
                 })}
               </div>
-              <p>
+              <p className="stack-rule">
                 {g.passes === 1
-                  ? "Um passe confirmado. O próximo passe resolve."
+                  ? `${1 - g.priority === p.seat ? "Você" : p.names[1 - g.priority]} passou. Se ${yourTurn ? "você também passar" : `${p.names[g.priority]} também passar`}, ${g.stack.length ? "a magia do topo resolve" : "o combate acontece"}.`
                   : g.stack.length
-                    ? "Duas respostas passadas resolvem a última magia."
-                    : "Os dois jogadores podem responder antes do dano."}
+                    ? "Magias rápidas podem responder. Quando os dois passam seguidos, a primeira da lista resolve."
+                    : "Os dois jogadores podem responder com magias rápidas antes do dano."}
               </p>
             </aside>
           )}
-        <TurnTimeline
-          game={g}
-          names={p.names}
-          open={timelineOpen}
-          onOpen={() => setTimelineOpen(true)}
-          onClose={() => setTimelineOpen(false)}
-        />
       </div>
+      <TurnTimeline
+        game={g}
+        names={p.names}
+        open={timelineOpen}
+        onOpen={() => setTimelineOpen(true)}
+        onClose={() => setTimelineOpen(false)}
+      />
       {!done && !presenting && !drawing && g.searches?.[0]?.seat === p.seat && (
         <SearchChoice
           key={g.searches[0].id}
@@ -719,9 +812,25 @@ export function Arena(p: Props) {
       />
       {elementsOpen && <ElementsGuide onClose={() => setElementsOpen(false)} />}
       {menu && (
-        <div className="arena-menu-panel">
+        <div
+          className="arena-menu-backdrop"
+          aria-hidden="true"
+          onClick={() => setMenu(false)}
+        />
+      )}
+      {menu && (
+        <div
+          className="arena-menu-panel plaque"
+          role="dialog"
+          aria-label="Menu da partida"
+        >
+          <span className="rune-label">
+            {p.code === "TREINO" ? "Treino" : `Sala ${p.code}`} · Turno {g.turn}
+          </span>
           <h2>Shikigamido</h2>
-          <button onClick={() => setMenu(false)}>Continuar duelo</button>
+          <button autoFocus onClick={() => setMenu(false)}>
+            Continuar duelo
+          </button>
           <button
             onClick={() => {
               void host.current?.parentElement
@@ -742,7 +851,15 @@ export function Arena(p: Props) {
           </button>
           <button onClick={p.onExit}>Voltar ao santuário</button>
           {me && !done && (
-            <button onClick={p.onConcede}>Conceder partida</button>
+            <button
+              className="menu-danger"
+              onClick={() => {
+                setMenu(false);
+                p.onConcede();
+              }}
+            >
+              Conceder partida
+            </button>
           )}
         </div>
       )}
@@ -756,21 +873,40 @@ export function Arena(p: Props) {
         />
       )}
       {done && p.presentation.resultReady && (
-        <div className="arena-victory">
-          <small>O DUELO TERMINOU</small>
+        <div
+          className={`arena-victory ${g.draw ? "draw" : g.winner === p.seat ? "won" : p.seat >= 0 ? "lost" : "watched"}`}
+        >
+          <small className="rune-label">
+            O duelo terminou · Turno {g.turn}
+          </small>
+          {!g.draw && (
+            <div
+              className="victory-portrait"
+              aria-hidden="true"
+              style={{
+                backgroundImage: `url(${cards.get(`omionji-${g.players[g.winner!].element}`)?.asset})`,
+              }}
+            />
+          )}
           <h1>
             {g.draw
               ? "Empate"
               : g.winner === p.seat
                 ? "Vitória"
-                : `${p.names[g.winner!]} venceu`}
+                : p.seat >= 0
+                  ? "Derrota"
+                  : `${p.names[g.winner!]} venceu`}
           </h1>
           <p>
             {g.draw
               ? "Os dois Omionjis caíram."
-              : "O santuário reconhece seu vencedor."}
+              : p.seat >= 0 && g.winner !== p.seat
+                ? `${p.names[g.winner!]} venceu. O santuário aguarda sua revanche.`
+                : "O santuário reconhece seu vencedor."}
           </p>
-          <button onClick={p.onExit}>Retornar ao santuário →</button>
+          <button className="seal-button" onClick={p.onExit}>
+            Retornar ao santuário
+          </button>
         </div>
       )}
       <div className="arena-accessibility" aria-label="Casas do tabuleiro">
@@ -782,5 +918,23 @@ export function Arena(p: Props) {
         ))}
       </div>
     </section>
+  );
+}
+
+function ToolIcon({ d }: { d: string }) {
+  return (
+    <svg
+      width="19"
+      height="19"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="1.5"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      aria-hidden="true"
+    >
+      <path d={d} />
+    </svg>
   );
 }

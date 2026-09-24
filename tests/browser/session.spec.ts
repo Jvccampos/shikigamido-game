@@ -34,7 +34,7 @@ test("deck drafts survive navigation and a new practice match starts cleanly", a
     await page.getByRole("button", { name: "Jogar treino local" }).click();
     await expect(page.locator(".choice-art")).toHaveCount(6);
     await page.getByRole("button", { name: "Manter estas cartas" }).click();
-    await page.getByRole("button", { name: "Começar neste selo" }).click();
+    await page.getByRole("button", { name: /^Começar no selo/ }).click();
     await expect(page.locator(".position-guide")).toHaveCount(0);
     await page
       .getByRole("button", { name: "Menu da partida", exact: true })

@@ -5,6 +5,7 @@ import {
   type APIRequestContext,
   type Browser,
   type BrowserContext,
+  type Locator,
   type Page,
 } from "@playwright/test";
 import type { Queries, Mutations } from "../../shared/protocol.js";
@@ -33,6 +34,17 @@ export async function mutate<K extends keyof Mutations>(
   const result: ReturnType<Mutations[K]> = (await response.json()).result;
   expect(result.error).toBeUndefined();
   return result;
+}
+/** Waits for an element's entrance animations so its box is final. */
+export async function settled(locator: Locator) {
+  await locator.evaluate((el) =>
+    Promise.all(
+      el
+        .getAnimations()
+        .filter((a) => a.effect?.getComputedTiming().iterations !== Infinity)
+        .map((a) => a.finished),
+    ),
+  );
 }
 export async function idle(page: Page) {
   await expect(page.locator(".arena-shell")).toHaveAttribute(

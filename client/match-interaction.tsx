@@ -36,7 +36,12 @@ export function useMatchInteraction(
       ...model.arena,
       onFocus: (card: Card | undefined, unit?: UnitView) =>
         setFocus({ card, unit }),
-      controls: <MatchControls view={model.controls} />,
+      controls: (
+        <MatchControls
+          view={model.controls}
+          onRead={(card) => setFocus({ card })}
+        />
+      ),
     },
   };
 }

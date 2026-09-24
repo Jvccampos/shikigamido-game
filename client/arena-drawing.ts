@@ -4,7 +4,7 @@ export const label = (text: string, size: number, color = 0xf6e3b7) =>
   new Text({
     text,
     style: {
-      fontFamily: "ShikigamidoJP, Arial",
+      fontFamily: "ShikigamidoJP, Alegreya Sans, Arial",
       fontSize: size,
       fill: color,
       fontWeight: "600",

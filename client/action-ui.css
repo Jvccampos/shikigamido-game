@@ -1,44 +1,42 @@
-/* The right-hand rail is outside the board and never follows a card or target. */
-.arena-action-rail {
-  position: absolute;
-  z-index: 44;
-  left: var(--action-rail-left);
-  width: var(--action-rail-width);
-  top: clamp(176px, 24vh, 280px);
-  bottom: 310px;
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  overflow-y: auto;
-  scrollbar-width: thin;
-  scrollbar-color: #8e8056 #102019;
-  pointer-events: none;
-}
-.arena-action-rail > * {
-  pointer-events: auto;
-  flex-shrink: 0;
-}
+/* The action dock: the spell, ability or choice being prepared. */
 .action-dock {
-  padding: 18px;
-  border-top: 2px solid #c4aa72;
-  background: linear-gradient(125deg, #192823f7, #0a1618f5);
-  box-shadow: 0 12px 24px #0005;
-  color: #e7dfca;
+  position: relative;
+  padding: 18px 20px 20px;
+  border: 1px solid var(--gold-line-strong);
+  border-top: 2px solid var(--gold);
+  border-radius: 4px 4px 10px 10px;
+  background:
+    radial-gradient(ellipse at 50% 0, #d9c08420, transparent 60%),
+    var(--lacquer);
+  box-shadow: var(--hairline), var(--panel-shadow);
+  color: var(--parchment);
 }
 .action-dock-head {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding-bottom: 18px;
+  padding-bottom: 16px;
   margin-bottom: 16px;
-  border-bottom: 1px solid #c5b17b30;
+  border-bottom: 1px solid var(--gold-line);
 }
 .action-card-art {
-  width: 48px;
-  height: 67px;
+  flex-shrink: 0;
+  width: 52px;
+  height: 73px;
+  padding: 0;
+  border: 1px solid var(--gold-line-strong);
+  border-radius: 4px;
+  overflow: hidden;
+  cursor: zoom-in;
+  transition: border-color 0.15s;
+}
+.action-card-art:hover {
+  border-color: var(--gold-bright);
+}
+.action-card-art img {
+  width: 100%;
+  height: 100%;
   object-fit: cover;
-  border: 1px solid #c4aa7277;
-  border-radius: 3px;
 }
 .action-card-title {
   flex: 1;
@@ -46,29 +44,42 @@
 }
 .action-card-title > small {
   display: block;
-  color: #bfaa7a;
+  color: var(--gold);
   font:
-    10px/1.3 Arial,
+    600 10px/1.3 var(--font-ui),
     sans-serif;
-  letter-spacing: 2px;
-  margin-bottom: 8px;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  margin-bottom: 6px;
 }
 .action-card-title > b {
   display: block;
   font:
-    19px/1.25 Georgia,
+    600 22px/1.15 var(--font-display),
     serif;
-  color: #f1dfb5;
+  color: var(--parchment);
 }
-.action-dock-head > button {
+.action-dock-head > .action-close {
   align-self: flex-start;
-  background: transparent;
-  border: 0;
-  color: #c3c6b6;
-  font-size: 22px;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
   padding: 0;
-  min-width: 24px;
-  min-height: 24px;
+  border-radius: 50%;
+  color: var(--mist);
+  font-size: 22px;
+  line-height: 1;
+  transition:
+    background 0.15s,
+    color 0.15s;
+}
+.action-dock-head > .action-close:hover {
+  background: #ffffff12;
+  color: var(--parchment);
+}
+.action-dock .eyebrow {
+  margin-bottom: 10px;
 }
 .action-dock .target-controls {
   display: flex;
@@ -152,127 +163,11 @@
   gap: 12px;
   font-size: 14px;
 }
-.arena-action-rail .arena-stack-panel {
-  position: relative;
-  inset: auto;
-  width: 100%;
-  max-height: 270px;
-  padding: 16px;
-  border: 0;
-  border-top: 1px solid #a69ac277;
-  background: linear-gradient(125deg, #171d29ed, #101b1bed);
-}
-.arena-action-rail .stack-list {
-  max-height: 170px;
-  overflow-y: auto;
-}
-.arena-action-rail .arena-stack-panel > p {
-  font-size: 12px;
-  line-height: 1.4;
-}
-.arena-shell .arena-pass {
-  left: var(--action-rail-left);
-  right: auto;
-  width: var(--action-rail-width);
-  bottom: 210px;
-}
-.hand-action-hint {
-  position: absolute;
-  left: var(--action-rail-left);
-  width: var(--action-rail-width);
-  top: calc(100% - 174px);
-  min-height: 100px;
-  z-index: 46;
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  padding: 14px 16px;
-  border-left: 2px solid #c49b65;
-  background: linear-gradient(90deg, #241d17ed, #141b1900);
-  color: #edd1a5;
-  text-shadow: 0 2px 4px #000;
-  opacity: 0;
-  visibility: hidden;
-  transition: opacity 120ms ease;
-  pointer-events: none;
-}
-.hand-action-hint.visible {
-  opacity: 1;
-  visibility: visible;
-}
-.hand-hint-icon {
-  display: grid;
-  place-items: center;
-  width: 22px;
-  height: 22px;
-  flex-shrink: 0;
-  border: 1px solid #bd9563;
-  border-radius: 50%;
-  font:
-    15px Georgia,
-    serif;
-}
-.hand-action-hint small {
-  display: block;
-  font:
-    13px/1.4 Arial,
-    sans-serif;
-  color: #b7b9a9;
-  margin-bottom: 7px;
-}
-.hand-action-hint div > span {
-  display: block;
-  font:
-    16px/1.4 Arial,
-    sans-serif;
-}
 .arena-shell:has(.action-dock) .arena-hover {
   display: none;
 }
-@media (max-width: 1200px) {
-  .action-dock {
-    padding: 12px;
-  }
-  .action-dock-head {
-    gap: 8px;
-  }
-  .action-card-art {
-    width: 34px;
-    height: 48px;
-  }
-  .action-card-title > b {
-    font-size: 15px;
-  }
-  .action-card-title > small {
-    font-size: 8px;
-    letter-spacing: 1px;
-  }
-  .arena-action-rail {
-    top: 176px;
-    bottom: 280px;
-  }
-  .hand-action-hint {
-    padding: 10px;
-  }
-  .hand-action-hint div > span {
-    font-size: 14px;
-  }
-}
-@media (max-height: 700px) {
-  .arena-action-rail {
-    top: 120px;
-    bottom: 190px;
-  }
-  .arena-shell .arena-pass {
-    bottom: 125px;
-  }
-  .hand-action-hint {
-    top: auto;
-    bottom: 12px;
-    min-height: 80px;
-  }
-}
 
+/* Keyword hints inside card text. ------------------------------------------ */
 .rule-hint {
   display: inline;
   padding: 0;
@@ -297,13 +192,15 @@
   width: 280px;
   max-width: calc(100vw - 24px);
   padding: 14px 16px;
-  border: 1px solid #b6a477;
-  border-radius: 10px;
+  border: 1px solid var(--gold-line-strong);
+  border-radius: 6px;
   background: #142820;
   color: #e5ebdf;
-  box-shadow: 0 10px 32px #0009;
+  box-shadow:
+    var(--hairline),
+    0 10px 32px #000a;
   font:
-    14px/1.5 Arial,
+    14px/1.5 var(--font-ui),
     sans-serif;
   pointer-events: none;
 }
@@ -314,6 +211,9 @@
 .rule-tooltip b {
   color: #f1d298;
   margin-bottom: 6px;
+  font:
+    600 17px var(--font-display),
+    serif;
 }
 .active-effects {
   display: flex;
@@ -325,7 +225,7 @@
   display: inline-block;
   padding: 7px 11px;
   border: 1px solid #a58bc27a;
-  border-radius: 8px;
+  border-radius: 6px;
   background: #392949;
   color: #e8d4ff;
   font-size: 14px;
@@ -334,4 +234,361 @@
   background: #452723;
   border-color: #cf8279;
   color: #ffbeb3;
+}
+
+/* Spell and ability panel: effect, ordered choices, forecast, then commit. */
+.action-effect {
+  margin: 0;
+  color: #cfdbcf;
+  font:
+    15px/1.5 var(--font-ui),
+    sans-serif;
+}
+.action-dock .action-effect:not(.action-blocked) {
+  font:
+    italic 16px/1.5 var(--font-display),
+    serif;
+  color: #dcdfcd;
+}
+.action-effect > b {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--parchment);
+  font:
+    600 17px var(--font-display),
+    serif;
+}
+.action-effect > span {
+  display: block;
+}
+.action-effect .read-card {
+  display: inline;
+  margin-left: 6px;
+  padding: 0;
+  color: var(--gold);
+  font: inherit;
+  font-size: 14px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-color: #d9c08466;
+}
+.action-effect .read-card:hover {
+  color: var(--gold-bright);
+}
+.spell-steps {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--gold-line);
+}
+.spell-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  padding: 10px 2px;
+  border-bottom: 1px solid var(--gold-line);
+  transition:
+    border-color 0.2s,
+    background 0.2s;
+}
+.step-index {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  border: 1px solid #9fb8a466;
+  border-radius: 50%;
+  color: #b9c9bb;
+  font:
+    700 12px var(--font-ui),
+    sans-serif;
+}
+.spell-step.current .step-index {
+  border-color: var(--gold-bright);
+  background: var(--gold-bright);
+  color: var(--ink-900);
+}
+.spell-step.done .step-index {
+  border-color: #8fd5b5;
+  background: #8fd5b533;
+  color: #b8f0d6;
+}
+.step-body {
+  display: grid;
+  flex: 1;
+  gap: 3px;
+  min-width: 0;
+}
+.action-dock .step-body > small {
+  color: #a9bdb0;
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.spell-step.current .step-body > small {
+  color: #f1d68f;
+}
+.step-body > b {
+  color: var(--parchment);
+  font:
+    500 16px/1.3 var(--font-ui),
+    sans-serif;
+}
+.spell-step:not(.done):not(.current) .step-body > b {
+  color: #7f9587;
+  font-weight: normal;
+}
+.spell-step.current .step-body > b {
+  color: #f3d99a;
+}
+.step-art {
+  width: 30px;
+  height: 38px;
+  object-fit: cover;
+  object-position: 50% 25%;
+  border-radius: 3px;
+}
+.muted-value {
+  color: #8fa596;
+  font:
+    14px var(--font-ui),
+    sans-serif;
+}
+.choice-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 3px;
+}
+.choice-chips > button,
+.segmented > button {
+  padding: 6px 12px;
+  border: 1px solid #9fb8a455;
+  border-radius: 999px;
+  background: #0b1c17;
+  color: #d9e3d6;
+  font:
+    500 14px var(--font-ui),
+    sans-serif;
+  transition:
+    border-color 0.15s,
+    background 0.15s,
+    color 0.15s;
+}
+.choice-chips > button:hover,
+.segmented > button:hover {
+  border-color: var(--gold-line-strong);
+}
+.choice-chips > button[aria-checked="true"],
+.segmented > button[aria-checked="true"] {
+  border-color: var(--gold-bright);
+  background: var(--gold-bright);
+  color: var(--ink-900);
+  font-weight: 700;
+}
+.segmented {
+  display: flex;
+  gap: 6px;
+}
+.segmented > button {
+  flex: 1;
+  border-radius: 6px;
+  padding: 9px 10px;
+}
+.discard-options {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+.discard-options > button {
+  display: grid;
+  gap: 4px;
+  width: 66px;
+  flex-shrink: 0;
+  padding: 3px;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  color: #cbd7c9;
+  font:
+    12px/1.25 var(--font-ui),
+    sans-serif;
+  text-align: center;
+}
+.discard-options > button[aria-checked="true"] {
+  border-color: var(--gold-bright);
+  background: #e3c77f1c;
+}
+.discard-options img {
+  width: 100%;
+  aspect-ratio: 315 / 440;
+  object-fit: cover;
+  border-radius: 3px;
+}
+.amount {
+  display: grid;
+  gap: 4px;
+}
+.action-dock .amount > small {
+  color: #a9bdb0;
+  font-size: 12px;
+}
+.amount-stepper {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  border: 1px solid #9fb8a455;
+  border-radius: 6px;
+  overflow: hidden;
+}
+.amount-stepper > button {
+  width: 34px;
+  height: 32px;
+  padding: 0;
+  background: #0b1c17;
+  color: var(--parchment);
+  font-size: 18px;
+}
+.amount-stepper > output {
+  min-width: 40px;
+  text-align: center;
+  color: #f7e8bd;
+  font:
+    700 18px var(--font-display),
+    serif;
+}
+.action-outcome {
+  display: grid;
+  gap: 6px;
+  padding: 10px 12px;
+  border-radius: 6px;
+  background: #06120ecc;
+  border: 1px solid #8fd5b52e;
+}
+.action-dock .action-outcome > small {
+  color: #9fd5bd;
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+.outcome-row {
+  display: grid;
+  gap: 2px;
+  padding-left: 9px;
+  border-left: 2px solid var(--owner, #8fd5b5);
+}
+.outcome-row > b {
+  color: var(--parchment);
+  font:
+    600 14px var(--font-ui),
+    sans-serif;
+}
+.outcome-row > span {
+  color: #bfe9d3;
+  font:
+    14px/1.35 var(--font-ui),
+    sans-serif;
+}
+.outcome-row.removed > span {
+  color: #ffb0a0;
+}
+.action-outcome > p {
+  margin: 0;
+  color: #e8c897;
+  font:
+    italic 13px var(--font-display),
+    serif;
+}
+.action-blocked {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 10px 12px;
+  border-left: 2px solid #d99a7a;
+  border-radius: 4px;
+  background: #3b221a66;
+  color: #f2c7b2;
+  font:
+    15px/1.45 var(--font-ui),
+    sans-serif;
+}
+.action-blocked > b {
+  color: #ffd9c4;
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+.center-waiting {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  color: #d9e3d6;
+  font:
+    15px var(--font-ui),
+    sans-serif;
+}
+.center-waiting .waiting-pulse {
+  margin: 0;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .spell-step.current .step-index {
+    animation: step-pulse 1.8s ease-in-out infinite;
+  }
+}
+@keyframes step-pulse {
+  50% {
+    box-shadow: 0 0 0 5px #e3c77f33;
+  }
+}
+
+/* Smaller screens: keep the dock to what's needed to finish the action. */
+@media (max-width: 1200px) {
+  .action-dock {
+    padding: 12px;
+  }
+  .action-dock-head {
+    gap: 8px;
+  }
+  .action-card-art {
+    width: 34px;
+    height: 48px;
+  }
+  .action-card-title > b {
+    font-size: 17px;
+  }
+  .action-card-title > small {
+    font-size: 8px;
+    letter-spacing: 1px;
+  }
+}
+@media (max-width: 759px), (max-height: 559px) and (orientation: landscape) {
+  .action-dock {
+    padding: 10px;
+  }
+  .action-dock-head {
+    padding-bottom: 8px;
+    margin-bottom: 8px;
+  }
+  .action-dock .action-effect:not(.action-blocked) {
+    display: none;
+  }
+  .spell-step {
+    padding: 6px 0;
+    gap: 7px;
+  }
+  .step-body > b {
+    font-size: 13px;
+  }
+  .step-art,
+  .action-outcome > small {
+    display: none;
+  }
+  .action-outcome {
+    padding: 6px 8px;
+  }
 }

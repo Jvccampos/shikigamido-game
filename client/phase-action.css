@@ -1,0 +1,517 @@
+/* Right rail: only the decision in progress (spell, response, center).
+   It stays clear of the turn bar above and the phase button below and
+   scrolls inside itself instead of pushing anything off-screen. */
+.arena-action-rail {
+  position: absolute;
+  z-index: 44;
+  left: var(--action-rail-left);
+  width: var(--action-rail-width);
+  top: 170px;
+  bottom: 150px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: #8e8056 transparent;
+  pointer-events: none;
+}
+.arena-action-rail > * {
+  pointer-events: auto;
+  flex-shrink: 0;
+}
+
+/* Phase button: the one "I'm done" control, beside the deck like an
+   end-turn button. Lit gold when it is yours to press, quiet while waiting. */
+.arena-pass {
+  position: absolute;
+  z-index: 55;
+  right: 134px;
+  bottom: 44px;
+  width: 318px;
+  min-height: 72px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 10px 12px 10px 24px;
+  border: 1px solid var(--gold-line);
+  border-radius: 8px;
+  background: linear-gradient(180deg, #13261ef2, #0a1813f4);
+  box-shadow:
+    inset 0 0 0 3px #0a1813,
+    inset 0 0 0 4px #c7bc8b1f,
+    0 12px 30px #0009;
+  color: var(--mist);
+  font:
+    500 15px var(--font-ui),
+    sans-serif;
+  text-align: left;
+}
+.arena-pass > span {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.arena-pass > span,
+.arena-pass > span > small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.arena-pass > span > small {
+  font:
+    400 13px var(--font-ui),
+    sans-serif;
+  letter-spacing: 0.02em;
+  opacity: 0.8;
+}
+.arena-pass > b {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--gold-line);
+  border-radius: 16px 6px;
+  font-size: 19px;
+}
+/* Yours to press: gold-framed lacquer, the arrow set in an energy gem. */
+.arena-pass.enabled {
+  border-color: var(--gold);
+  background:
+    radial-gradient(ellipse at 30% -30%, #f3dfa040, transparent 65%),
+    linear-gradient(180deg, #2c4a33, #15291f);
+  box-shadow:
+    inset 0 0 0 3px #15291f,
+    inset 0 0 0 4px #e3cf8f66,
+    0 12px 30px #000a,
+    0 0 24px #e3cf8f22;
+  color: var(--parchment);
+  text-shadow: 0 1px 2px #000;
+}
+.arena-pass.enabled > span {
+  font:
+    600 21px var(--font-display),
+    serif;
+  letter-spacing: 0.02em;
+}
+.arena-pass.enabled > span > small {
+  color: var(--parchment-dim);
+  text-shadow: none;
+  opacity: 1;
+}
+.arena-pass.enabled > b {
+  border: 1.5px solid #bdd39a;
+  background: radial-gradient(ellipse at 35% 25%, #7a9660, #14392c 70%);
+  box-shadow: 0 0 14px #aadd8540;
+  color: #edffe0;
+}
+.arena-pass:disabled {
+  opacity: 1;
+  cursor: default;
+}
+.arena-pass.enabled:disabled {
+  filter: saturate(0.5) brightness(0.8);
+}
+/* While the opponent acts the button reads as status, with a soft pulse. */
+.arena-pass:not(.enabled) > b {
+  font-size: 0;
+}
+.arena-pass:not(.enabled) > b::after {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: wait-pulse 1.5s infinite;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .arena-pass {
+    transition:
+      background 0.25s,
+      border-color 0.25s,
+      box-shadow 0.25s,
+      color 0.25s,
+      translate 0.12s;
+  }
+  .arena-pass.enabled:not(:disabled):hover {
+    translate: 0 -2px;
+    border-color: #fff0c0;
+    box-shadow:
+      inset 0 0 0 3px #15291f,
+      inset 0 0 0 4px #e3cf8f99,
+      0 14px 34px #000a,
+      0 0 30px #e3cf8f44;
+  }
+  .arena-pass.enabled:not(:disabled):active {
+    translate: 0 1px;
+  }
+  .arena-pass.enabled:not(:disabled):hover > b {
+    translate: 3px 0;
+    transition: translate 0.2s;
+  }
+  .arena-pass.suggested:not(:disabled) {
+    animation: pass-suggest 1.8s ease-in-out infinite;
+  }
+}
+@keyframes pass-suggest {
+  50% {
+    box-shadow:
+      inset 0 0 0 3px #15291f,
+      inset 0 0 0 4px #e3cf8fcc,
+      0 10px 30px #0009,
+      0 0 44px #f1dc92aa;
+  }
+}
+
+/* Seal button: the themed commit for spells, abilities and choices. -------- */
+.seal-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 54px;
+  padding: 0 22px;
+  border: 1px solid var(--gold);
+  border-radius: 8px;
+  background:
+    radial-gradient(ellipse at 50% -40%, #f3dfa044, transparent 65%),
+    linear-gradient(180deg, #2c4a33, #15291f);
+  box-shadow:
+    inset 0 0 0 3px #15291f,
+    inset 0 0 0 4px #e3cf8f66,
+    0 8px 22px #0008;
+  color: var(--parchment);
+  font:
+    600 19px var(--font-display),
+    serif;
+  letter-spacing: 0.05em;
+  text-shadow: 0 1px 2px #000;
+}
+.seal-button:not(:disabled):hover {
+  border-color: #fff0c0;
+  color: #fff6d8;
+  box-shadow:
+    inset 0 0 0 3px #15291f,
+    inset 0 0 0 4px #e3cf8f99,
+    0 8px 22px #0008,
+    0 0 26px #e3cf8f40;
+}
+.seal-button:disabled {
+  border-color: var(--gold-line);
+  background: #0f1f19;
+  box-shadow: inset 0 0 0 3px #0f1f19;
+  color: var(--mist-dim);
+  opacity: 1;
+}
+.seal-button.quiet {
+  min-height: 46px;
+  border-color: var(--gold-line-strong);
+  background: transparent;
+  box-shadow: none;
+  color: var(--parchment-dim);
+  font-size: 16px;
+}
+.seal-button.quiet:not(:disabled):hover {
+  border-color: var(--gold);
+  box-shadow: none;
+}
+.seal-cost {
+  display: grid;
+  place-items: center;
+  min-width: 32px;
+  height: 32px;
+  padding: 0 6px;
+  border: 1.5px solid #bdd39a;
+  border-radius: 12px 5px;
+  background: radial-gradient(ellipse at 35% 25%, #7a9660, #14392c 70%);
+  box-shadow: 0 0 12px #aadd8540;
+  color: #edffe0;
+  font:
+    700 15px var(--font-ui),
+    sans-serif;
+  letter-spacing: 0;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .seal-button {
+    transition:
+      border-color 0.2s,
+      box-shadow 0.2s,
+      color 0.2s,
+      translate 0.12s;
+  }
+  .seal-button:not(:disabled):active {
+    translate: 0 1px;
+  }
+}
+
+/* Why a card can't be played appears right above it while hovered. -------- */
+.hand-action-hint {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 44px);
+  z-index: 2;
+  width: 220px;
+  translate: -50% 0;
+  padding: 9px 12px;
+  border: 1px solid #d99a7a88;
+  border-radius: 6px;
+  background: #2a1a14f4;
+  box-shadow: 0 8px 20px #000a;
+  color: #f8d7c3;
+  font:
+    500 13px/1.4 var(--font-ui),
+    sans-serif;
+  text-align: center;
+  pointer-events: none;
+}
+.hand-action-hint::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 100%;
+  width: 8px;
+  height: 8px;
+  translate: -50% -4px;
+  rotate: 45deg;
+  background: #2a1a14;
+  border-right: 1px solid #d99a7a88;
+  border-bottom: 1px solid #d99a7a88;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .hand-action-hint {
+    animation: fade-up 160ms ease-out;
+  }
+}
+
+/* Response stack: same frame as the spell panel, in a cooler tint. --------- */
+.arena-stack-panel {
+  position: relative;
+  padding: 18px 20px 20px;
+  border: 1px solid #a69ac244;
+  border-top: 2px solid #b8a6de;
+  border-radius: 4px 4px 10px 10px;
+  background:
+    radial-gradient(ellipse at 50% 0, #b8a6de18, transparent 60%),
+    linear-gradient(170deg, #1a1f2af7, #0d1618f5);
+  box-shadow: 0 16px 40px #0008;
+  color: var(--parchment);
+}
+.arena-stack-panel .action-dock-head {
+  display: flex;
+  padding-bottom: 14px;
+  margin-bottom: 12px;
+  border-bottom: 1px solid #c5b17b30;
+}
+.arena-stack-panel .action-card-title > small {
+  display: block;
+  margin-bottom: 6px;
+  color: #c3b6e2;
+  font:
+    600 11px/1.3 var(--font-ui),
+    sans-serif;
+  letter-spacing: 0.22em;
+}
+.arena-stack-panel .action-card-title > b {
+  display: block;
+  color: var(--parchment);
+  font:
+    600 22px/1.2 var(--font-display),
+    serif;
+}
+.pending-combat {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #e6ddc4;
+  font:
+    500 15px/1.4 var(--font-ui),
+    sans-serif;
+}
+.pending-combat b {
+  color: #e4b48b;
+}
+.stack-list {
+  display: grid;
+  gap: 8px;
+  max-height: 260px;
+  overflow-y: auto;
+}
+.stack-card {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  width: 100%;
+  padding: 6px;
+  border: 1px solid #ffffff12;
+  border-radius: 6px;
+  background: #ffffff06;
+  color: #cbd5bb;
+  text-align: left;
+}
+.stack-card:first-child {
+  border-color: #e3c77f88;
+  background: #e3c77f12;
+}
+.stack-card img {
+  width: 46px;
+  height: 64px;
+  object-fit: cover;
+  border-radius: 4px;
+}
+.stack-card > div {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+.stack-card small {
+  color: #b9aecf;
+  font:
+    500 11px var(--font-ui),
+    sans-serif;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.stack-card:first-child small {
+  color: #f1d68f;
+}
+.stack-card b {
+  color: var(--parchment);
+  font:
+    600 17px/1.2 var(--font-display),
+    serif;
+}
+.stack-owner {
+  font:
+    500 13px var(--font-ui),
+    sans-serif;
+}
+.stack-owner.seat-0 {
+  color: #8fd8ea;
+}
+.stack-owner.seat-1 {
+  color: #f0a68a;
+}
+.stack-rule {
+  margin: 12px 0 0;
+  color: #b4c2b3;
+  font:
+    14px/1.45 var(--font-ui),
+    sans-serif;
+}
+
+/* Smaller screens. ----------------------------------------------------------- */
+@media (max-width: 1100px) {
+  .arena-action-rail {
+    top: 176px;
+    bottom: 256px;
+  }
+  .arena-pass {
+    right: 12px;
+    bottom: 176px;
+    width: 220px;
+    min-height: 58px;
+    padding: 10px 10px 10px 16px;
+    font-size: 12px;
+  }
+  .arena-pass.enabled > span {
+    font-size: 16px;
+  }
+  .arena-pass > b {
+    width: 32px;
+    height: 32px;
+  }
+}
+@media (max-height: 700px) and (min-width: 760px) {
+  .arena-action-rail {
+    top: 132px;
+  }
+}
+@media (max-width: 759px) {
+  .arena-action-rail {
+    left: auto;
+    right: 10px;
+    width: min(220px, calc(100vw - 20px));
+    top: 172px;
+    bottom: 270px;
+  }
+  .arena-pass {
+    right: 10px;
+    bottom: 216px;
+    width: 176px;
+    min-height: 46px;
+    padding: 7px 8px 7px 12px;
+    border-radius: 10px;
+    font-size: 11px;
+  }
+  .arena-pass.enabled > span {
+    font-size: 14px;
+  }
+  .arena-pass > span > small {
+    font-size: 10px;
+  }
+  .arena-pass > b {
+    width: 26px;
+    height: 26px;
+    font-size: 15px;
+  }
+  .seal-button {
+    min-height: 40px;
+    font-size: 15px;
+  }
+}
+@media (max-height: 559px) and (orientation: landscape) {
+  .arena-action-rail {
+    left: auto;
+    right: 8px;
+    width: 200px;
+    top: 50px;
+    bottom: 186px;
+  }
+  .arena-pass {
+    right: 8px;
+    bottom: 130px;
+    width: 188px;
+    min-height: 44px;
+    padding: 6px 8px 6px 12px;
+    border-radius: 10px;
+    font-size: 11px;
+  }
+  .arena-pass.enabled > span {
+    font-size: 14px;
+  }
+  .arena-pass > span > small {
+    display: none;
+  }
+  .arena-pass > b {
+    width: 26px;
+    height: 26px;
+    font-size: 15px;
+  }
+  .seal-button {
+    min-height: 40px;
+    font-size: 15px;
+  }
+}
+@media (max-width: 759px), (max-height: 559px) and (orientation: landscape) {
+  .arena-stack-panel {
+    padding: 10px;
+  }
+  .arena-stack-panel .action-card-title > b {
+    font-size: 16px;
+  }
+  .stack-card img {
+    width: 30px;
+    height: 42px;
+  }
+  .stack-card b {
+    font-size: 13px;
+  }
+  .stack-rule,
+  .stack-owner {
+    display: none;
+  }
+}

@@ -90,7 +90,7 @@ export function SearchChoice({
         <div className="search-actions">
           {search.optional && !empty && (
             <button
-              className="outline"
+              className="seal-button quiet"
               disabled={busy}
               onClick={() => submit(true)}
             >
@@ -98,7 +98,7 @@ export function SearchChoice({
             </button>
           )}
           <button
-            className="gold"
+            className="seal-button"
             disabled={busy || (!empty && chosen < 0)}
             onClick={() => submit(empty)}
           >

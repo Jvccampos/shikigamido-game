@@ -1,3 +1,4 @@
+/* Search prompts: pick a card from the deck or discard pile. */
 .search-scrim {
   position: absolute;
   inset: 0;
@@ -5,19 +6,21 @@
   display: grid;
   place-items: center;
   background: #031310bb;
-  backdrop-filter: blur(4px);
+  backdrop-filter: blur(6px);
   padding: 20px;
 }
 .search-choice {
-  width: min(740px, 100%);
+  width: min(760px, 100%);
   max-height: 90dvh;
   overflow: auto;
-  padding: 26px;
-  border: 1px solid #bdb07888;
-  border-radius: 14px;
-  background: linear-gradient(145deg, #19352c, #0a211a);
-  box-shadow: 0 20px 60px #000a;
-  color: #e2e5d6;
+  padding: 28px 30px;
+  border: 1px solid var(--gold-line-strong);
+  border-radius: 10px;
+  background: var(--lacquer-solid);
+  box-shadow:
+    var(--hairline),
+    0 30px 100px #000d;
+  color: var(--parchment);
   outline: none;
 }
 .search-source {
@@ -26,24 +29,33 @@
   gap: 16px;
 }
 .search-source > img {
-  width: 44px;
-  height: 62px;
+  width: 46px;
+  height: 64px;
   object-fit: cover;
   border-radius: 4px;
+  border: 1px solid var(--gold-line-strong);
 }
 .search-source small {
-  font: 11px Arial;
-  letter-spacing: 1px;
-  color: #d8c695;
+  color: var(--gold);
+  font:
+    600 11px var(--font-ui),
+    sans-serif;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
 }
 .search-choice h2 {
-  margin: 7px 0;
-  font: 30px Georgia;
-  color: #f1e1b6;
+  margin: 6px 0 0;
+  font:
+    600 32px var(--font-display),
+    serif;
+  color: var(--parchment);
 }
 .search-choice > p {
-  font: 15px/1.5 Arial;
-  margin: 20px 0;
+  margin: 18px 0 0;
+  color: var(--mist);
+  font:
+    16px/1.5 var(--font-ui),
+    sans-serif;
 }
 .search-actions {
   display: flex;
@@ -52,16 +64,17 @@
   gap: 12px;
   margin-top: 22px;
 }
-.search-actions button {
-  min-height: 44px;
-  padding: 10px 18px;
-  font: 14px Arial;
+.search-actions .seal-button {
+  width: auto;
+  min-width: 220px;
 }
 .search-privacy {
   display: block;
   margin-top: 14px;
-  color: #a7bfae;
-  font: 12px/1.4 Arial;
+  color: var(--mist-dim);
+  font:
+    italic 14px/1.4 var(--font-display),
+    serif;
   text-align: center;
 }
 @media (max-width: 759px) {

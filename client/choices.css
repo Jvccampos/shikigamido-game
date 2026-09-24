@@ -1,25 +1,39 @@
+/* Card choice screens (opening hand, discard, searches) and the starting seal. */
+
 .choice-heading {
   text-align: center;
-  max-width: 750px;
+  max-width: 760px;
 }
 .choice-step {
-  font-size: 10px;
-  letter-spacing: 3px;
-  color: #dbc98d;
+  display: block;
+  color: var(--gold);
+  font:
+    600 12px var(--font-ui),
+    sans-serif;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
 }
 .choice-heading h1 {
-  font: 42px Georgia;
-  margin: 12px 0;
+  margin: 12px 0 10px;
+  font:
+    600 50px/1.1 var(--font-display),
+    serif;
+  letter-spacing: 0.01em;
+  color: var(--parchment);
 }
 .choice-heading p {
-  font-size: 14px;
-  line-height: 1.7;
-  color: #bacbb7;
+  font-size: 17px;
+  line-height: 1.55;
+  color: var(--mist);
   margin: 8px 0;
 }
+.choice-heading p b {
+  color: var(--parchment);
+  font-weight: 600;
+}
 .choice-heading small {
-  font-size: 12px;
-  color: #d9cdad;
+  font-size: 14px;
+  color: var(--parchment-dim);
 }
 .choice-cards {
   display: flex;
@@ -33,8 +47,8 @@
   position: relative;
   width: clamp(90px, 10vw, 165px);
   transition:
-    transform 0.18s,
-    filter 0.18s;
+    transform 0.2s var(--ease-out),
+    filter 0.2s;
 }
 .choice-art {
   width: 100%;
@@ -42,11 +56,14 @@
   display: block;
   border: 2px solid #82977b66;
   border-radius: 7px;
-  background: #14261c;
-  box-shadow: 0 8px 16px #0005;
+  background: var(--ink-600);
+  box-shadow: 0 10px 22px #0008;
   overflow: hidden;
   user-select: none;
   -webkit-touch-callout: none;
+  transition:
+    border-color 0.18s,
+    box-shadow 0.18s;
 }
 .choice-art img {
   width: 100%;
@@ -55,12 +72,12 @@
   object-fit: cover;
 }
 .choice-card.chosen {
-  transform: translateY(-6px);
-  filter: drop-shadow(0 0 12px #d8c37888);
+  transform: translateY(-10px);
+  filter: drop-shadow(0 0 14px #d8c37888);
 }
 .choice-card.chosen .choice-art {
-  border-color: #efda96;
-  outline: 1px solid #efda96;
+  border-color: var(--gold-bright);
+  outline: 1px solid var(--gold-bright);
   outline-offset: 3px;
 }
 .choice-art:focus-visible {
@@ -69,141 +86,355 @@
 }
 @media (hover: hover) {
   .choice-card:not(.chosen):hover {
-    transform: translateY(-3px);
+    transform: translateY(-4px);
   }
   .choice-art:hover {
     border-color: #d9d3a4;
+    box-shadow: 0 14px 28px #000a;
   }
 }
-@media (prefers-reduced-motion: reduce) {
-  .choice-card {
-    transition: none;
+/* The chosen mark: an exchange or reserve stamp in the corner. */
+.opening-hand .choice-card.chosen::after,
+.discard-choice .choice-card.chosen::after {
+  content: "⇄";
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--gold-bright);
+  color: var(--ink-900);
+  font-weight: bold;
+  box-shadow: 0 2px 8px #000a;
+  pointer-events: none;
+}
+.discard-choice .choice-card.chosen::after {
+  content: "+1";
+  font:
+    700 14px var(--font-display),
+    serif;
+}
+.choice-read-hint {
+  margin: -8px 0 0;
+  color: var(--mist-dim);
+  font:
+    italic 15px var(--font-display),
+    serif;
+}
+.choice-read-hint kbd {
+  padding: 0;
+  border: 0;
+  font: inherit;
+  font-style: normal;
+  color: var(--gold);
+}
+@media (hover: none), (max-width: 759px), (max-height: 559px) {
+  .choice-read-hint {
+    display: none;
   }
 }
 .choice-footer {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 20px;
+  gap: 18px;
   flex-wrap: wrap;
 }
 .choice-footer > p {
   flex-basis: 100%;
   text-align: center;
   margin: 0;
-  color: #bbcaaf;
-  font-size: 12px;
+  color: var(--mist);
+  font-size: 14px;
 }
+/* Confirm: the seal button; secondary actions are quiet outlines. */
 .choice-confirm {
-  padding: 14px 24px;
-  border: 1px solid #ead99e;
-  border-radius: 3px;
-  background: linear-gradient(#dbcb92, #b3a565);
-  color: #17251a;
-  font-size: 13px;
-  font-weight: bold;
-  min-width: 210px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  min-width: 250px;
+  min-height: 56px;
+  padding: 0 28px;
+  border: 1px solid var(--gold);
+  border-radius: 8px;
+  background:
+    radial-gradient(ellipse at 50% -40%, #f3dfa044, transparent 65%),
+    linear-gradient(180deg, #2c4a33, #15291f);
+  box-shadow:
+    inset 0 0 0 3px #15291f,
+    inset 0 0 0 4px #e3cf8f66,
+    0 8px 22px #0008;
+  color: var(--parchment);
+  font:
+    600 19px var(--font-display),
+    serif;
+  letter-spacing: 0.05em;
+  text-shadow: 0 1px 2px #000;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s,
+    color 0.2s,
+    translate 0.12s;
 }
 .choice-confirm span {
-  margin-left: 16px;
+  margin: 0;
+  font-size: 17px;
+}
+.choice-confirm:not(:disabled):hover {
+  border-color: #fff0c0;
+  color: #fff6d8;
+  box-shadow:
+    inset 0 0 0 3px #15291f,
+    inset 0 0 0 4px #e3cf8f99,
+    0 8px 22px #0008,
+    0 0 26px #e3cf8f40;
+}
+.choice-confirm:not(:disabled):active {
+  translate: 0 1px;
 }
 .choice-confirm:disabled {
-  opacity: 0.4;
+  border-color: var(--gold-line);
+  background: #0f1f19;
+  box-shadow: inset 0 0 0 3px #0f1f19;
+  color: var(--mist-dim);
+  opacity: 1;
 }
-.choice-skip,
-.choice-back {
+.choice-skip {
+  min-height: 48px;
+  padding: 0 20px;
+  border: 1px solid var(--gold-line-strong);
+  border-radius: 8px;
   background: transparent;
-  color: #d4dcc3;
-  border: 1px solid #8c9a6c77;
-  padding: 13px 20px;
-  border-radius: 3px;
-  font-size: 12px;
+  color: var(--parchment-dim);
+  font:
+    500 16px var(--font-display),
+    serif;
+  letter-spacing: 0.03em;
+  transition:
+    border-color 0.2s,
+    color 0.2s;
+}
+.choice-skip:not(:disabled):hover {
+  border-color: var(--gold);
+  color: var(--parchment);
 }
 .choice-back {
   position: absolute;
-  top: 24px;
-  left: 24px;
+  top: 26px;
+  left: 30px;
+  padding: 8px 4px;
+  background: transparent;
+  border: 0;
+  color: var(--mist);
+  font:
+    500 13px var(--font-ui),
+    sans-serif;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  transition: color 0.15s;
+}
+.choice-back:hover {
+  color: var(--gold-bright);
 }
 .reserve-preview {
   display: flex;
   justify-content: center;
-  align-items: center;
+  align-items: baseline;
   gap: 12px;
-  color: #c8d9b7;
-  margin-top: 16px;
+  margin-top: 14px;
+  color: var(--mist);
+  font-size: 13px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
 }
 .reserve-preview > b {
-  font-size: 27px;
+  font:
+    600 32px var(--font-display),
+    serif;
+  letter-spacing: 0;
+  color: var(--parchment);
 }
 .reserve-preview small {
-  font-size: 17px;
-  color: #97ab8c;
+  font-size: 18px;
+  color: var(--mist-dim);
 }
 .reserve-preview em {
-  color: #ead17d;
+  color: var(--gold-bright);
   font-style: normal;
 }
 .choice-empty {
   padding: 30px;
   color: #b4c9a5;
+  font:
+    italic 18px var(--font-display),
+    serif;
 }
+
+/* Starting seal: two radio tiles, the portal tradeoff, then one commit. --- */
 .position-guide {
   position: absolute;
   left: 28px;
-  top: 35%;
-  width: 245px;
-  padding: 20px;
-  background: linear-gradient(110deg, #0b211be8, #173328aa);
-  border-left: 2px solid #d2bc74;
+  top: 50%;
+  z-index: 35;
+  translate: 0 -50%;
+  width: 300px;
+  padding: 22px 22px 18px;
 }
-.position-guide > small {
-  font-size: 8px;
-  letter-spacing: 2px;
-  color: #cfbe85;
+.position-guide > .rune-label {
+  display: block;
 }
-.position-guide h2 {
-  font: 27px Georgia;
-  line-height: 1.2;
-  margin: 10px 0;
+.position-guide .position-options {
+  display: flex;
+  gap: 8px;
+  margin: 14px 0;
 }
-.position-guide p {
-  font-size: 12px;
-  line-height: 1.6;
-  color: #b2c3aa;
+.position-options button {
+  flex: 1;
+  display: grid;
+  justify-items: start;
+  align-content: start;
+  gap: 3px;
+  padding: 12px 12px 10px;
+  background: #ffffff05;
+  border: 1px solid var(--gold-line);
+  border-radius: 6px;
+  color: var(--parchment-dim);
+  text-align: left;
+  transition:
+    border-color 0.2s,
+    background 0.2s,
+    box-shadow 0.2s;
+}
+.position-options button:hover {
+  border-color: var(--gold-line-strong);
+}
+.position-options button > b {
+  font:
+    600 28px/1 var(--font-display),
+    serif;
+  color: var(--gold-bright);
+}
+.position-options button > span {
+  margin: 0;
+  font:
+    400 13px var(--font-ui),
+    sans-serif;
+  color: var(--mist);
+}
+.position-options button > em {
+  font:
+    500 11px/1.3 var(--font-ui),
+    sans-serif;
+  font-style: normal;
+  letter-spacing: 0.04em;
+  color: var(--curse);
+  white-space: nowrap;
+}
+.position-options .active {
+  border-color: var(--gold-bright);
+  background: #f1d68f14;
+  box-shadow:
+    inset 0 0 0 1px var(--gold-bright),
+    0 0 18px #f1d68f22;
+}
+.position-note {
+  margin: 0 0 16px;
+  padding-left: 12px;
+  border-left: 2px solid var(--curse);
+}
+.position-guide p.position-note {
+  color: #cdbfe0;
+  font-size: 14px;
+  line-height: 1.5;
+}
+.position-guide .glyph {
+  font-family: var(--font-jp);
+  font-style: normal;
 }
 .position-guide .choice-confirm {
   width: 100%;
   min-width: 0;
-  padding: 12px 8px;
-  font-size: 11px;
+  min-height: 52px;
+  font-size: 18px;
 }
+.position-hint,
+.position-guide > small.position-hint {
+  display: block;
+  margin-top: 10px;
+  color: var(--mist-dim);
+  font:
+    italic 13px var(--font-display),
+    serif;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+/* Searches share the card grid but scroll inside their dialog. ------------ */
+.search-choice .choice-cards {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 18px;
+  max-height: 48dvh;
+  overflow: auto;
+  width: 100%;
+  margin: 16px 0;
+  padding: 14px 8px;
+}
+.search-choice .choice-card {
+  width: 154px;
+  flex: 0 0 154px;
+}
+
+/* Large screens: cards grow with the viewport and shrink to stay on one row. */
+@media (min-width: 1200px) and (min-height: 700px) {
+  .card-choice-screen:not(.search-choice) .choice-cards {
+    flex-wrap: nowrap;
+    gap: clamp(14px, 1.2vw, 24px);
+  }
+  .card-choice-screen:not(.search-choice) .choice-card {
+    width: auto;
+    min-width: 0;
+    flex: 0 1 clamp(150px, min(11.5vw, 27dvh), 230px);
+  }
+  .search-choice .choice-card {
+    width: clamp(154px, min(10vw, 24dvh), 200px);
+    flex-basis: clamp(154px, min(10vw, 24dvh), 200px);
+  }
+}
+
+/* Smaller screens. ----------------------------------------------------------- */
 @media (max-width: 1100px) {
   .position-guide {
     left: 12px;
-    width: 215px;
+    width: 230px;
     padding: 15px;
   }
   .choice-cards {
     gap: 10px;
   }
   .choice-heading h1 {
-    font-size: 34px;
+    font-size: 36px;
   }
 }
 @media (max-width: 759px) {
   .choice-heading h1 {
-    font-size: 28px;
+    font-size: 30px;
   }
   .choice-step {
-    font-size: 8px;
+    font-size: 9px;
     letter-spacing: 2px;
   }
   .choice-heading p {
-    font-size: 11px;
+    font-size: 12px;
     line-height: 1.5;
   }
   .choice-heading small {
-    font-size: 10px;
+    font-size: 11px;
   }
   .choice-cards {
     gap: 9px;
@@ -221,13 +452,14 @@
     width: 100%;
   }
   .choice-footer > p {
-    font-size: 10px;
+    font-size: 11px;
   }
   .choice-confirm,
   .choice-skip {
     width: 100%;
-    font-size: 11px;
-    padding: 12px;
+    min-height: 46px;
+    font-size: 15px;
+    padding: 0 12px;
   }
   .choice-back {
     position: static;
@@ -240,21 +472,18 @@
     font-size: 11px;
   }
   .reserve-preview > b {
-    font-size: 21px;
+    font-size: 24px;
   }
   .position-guide {
     top: auto;
     bottom: 22px;
     left: 18px;
+    translate: none;
     width: calc(100% - 36px);
     padding: 16px;
   }
-  .position-guide h2 {
-    font-size: 22px;
-    margin: 6px 0;
-  }
-  .position-guide p {
-    font-size: 10px;
+  .position-guide p.position-note {
+    font-size: 11px;
     margin: 6px 0;
   }
   .discard-choice .choice-cards {
@@ -266,21 +495,28 @@
   .discard-choice .choice-footer {
     flex-direction: column-reverse;
   }
+  .search-choice .choice-card {
+    width: 125px;
+    flex-basis: 125px;
+  }
+  .search-choice .choice-cards {
+    gap: 10px;
+  }
 }
 @media (max-height: 559px) and (orientation: landscape) {
   .choice-heading h1 {
-    font-size: 24px;
+    font-size: 26px;
     margin: 5px 0;
   }
   .choice-heading p {
-    font-size: 10px;
+    font-size: 11px;
     margin: 4px 0;
   }
   .choice-heading small {
-    font-size: 9px;
+    font-size: 10px;
   }
   .choice-step {
-    font-size: 7px;
+    font-size: 8px;
     letter-spacing: 2px;
   }
   .choice-card {
@@ -296,12 +532,13 @@
     gap: 10px;
   }
   .choice-footer > p {
-    font-size: 9px;
+    font-size: 10px;
   }
   .choice-confirm,
   .choice-skip {
-    padding: 9px 15px;
-    font-size: 10px;
+    min-height: 40px;
+    padding: 0 15px;
+    font-size: 14px;
     min-width: 180px;
   }
   .choice-back {
@@ -315,56 +552,34 @@
     font-size: 10px;
   }
   .reserve-preview > b {
-    font-size: 18px;
+    font-size: 20px;
   }
   .position-guide {
     left: 10px;
     top: 140px;
     bottom: auto;
-    width: 145px;
+    translate: none;
+    width: 150px;
     padding: 10px;
   }
-  .position-guide > small {
-    font-size: 6px;
+  .position-guide p.position-note {
+    font-size: 10px;
   }
-  .position-guide h2 {
-    font-size: 19px;
-    margin: 5px 0;
+  .position-options button {
+    padding: 6px 6px;
   }
-  .position-guide p {
+  .position-options button > b {
+    font-size: 20px;
+  }
+  .position-options button > span {
+    font-size: 10px;
+  }
+  .position-options button > em {
     font-size: 9px;
   }
   .position-guide .choice-confirm {
-    padding: 8px 4px;
-    font-size: 9px;
-    min-width: 0;
-  }
-}
-.choice-heading .choice-step {
-  display: block;
-}
-.search-choice .choice-cards {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 18px;
-  max-height: 48dvh;
-  overflow: auto;
-  width: 100%;
-  margin: 16px 0;
-  padding: 14px 8px;
-}
-.search-choice .choice-card {
-  width: 154px;
-  flex: 0 0 154px;
-}
-@media (max-width: 759px) {
-  .search-choice .choice-card {
-    width: 125px;
-    flex-basis: 125px;
-  }
-  .search-choice .choice-cards {
-    gap: 10px;
+    min-height: 40px;
+    font-size: 14px;
   }
 }
 @media (max-height: 540px) and (min-width: 600px) {
@@ -378,5 +593,10 @@
   .search-choice .choice-card {
     width: clamp(90px, calc((100dvh - 170px) * 0.6), 140px);
     flex-basis: clamp(90px, calc((100dvh - 170px) * 0.6), 140px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .choice-card {
+    transition: none;
   }
 }

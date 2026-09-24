@@ -28,30 +28,31 @@ test("multi-step spells reset old choices and submit the selected units or cells
     const p = layout(1920, 1080).point(x, y);
     await page.mouse.click(p.x, p.y);
   };
+  const done = page.locator(".spell-step.done");
   await page.getByRole("button", { name: /^Selecionar Gishiki/ }).click();
   await click(2, 2);
-  await page
-    .getByRole("combobox", { name: "Keyword", exact: true })
-    .selectOption("Pular");
+  await expect(done).toHaveCount(1);
+  // Only the donor's own keywords are offered.
+  await page.getByRole("radio", { name: "Pular" }).click();
+  // The cast button only appears once every choice is made.
   await expect(
     page.getByRole("button", { name: "Conjurar · 3 PE" }),
-  ).toBeDisabled();
+  ).toHaveCount(0);
   await click(2, 3);
-  await expect(page.locator(".action-target")).toHaveCount(2);
+  await expect(done).toHaveCount(3);
   await page.getByRole("button", { name: /^Selecionar Ventos/ }).click();
-  await expect(page.locator(".action-target")).toHaveCount(0);
+  await expect(done).toHaveCount(0);
   await expect(
     page.getByRole("button", { name: "Conjurar · 2 PE" }),
-  ).toBeDisabled();
+  ).toHaveCount(0);
   await page.getByRole("button", { name: /^Selecionar Gishiki/ }).click();
-  await expect(
-    page.getByRole("combobox", { name: "Keyword", exact: true }),
-  ).toHaveValue("");
+  await expect(page.getByRole("radio", { checked: true })).toHaveCount(0);
+  // Each pick advances the step list before the next one is made.
   await click(2, 2);
+  await expect(done).toHaveCount(1);
   await click(2, 3);
-  await page
-    .getByRole("combobox", { name: "Keyword", exact: true })
-    .selectOption("Pular");
+  await expect(done).toHaveCount(2);
+  await page.getByRole("radio", { name: "Pular" }).click();
   await page.getByRole("button", { name: "Conjurar · 3 PE" }).click();
   expect(g.stack[0]).toMatchObject({
     targetId: donor.id,
@@ -69,7 +70,7 @@ test("multi-step spells reset old choices and submit the selected units or cells
   await click(3, 4);
   await expect(
     page.getByRole("button", { name: "Conjurar · 2 PE" }),
-  ).toBeDisabled();
+  ).toHaveCount(0);
   await click(4, 4);
   await page.getByRole("button", { name: "Conjurar · 2 PE" }).click();
   expect(g.stack[0]).toMatchObject({ x: 3, y: 4, x2: 4, y2: 4 });

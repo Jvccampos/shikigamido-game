@@ -1,5 +1,5 @@
 :root {
-  font-family: "Trebuchet MS", sans-serif;
+  font-family: var(--font-ui);
   color: #eeede3;
   background: #0b1112;
   font-synthesis: none;
@@ -66,8 +66,8 @@ p {
 h1,
 h2,
 h3 {
-  font-family: Georgia, serif;
-  font-weight: 400;
+  font-family: var(--font-display);
+  font-weight: 600;
 }
 p {
   line-height: 1.65;
@@ -106,7 +106,7 @@ em {
 }
 .eyebrow {
   font:
-    600 10px/1.5 "Trebuchet MS",
+    600 11px/1.5 var(--font-ui),
     sans-serif;
   letter-spacing: 0.2em;
   color: var(--gold);
@@ -192,7 +192,7 @@ header {
 }
 .brand b {
   font:
-    17px Georgia,
+    p0 17px var(--font-display),
     serif;
   letter-spacing: 0.15em;
 }
@@ -280,7 +280,7 @@ nav .on {
   right: -20px;
   top: 30px;
   writing-mode: vertical-rl;
-  font: 60px Georgia;
+  font: 600 60px var(--font-display);
   color: #d4b97740;
   z-index: -1;
   letter-spacing: 0.25em;
@@ -454,10 +454,10 @@ footer small {
   gap: 10px;
 }
 .deck-progress > b {
-  font: 25px Georgia;
+  font: 600 25px var(--font-display);
 }
 .deck-progress > b small {
-  font: 11px "Trebuchet MS";
+  font: 12px var(--font-ui);
   color: var(--muted);
 }
 .deck-progress > span {
@@ -591,7 +591,7 @@ footer small {
   padding: 10px 0;
 }
 .catalog-meta b {
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 400;
   overflow: hidden;
   white-space: nowrap;
@@ -599,18 +599,20 @@ footer small {
 }
 .catalog-meta small {
   color: var(--muted);
-  font-size: 10px;
+  font-size: 11px;
 }
 .add-card {
   width: 100%;
-  padding: 8px;
-  border: 1px solid var(--line);
-  font-size: 10px;
+  padding: 9px 8px;
+  border: 1px solid #c7bc8b55;
+  font-size: 12px;
   border-radius: 3px;
-  color: #cdb788;
+  color: #e2cc98;
+  background: #d4c0920a;
 }
 .add-card:not(:disabled):hover {
-  background: #d4c09215;
+  background: #d4c09226;
+  border-color: #d9bc80aa;
 }
 .card-placeholder {
   height: 100%;
@@ -625,7 +627,7 @@ footer small {
   color: var(--gold);
 }
 .card-placeholder b {
-  font: 14px Georgia;
+  font: 600 14px var(--font-display);
   max-width: 90%;
   text-align: center;
 }
@@ -643,7 +645,7 @@ footer small {
   border: 1px solid #899d7d50;
   border-radius: 5px;
   padding: 6px 10px;
-  font: 700 18px "Trebuchet MS";
+  font: 700 19px var(--font-display);
   white-space: nowrap;
 }
 .stat sup {
@@ -748,34 +750,6 @@ footer small {
 .phase-track .done {
   color: #acc6af;
 }
-.owner-1 {
-  --owner: var(--red);
-}
-.owner-0 {
-  --owner: var(--blue);
-}
-.pe {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  border-top: 1px solid var(--line);
-  padding-top: 10px;
-}
-.pe > b {
-  font-size: 22px;
-  color: var(--gold);
-}
-.pe small {
-  font-size: 10px;
-  margin-left: 3px;
-  color: #8b9b8c;
-  font-weight: 400;
-}
-.pe i {
-  font-style: normal;
-  font-size: 13px;
-  color: #3f5046;
-}
 .paths {
   position: absolute;
   inset: 0;
@@ -783,54 +757,6 @@ footer small {
   height: 100%;
   overflow: visible;
   pointer-events: none;
-}
-.stack-panel {
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  padding: 16px;
-}
-.target-controls {
-  display: grid;
-  gap: 9px;
-  margin: 14px 0;
-}
-.target-controls > small {
-  font-size: 9px;
-  overflow-wrap: anywhere;
-  color: #a8bbaa;
-}
-.target-controls input,
-.target-controls select {
-  font-size: 10px;
-  padding: 8px;
-}
-.target-controls button {
-  font-size: 10px;
-  padding: 10px 8px;
-}
-.stack-panel {
-  margin-top: 16px;
-  border-color: #bc9d5066;
-  background: #29241666;
-}
-.stack-panel p {
-  font-size: 10px;
-}
-.stack-panel > button {
-  display: block;
-  font-size: 11px;
-  padding: 8px 0;
-  color: #e1cc92;
-}
-.stack-panel > small {
-  font-size: 9px;
-  color: var(--muted);
-}
-.concede {
-  display: block;
-  color: #ab837a;
-  font-size: 10px;
-  padding: 20px 0;
 }
 .lobby {
   max-width: 860px;
@@ -863,7 +789,7 @@ footer small {
   box-shadow: 0 0 35px color-mix(in srgb, var(--owner) 15%, transparent);
   color: var(--owner);
   margin: 0 auto 20px;
-  font: 32px Georgia;
+  font: 600 32px var(--font-display);
 }
 .lobby-members {
   padding: 20px;
@@ -888,8 +814,8 @@ footer small {
 .modal-scrim {
   position: fixed;
   inset: 0;
-  background: #050b0ce8;
-  backdrop-filter: blur(10px);
+  background: #030a08e0;
+  backdrop-filter: blur(12px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -908,80 +834,125 @@ footer small {
 .card-dialog:not([open]) {
   display: none;
 }
+/* Card reading: the card floats large on the left, the text breathes beside
+   it. No box; the dimmed board is the frame. */
 .card-focus {
   position: relative;
-  max-width: 880px;
+  max-width: 1060px;
   width: 100%;
   display: grid;
-  grid-template-columns: minmax(180px, 315px) minmax(0, 1fr);
-  gap: 40px;
+  grid-template-columns: minmax(200px, min(440px, 62dvh)) minmax(0, 1fr);
+  gap: 56px;
   align-items: center;
-  border: 1px solid #bca97666;
-  padding: 32px;
-  background: #12201a;
-  border-radius: 12px;
-  box-shadow: 0 30px 150px #000a;
+  padding: 32px 40px;
   max-height: 95dvh;
   overflow: auto;
 }
 .card-focus > .card-face {
-  max-height: 75vh;
+  max-height: 80vh;
+  border-radius: 12px;
+  box-shadow:
+    0 0 0 1px #d8c38a66,
+    0 0 80px #d9c08422,
+    0 30px 70px #000d;
+}
+/* The text column repeats current stats; keep the printed card uncovered. */
+.card-focus > .card-face > .stats {
+  display: none;
+}
+.focus-text .eyebrow {
+  color: var(--gold);
+  letter-spacing: 0.3em;
+  margin-bottom: 10px;
 }
 .focus-text h2 {
-  font-size: 32px;
+  margin: 0 0 18px;
+  font:
+    600 44px/1.1 var(--font-display),
+    serif;
+  color: var(--parchment);
 }
 .focus-text p:not(.eyebrow) {
-  font-size: 14px;
-  color: #c3ceb8;
-  line-height: 1.8;
-  margin-top: 24px;
+  font-size: 17px;
+  color: #cfd8c5;
+  line-height: 1.7;
+  margin-top: 22px;
   white-space: pre-line;
 }
 .focus-text > .stats {
   justify-content: flex-start;
+  gap: 10px;
+}
+.focus-text > .stats .stat {
+  padding: 8px 14px;
+  font:
+    700 20px var(--font-ui),
+    sans-serif;
+}
+.focus-text > .stats .stat small {
+  font-size: 16px;
 }
 .focus-text > small {
   display: block;
-  color: #7f927e;
-  margin-top: 20px;
+  color: var(--mist-dim);
+  margin-top: 26px;
+  font:
+    500 11px var(--font-ui),
+    sans-serif;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
 }
 .focus-text .muted {
-  font-size: 11px !important;
+  font-size: 13px !important;
 }
 .close {
   position: absolute;
   right: 12px;
   top: 8px;
-  font-size: 28px;
   z-index: 3;
-  width: 36px;
-  height: 36px;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 1px solid var(--gold-line-strong);
   border-radius: 50%;
-  background: #14261bf0;
-  color: #e7dfbd;
+  background: var(--ink-900);
+  color: var(--parchment-dim);
+  font-size: 26px;
+  line-height: 1;
+  transition:
+    color 0.15s,
+    border-color 0.15s;
+}
+.close:hover {
+  color: var(--gold-bright);
+  border-color: var(--gold-bright);
 }
 .confirm-dialog {
-  padding: 32px;
-  background: #16241c;
-  border: 1px solid var(--line);
+  position: relative;
+  padding: 34px 36px 28px;
+  background: var(--lacquer-solid);
+  border: 1px solid var(--gold-line-strong);
   border-radius: 10px;
+  box-shadow:
+    var(--hairline),
+    0 30px 100px #000d;
   max-width: 500px;
 }
 .confirm-dialog h2 {
-  font-size: 28px;
+  font-size: 34px;
 }
 .confirm-dialog p {
-  color: var(--muted);
-  font-size: 14px;
+  color: var(--mist);
+  font-size: 16px;
 }
 .toast {
   position: fixed;
   left: 50%;
   bottom: 24px;
   transform: translateX(-50%);
-  background: #dfcb99;
-  color: #1d271e;
-  border: 1px solid #f4e3b8;
+  background: var(--lacquer-solid);
+  color: var(--parchment);
+  border: 1px solid var(--gold);
   padding: 14px 18px;
   display: flex;
   align-items: center;
@@ -1021,7 +992,7 @@ footer small {
   border-radius: 5px;
 }
 .rulegrid span {
-  font: 27px Georgia;
+  font: 600 27px var(--font-display);
   color: var(--gold);
 }
 .rulegrid h2 {
@@ -1063,12 +1034,6 @@ footer small {
   .phase-track > div:after {
     right: -15px;
     width: 12px;
-  }
-  .stack-panel {
-    margin: 0;
-  }
-  .concede {
-    padding: 5px;
   }
   .hero-card {
     width: 175px;
@@ -1220,13 +1185,6 @@ footer small {
   .room-code small {
     font-size: 6px;
   }
-  .pe {
-    grid-column: 1/-1;
-    padding-top: 6px;
-  }
-  .pe > b {
-    font-size: 18px;
-  }
   .lobby {
     padding: 35px 18px;
   }
@@ -1310,18 +1268,11 @@ footer small {
     padding-bottom: 10px;
   }
 }
-@font-face {
-  font-family: ShikigamidoJP;
-  src: url("/assets/fonts/shikigamido-jp.woff2") format("woff2");
-  font-style: normal;
-  font-weight: 400;
-  font-display: swap;
-}
 .seal,
 .hero-kanji,
 .elements button,
 .card-placeholder > span {
-  font-family: ShikigamidoJP, Georgia, serif;
+  font-family: var(--font-jp);
 }
 @media (min-width: 1101px) {
   .in-game footer {

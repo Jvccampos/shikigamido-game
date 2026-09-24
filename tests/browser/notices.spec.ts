@@ -2,7 +2,7 @@ import { test, expect } from "@playwright/test";
 import { idle } from "./fixtures.js";
 import { random, randomState } from "../../shared/random.js";
 
-test("practice opponent notices allow reading and fade before removal", async ({
+test("practice phase notices allow reading and fade before removal", async ({
   page,
 }) => {
   await page.goto("/");
@@ -45,15 +45,17 @@ test("practice opponent notices allow reading and fade before removal", async ({
     Object.assign(window, { noticeRecords: records });
   });
   await page.getByRole("button", { name: "Manter estas cartas" }).click();
-  await page.getByRole("button", { name: "Começar neste selo" }).click();
+  await page.getByRole("button", { name: /^Começar no selo/ }).click();
   // The player can confirm before the bot is ready. Wait for setup to finish
   // before deciding whether we need to pass the player's invocation phase.
   await expect(page.locator(".arena-shell")).not.toHaveClass(
     /preparing-position/,
   );
   await idle(page);
-  if (await page.locator(".arena-phase.active").count())
-    await page.getByRole("button", { name: "Concluir invocações" }).click();
+  // Whoever starts, pass your invocation once it arrives.
+  await page
+    .getByRole("button", { name: "Concluir invocações" })
+    .click({ timeout: 20000 });
   const finished = () =>
     page.evaluate(() =>
       (
@@ -66,13 +68,15 @@ test("practice opponent notices allow reading and fade before removal", async ({
           }[];
         }
       ).noticeRecords.find(
-        (n) => n.title.includes("Guardião") && n.duration !== undefined,
+        // Your movement notice follows the bot's half without any click.
+        (n) =>
+          n.title.includes("Sua vez · Movimento") && n.duration !== undefined,
       ),
     );
   await expect.poll(finished, { timeout: 20000 }).toBeTruthy();
   const notice = (await finished())!;
-  expect(notice.duration, notice.title).toBeGreaterThanOrEqual(3900);
-  expect(notice.duration, notice.title).toBeLessThan(5000);
+  expect(notice.duration, notice.title).toBeGreaterThanOrEqual(2700);
+  expect(notice.duration, notice.title).toBeLessThan(3800);
   expect(notice.fadeOpacity).toBeGreaterThan(0);
   expect(notice.fadeOpacity).toBeLessThan(1);
   expect(notice.faded, "Notice should fade out before it leaves the DOM").toBe(
@@ -80,7 +84,7 @@ test("practice opponent notices allow reading and fade before removal", async ({
   );
 });
 
-test("discard choices follow the opponent notice without an extra pause or a deferred player notice", async ({
+test("discard choices follow the opponent's discard without a banner or a deferred notice", async ({
   page,
 }) => {
   await page.goto("/");
@@ -105,18 +109,20 @@ test("discard choices follow the opponent notice without an extra pause or a def
   );
   await page.getByRole("button", { name: "Jogar treino local" }).click();
   await page.getByRole("button", { name: "Manter estas cartas" }).click();
-  await page.getByRole("button", { name: "Começar neste selo" }).click();
+  await page.getByRole("button", { name: /^Começar no selo/ }).click();
   for (const phase of ["invocações", "movimentos", "magias"])
     await page
       .getByRole("button", { name: `Concluir ${phase}` })
       .click({ timeout: 20000 });
   const notice = page.locator(".arena-notice");
-  await expect(notice).toContainText("Guardião do santuário · Descarte");
-  await page.mouse.click(5, 500);
-  await expect(notice).toHaveCount(0, { timeout: 1200 });
+  // The turn bar shows the opponent's discard; no banner covers the board.
+  await expect(page.locator(".duel-context h1")).toContainText(
+    "Guardião do santuário está convertendo cartas",
+  );
+  await expect(notice).toHaveCount(0);
   await expect(
     page.getByRole("heading", { name: "Transforme cartas em energia" }),
-  ).toBeVisible({ timeout: 1000 });
+  ).toBeVisible({ timeout: 5000 });
   await page.getByRole("button", { name: "Ver tabuleiro" }).click();
   // Returning to the board must not replay an announcement hidden by the dialog.
   await page.waitForTimeout(700);
@@ -136,7 +142,7 @@ test.describe("dismissible phase notices", () => {
       await page.goto("/");
       await page.getByRole("button", { name: "Jogar treino local" }).click();
       await page.getByRole("button", { name: "Manter estas cartas" }).click();
-      await page.getByRole("button", { name: "Começar neste selo" }).click();
+      await page.getByRole("button", { name: /^Começar no selo/ }).click();
       const notice = page.locator(".arena-notice");
       await expect(notice).toBeVisible();
       await expect(notice).toContainText("Clique ou toque para dispensar");

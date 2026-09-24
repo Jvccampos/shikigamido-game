@@ -16,17 +16,28 @@
   padding: 0;
   max-width: none;
 }
+body:has(.playing-arena) {
+  overflow: hidden;
+  height: 100dvh;
+}
 .arena-shell {
+  /* Board cell size on desktop, mirroring shared/arena-layout.ts so panels can
+     size themselves before the resize state settles. */
+  --board-step: min(
+    calc((100vw - 430px) / 6.9),
+    calc((100vh - 337px) / 6.9),
+    130px
+  );
   position: fixed;
   inset: 0;
-  overflow: hidden;
-  background: #10251e;
-  color: #f1e2bf;
+  overflow: clip;
+  background: var(--ink-700);
+  color: var(--parchment);
   isolation: isolate;
-  font-family: Arial, sans-serif;
-}
-.arena-shell button {
-  font-family: inherit;
+  contain: layout paint;
+  font-family: var(--font-ui);
+  font-size: 15px;
+  -webkit-font-smoothing: antialiased;
 }
 .arena-environment,
 .arena-vignette,
@@ -37,17 +48,17 @@
 }
 .arena-environment {
   background: url("/assets/arena/shrine.png") center/cover;
-  filter: brightness(0.67) saturate(0.7);
+  filter: brightness(0.64) saturate(0.68);
 }
 .arena-vignette {
   background:
     radial-gradient(
-      ellipse at 50% 44%,
-      transparent 25%,
-      #07130d88 75%,
-      #020906e8
+      ellipse at 50% 46%,
+      transparent 24%,
+      #07130d88 72%,
+      #020906f0
     ),
-    linear-gradient(#020b0b99, transparent 23%, transparent 73%, #020906e8);
+    linear-gradient(#020b0bb0, transparent 20%, transparent 74%, #020906f2);
   pointer-events: none;
 }
 .arena-dust {
@@ -58,8 +69,15 @@
   background-size:
     283px 217px,
     389px 331px;
-  opacity: 0.2;
+  opacity: 0.18;
   animation: arena-drift 36s linear infinite;
+}
+@keyframes arena-drift {
+  to {
+    background-position:
+      90px -217px,
+      -70px -331px;
+  }
 }
 .arena-canvas {
   touch-action: none;
@@ -69,11 +87,21 @@
   width: 100%;
   height: 100%;
 }
+.presenting .arena-canvas,
+.presenting .fan-card,
+.drawing .arena-canvas,
+.drawing .arena-hand,
+.drawing .fan-card {
+  pointer-events: none;
+}
+
+/* Top edge: menu seal and wordmark on the left, tools on the right. -------- */
 .arena-top {
   position: absolute;
-  top: 20px;
+  top: 18px;
   left: 24px;
   right: 24px;
+  z-index: 31;
   display: flex;
   align-items: center;
   gap: 14px;
@@ -81,132 +109,350 @@
 }
 .arena-top button {
   pointer-events: auto;
-  background: none;
-  border: 0;
-  padding: 8px;
-  color: #dbc899;
-  font-size: 20px;
+}
+.arena-menu .glyph {
+  font:
+    22px var(--font-jp),
+    serif;
+  line-height: 1;
+  translate: 0 1px;
 }
 .arena-wordmark {
+  display: grid;
+  gap: 2px;
+  color: var(--parchment);
   font:
-    12px Georgia,
+    600 15px var(--font-display),
     serif;
-  letter-spacing: 3px;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  text-shadow: 0 2px 8px #000;
 }
 .arena-room {
-  margin-left: auto;
-  color: #b1bdaa;
-  font-size: 10px;
-  letter-spacing: 2px;
+  color: var(--mist-dim);
+  font:
+    500 10px var(--font-ui),
+    sans-serif;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
 }
+.arena-tools {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+}
+.arena-tool svg {
+  width: 19px;
+  height: 19px;
+}
+
+/* Duelists: portrait, name and the energy readout. ------------------------ */
 .duelist {
   position: absolute;
   left: 28px;
+  z-index: 30;
   display: flex;
-  gap: 14px;
+  gap: 16px;
   align-items: center;
   pointer-events: none;
 }
+.duelist-opponent {
+  top: 78px;
+}
+.duelist-self {
+  bottom: 30px;
+}
 .duelist-portrait {
   position: relative;
-  width: 76px;
-  height: 86px;
+  width: 78px;
+  height: 90px;
   padding: 0 !important;
-  background: #0b1c16;
+  pointer-events: auto;
+  background: var(--ink-800);
   border: 2px solid #8fb1a0 !important;
-  border-radius: 48% 48% 35% 35%;
+  border-radius: 48% 48% 36% 36%;
   box-shadow:
-    0 0 0 4px #122b2299,
-    0 6px 24px #000a;
+    0 0 0 4px #0b1c1699,
+    0 0 0 5px #d9c08422,
+    0 8px 26px #000b;
+  transition:
+    box-shadow 0.2s,
+    translate 0.15s;
 }
 .side-1 .duelist-portrait {
   border-color: #d68d75 !important;
+}
+.duelist-portrait:hover {
+  translate: 0 -1px;
+  box-shadow:
+    0 0 0 4px #0b1c1699,
+    0 0 0 5px #d9c08466,
+    0 10px 30px #000c;
 }
 .duelist-portrait img {
   width: 100%;
   height: 100%;
   object-fit: cover;
   object-position: 50% 20%;
+  /* Frame the face rather than the printed name and rules box. */
+  object-view-box: inset(9% 14% 34% 14%);
   border-radius: inherit;
 }
 .duelist-life {
   position: absolute;
-  bottom: -13px;
-  border: 1px solid #b8ae7d;
-  background: radial-gradient(#374438, #0b1d15);
-  height: 32px;
-  font: bold 22px Georgia;
-  display: grid;
-  place-items: center;
-  box-shadow: 0 3px 8px #000;
+  left: 50%;
+  bottom: -14px;
+  translate: -50% 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-width: 52px;
+  height: 28px;
+  padding: 0 10px;
+  border: 1px solid var(--gold-line-strong);
+  border-radius: 14px;
+  background: linear-gradient(#2a3a2c, #0b1d15);
+  box-shadow: 0 3px 10px #000;
+  color: var(--parchment);
+  font:
+    700 16px/1 var(--font-ui),
+    sans-serif;
+}
+.duelist-life i {
+  color: var(--life);
+  font-style: normal;
+  font-size: 12px;
+  translate: 0 -1px;
 }
 .duelist-info {
   display: grid;
-  text-shadow: 0 2px 4px #000;
+  gap: 2px;
+  text-shadow: 0 2px 6px #000;
 }
 .duelist-info > small {
-  color: #91bba5;
+  color: var(--mist-dim);
+  font:
+    600 10px var(--font-ui),
+    sans-serif;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}
+.side-0 .duelist-info > small {
+  color: color-mix(in srgb, var(--seat-0) 70%, var(--mist));
+}
+.side-1 .duelist-info > small {
+  color: color-mix(in srgb, var(--seat-1) 70%, var(--mist));
 }
 .duelist-info > b {
-  font: 17px Georgia;
+  max-width: 250px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font:
+    600 23px/1.1 var(--font-display),
+    serif;
+  color: var(--parchment);
 }
 .duelist-element {
-  font-family: ShikigamidoJP, Georgia, serif;
+  color: var(--mist);
+  font:
+    500 13px var(--font-ui),
+    sans-serif;
+  letter-spacing: 0.04em;
 }
-.arena-phase {
+.duelist-element .glyph,
+.duelist-element::first-letter {
+  font-family: var(--font-jp);
+}
+.player-resources {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 8px;
+}
+/* Available energy: a crystal with the number inside, like the board's gems. */
+.mana-total {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 66px;
+  height: 66px;
+  flex-shrink: 0;
+}
+.mana-total::before {
+  content: "";
+  position: absolute;
+  inset: 7px;
+  rotate: 45deg;
+  border: 1.5px solid #c9e2a4;
+  border-radius: 12px 5px;
+  background: radial-gradient(ellipse at 35% 25%, #6f9459, #14392c 72%);
+  box-shadow:
+    0 0 22px #aadd8545,
+    inset 0 0 12px #ceec9440;
+  animation: mana-change 450ms ease-out;
+}
+.mana-total > b {
+  position: relative;
+  color: #f3ffe6;
+  font:
+    700 30px/1 var(--font-ui),
+    sans-serif;
+  text-shadow: 0 1px 3px #000;
+  animation: mana-change 450ms ease-out;
+}
+.mana-total > span {
   position: absolute;
   left: 50%;
-  transform: translateX(-50%);
-  text-align: center;
-  pointer-events: none;
-  text-shadow: 0 2px 8px #000;
+  bottom: -6px;
+  translate: -50% 0;
+  padding: 1px 6px;
+  border-radius: 8px;
+  background: var(--ink-900);
+  border: 1px solid #c9e2a455;
+  color: #c9e2a4;
+  font:
+    700 9px/1.3 var(--font-ui),
+    sans-serif;
+  letter-spacing: 0.16em;
 }
-.arena-phase > small {
-  color: #a8b8a6;
+.mana-total .value-delta {
+  left: 54px;
+  top: -8px;
 }
-.arena-phase h1 {
-  font: 30px Georgia;
-  color: #d7dfcc;
+.mana-pools {
+  display: grid;
+  gap: 5px;
 }
-.arena-phase.active h1 {
-  color: #f5e6b3;
+.energy-resource,
+.reserve-resource {
+  display: grid;
+  grid-template-columns: 54px auto auto;
+  align-items: center;
+  gap: 8px;
 }
+.energy-resource > span,
+.reserve-resource > span {
+  color: var(--mist);
+  font:
+    500 12px var(--font-ui),
+    sans-serif;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.energy-resource > b,
+.reserve-resource > b {
+  color: var(--parchment);
+  font:
+    700 15px/1 var(--font-ui),
+    sans-serif;
+}
+.energy-resource > b small,
+.reserve-resource > b small {
+  color: var(--mist-dim);
+  font-size: 12px;
+  font-weight: 500;
+}
+.pips {
+  display: flex;
+  gap: 5px;
+}
+.pips em {
+  width: 9px;
+  height: 9px;
+  rotate: 45deg;
+  border-radius: 2px 1px;
+  background: #0b1f18;
+  box-shadow: inset 0 0 0 1px #9fb8a455;
+  transition:
+    background 0.3s,
+    box-shadow 0.3s;
+}
+.pips em.lit {
+  background: linear-gradient(135deg, #cdf0b2, #6fa863);
+  box-shadow:
+    0 0 8px #a9e19a88,
+    inset 0 0 0 1px #e6ffd0;
+}
+.pips.reserve em.lit {
+  background: linear-gradient(135deg, var(--gold-bright), var(--gold-deep));
+  box-shadow:
+    0 0 8px #d9c08488,
+    inset 0 0 0 1px #fff0c0;
+}
+@keyframes mana-change {
+  from {
+    filter: brightness(1.6);
+  }
+  to {
+    filter: brightness(1);
+  }
+}
+
+/* Opponent's hidden hand: a small fan of card backs beside their resources. */
 .opponent-hand {
   position: absolute;
-  left: 50%;
-  top: -69px;
+  left: 124px;
+  top: 238px;
+  z-index: 30;
   display: flex;
-  transform: translateX(-50%);
+  align-items: center;
   pointer-events: none;
-  opacity: 0.7;
+  opacity: 0.92;
 }
 .opponent-hand > i {
   display: grid;
   place-items: center;
-  width: 48px;
-  height: 70px;
-  margin-right: -19px;
-  border-radius: 4px;
-  border: 2px solid #697c57;
-  background: repeating-linear-gradient(45deg, #173428 0 4px, #294835 5px 6px);
-  transform: translateY(30px) rotate(calc((var(--i) - 3) * 3deg));
-  box-shadow: 0 2px 9px #000;
+  width: 30px;
+  height: 44px;
+  margin-right: -13px;
+  border-radius: 3px;
+  border: 1px solid #7b8c62;
+  background:
+    linear-gradient(#0000 40%, #0007),
+    repeating-linear-gradient(45deg, #173428 0 4px, #294835 5px 6px);
+  transform: rotate(calc((var(--i) - 3) * 2deg));
+  box-shadow: 0 2px 8px #000b;
 }
 .opponent-hand span {
   font:
-    26px ShikigamidoJP,
+    15px var(--font-jp),
     serif;
   color: #c4b781;
 }
+.opponent-hand-count {
+  margin-left: 24px;
+  min-width: 26px;
+  height: 26px;
+  padding: 0 8px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--gold-line-strong);
+  border-radius: 13px;
+  background: var(--ink-800);
+  color: var(--parchment);
+  font:
+    700 13px var(--font-ui),
+    sans-serif;
+  box-shadow: 0 2px 6px #000a;
+}
+
+/* Deck: a stack of card backs in the lower-right corner. ------------------- */
 .arena-deck {
   position: absolute;
-  bottom: 45px;
-  right: 35px;
+  bottom: 46px;
+  right: 36px;
+  z-index: 30;
   width: 74px;
   height: 105px;
-  background: repeating-linear-gradient(45deg, #173428 0 4px, #294835 5px 6px);
+  display: grid;
+  place-items: center;
+  background:
+    linear-gradient(#0000 45%, #0006),
+    repeating-linear-gradient(45deg, #173428 0 4px, #294835 5px 6px);
   border: 2px solid #b7ae7f;
-  transform: rotate(9deg);
+  transform: rotate(8deg);
   border-radius: 6px;
   box-shadow:
     3px 3px #293e2a,
@@ -214,65 +460,70 @@
     7px 7px #293e2a,
     9px 9px #566e50,
     10px 14px 22px #000a;
+  transition:
+    translate 0.15s,
+    box-shadow 0.15s;
+}
+.arena-deck:hover {
+  translate: 0 -2px;
+}
+.arena-deck > i {
+  display: none;
 }
 .arena-deck > span {
   font:
-    40px ShikigamidoJP,
+    40px var(--font-jp),
     serif;
   color: #cfc192;
 }
 .arena-deck > b {
   position: absolute;
-  bottom: -13px;
-  right: -10px;
-  border: 1px solid #b8ae7d;
-  background: #173021;
-  border-radius: 50%;
-  padding: 6px 9px;
+  bottom: -14px;
+  right: -12px;
+  min-width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  padding: 0 7px;
+  border: 1px solid var(--gold-line-strong);
+  background: var(--ink-800);
+  border-radius: 15px;
+  color: var(--parchment);
+  font:
+    700 14px var(--font-ui),
+    sans-serif;
+  box-shadow: 0 2px 6px #000a;
 }
-.arena-pass {
-  position: absolute;
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  border: 0;
-  background: linear-gradient(90deg, transparent, #233e2ee8);
-  color: #a2b099;
-  clip-path: polygon(12% 0, 100% 0, 100% 100%, 12% 100%, 0 50%);
-  letter-spacing: 1px;
-}
-.arena-pass b {
-  font-size: 26px;
-}
-.arena-pass.enabled {
-  background: linear-gradient(90deg, #4e6034, #ad9d57);
-  color: #fff0bd;
-  filter: drop-shadow(0 0 14px #e8d28b33);
-}
-.arena-pass:disabled {
-  opacity: 0.5;
-}
+
+/* Hand: a fan of full cards, fully visible, lifting as you approach. ------- */
 .arena-hand {
   position: absolute;
-  bottom: -42px;
+  bottom: 16px;
   left: 50%;
   width: 0;
-  height: 198px;
+  height: 188px;
   z-index: 20;
   pointer-events: none;
 }
 .hand-caption {
   position: absolute;
-  bottom: 216px;
-  left: -220px;
-  width: 440px;
+  bottom: 198px;
+  left: -240px;
+  width: 480px;
   text-align: center;
-  font-size: 8px;
-  letter-spacing: 2px;
-  color: #b1bca399;
+  font:
+    600 10px var(--font-ui),
+    sans-serif;
+  letter-spacing: 0.24em;
+  color: var(--mist-dim);
+  transition: opacity 0.15s;
   white-space: nowrap;
   text-shadow: 0 1px 4px #000;
   pointer-events: none;
+}
+.arena-hand:has(.fan-card:hover) .hand-caption,
+.arena-hand:has(.fan-card:focus-within) .hand-caption {
+  opacity: 0;
 }
 .hand-fan {
   position: relative;
@@ -280,28 +531,29 @@
 }
 .fan-card {
   position: absolute;
-  left: -70px;
+  left: -67px;
   top: 0;
-  width: 140px;
-  height: 196px;
-  transform: translate(var(--offset), var(--lift)) rotate(var(--angle));
-  transform-origin: 50% 130%;
-  transition:
-    transform 0.18s ease,
-    filter 0.18s;
+  width: 134px;
+  height: 188px;
+  transform: translate(
+      var(--offset),
+      calc(var(--lift) + var(--lift-extra, 0px))
+    )
+    rotate(var(--angle));
+  transform-origin: 50% 140%;
   z-index: var(--order);
   pointer-events: auto;
-  filter: drop-shadow(0 5px 8px #000b);
+  filter: drop-shadow(0 6px 10px #000c);
   touch-action: none;
 }
 .fan-card:hover,
 .fan-card:focus-within {
-  transform: translate(var(--offset), -57px) rotate(0deg) scale(1.2);
+  transform: translate(var(--offset), -64px) rotate(0deg) scale(1.28);
   z-index: 30;
 }
 .fan-card.selected {
-  transform: translate(var(--offset), -28px) rotate(var(--angle));
-  filter: drop-shadow(0 0 8px #e8d38a);
+  transform: translate(var(--offset), -42px) rotate(var(--angle));
+  filter: drop-shadow(0 0 10px #e8d38a);
 }
 .fan-card.dragged {
   opacity: 0.15;
@@ -312,7 +564,7 @@
   height: 100%;
   padding: 0 !important;
   border: 1px solid #a8b890;
-  background: #15291c;
+  background: var(--ink-600);
   border-radius: 8px;
   overflow: visible;
   cursor: grab;
@@ -327,18 +579,20 @@
 }
 .fan-cost {
   position: absolute;
-  top: -7px;
-  left: -7px;
-  width: 28px;
-  height: 28px;
+  top: -8px;
+  left: -8px;
+  width: 30px;
+  height: 30px;
   display: grid;
   place-items: center;
-  background: radial-gradient(#719377, #143a27);
+  background: radial-gradient(circle at 35% 30%, #7fa37f, #143a27 75%);
   color: #f5ebc9;
-  border: 2px solid #ced7a2;
+  border: 1.5px solid #d6e0aa;
   border-radius: 50%;
-  font: 20px Georgia;
-  box-shadow: 0 2px 5px #000;
+  font:
+    700 16px var(--font-ui),
+    sans-serif;
+  box-shadow: 0 2px 6px #000;
 }
 .fan-cost.unaffordable {
   background: radial-gradient(#514d4a, #252822);
@@ -347,13 +601,43 @@
 }
 .fan-zoom {
   position: absolute;
-  background: #081811df;
-  border: 1px solid #dac78a;
-  color: #ffeabb;
+  top: -36px;
+  right: 0;
+  min-width: 58px;
+  height: 28px;
+  padding: 0 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  border: 1px solid var(--gold-line-strong);
+  border-radius: 14px;
+  background: var(--ink-900);
+  color: var(--parchment);
+  font:
+    500 12px var(--font-ui),
+    sans-serif;
+  letter-spacing: 0.06em;
+  pointer-events: none;
+  opacity: 0;
+}
+.fan-zoom span {
+  font-size: 16px;
 }
 .fan-card:hover .fan-zoom,
-.fan-card:focus-within .fan-zoom {
+.fan-card:focus-within .fan-zoom,
+.fan-card.selected .fan-zoom {
   opacity: 1;
+  pointer-events: auto;
+}
+/* Keeps the hover alive while the pointer travels up to the Read button. */
+.fan-card:hover::before,
+.fan-card:focus-within::before,
+.fan-card.selected::before {
+  content: "";
+  position: absolute;
+  inset: -40px 0 auto;
+  height: 42px;
 }
 .fan-exchange {
   position: absolute;
@@ -368,9 +652,10 @@
 }
 .drag-ghost {
   position: fixed;
-  width: 156px;
-  height: 218px;
-  transform: translate(-50%, -55%) rotate(-4deg);
+  width: 112px;
+  height: 157px;
+  /* Float above the pointer so the aimed cell stays visible. */
+  transform: translate(-50%, calc(-100% - 18px)) rotate(-4deg);
   z-index: 100;
   pointer-events: none;
   filter: drop-shadow(0 10px 20px #000a);
@@ -380,113 +665,107 @@
   border: 2px solid #e6d598;
   border-radius: 7px;
 }
-.arena-preparation {
+.preparing-position .arena-hand {
+  display: none;
+}
+
+/* Piece hover plaque: name and current state, above the hand. ------------- */
+.arena-hover {
   position: absolute;
   left: 50%;
-  bottom: 240px;
+  bottom: 236px;
+  z-index: 33;
   transform: translateX(-50%);
+  min-width: 220px;
+  padding: 10px 22px 11px;
   text-align: center;
-  width: min(650px, 95vw);
-  background: radial-gradient(
-    ellipse,
-    #081a14ef,
-    #081a14b8 65%,
-    transparent 73%
-  );
-  padding: 28px 15px;
-  color: #d2dac5;
+  pointer-events: none;
 }
-.arena-preparation p {
-  font-size: 12px;
+.arena-hover b {
+  display: block;
+  font:
+    600 20px/1.15 var(--font-display),
+    serif;
+  color: var(--parchment);
 }
-.ready-button {
-  background: linear-gradient(#b7ac72, #6f793f);
-  border: 1px solid #d5c891;
-  color: #102219;
-  padding: 11px 18px;
-  font-weight: bold;
+.arena-hover small {
+  display: block;
+  font-size: 10px;
+  color: var(--mist);
+  margin-top: 6px;
+}
+
+/* Pause menu: a centered plaque over a dimmed board. -------------------------- */
+.arena-menu-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 60;
+  background: #030a08a8;
+  backdrop-filter: blur(6px);
+  animation: fade-in 200ms ease-out;
 }
 .arena-menu-panel {
   position: absolute;
-  background: linear-gradient(135deg, #142b20fa, #071b14fa);
-  border: 1px solid #a5ad7b66;
-  box-shadow: 0 15px 60px #0009;
-  z-index: 40;
-  overflow-y: auto;
-  border-radius: 4px;
-}
-.drawer-close {
-  position: absolute;
-  right: 8px;
-  top: 7px;
-  border: 0;
-  background: none;
-  color: #d5d6b9;
-  font-size: 23px;
-  padding: 3px 8px;
-  z-index: 2;
-}
-.arena-menu-panel {
-  left: 24px;
-  right: auto;
-  top: 68px;
-  bottom: auto;
-  width: 260px;
-  padding: 30px;
+  left: 50%;
+  top: 50%;
+  z-index: 61;
+  translate: -50% -50%;
+  width: 360px;
+  padding: 34px 38px 26px;
+  display: grid;
+  justify-items: center;
+  text-align: center;
 }
 .arena-menu-panel h2 {
-  font: 27px Georgia;
+  margin: 8px 0 22px;
+  font:
+    600 34px var(--font-display),
+    serif;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--parchment);
+}
+.arena-menu-panel h2::after {
+  content: "";
+  display: block;
+  width: 60px;
+  height: 1px;
+  margin: 14px auto 0;
+  background: linear-gradient(90deg, transparent, var(--gold), transparent);
 }
 .arena-menu-panel button {
   display: block;
   width: 100%;
   padding: 13px 0;
-  text-align: left;
   background: none;
   border: 0;
-  border-bottom: 1px solid #b2b27b22;
-  color: #dbd9b9;
+  color: var(--parchment-dim);
+  font:
+    500 20px var(--font-display),
+    serif;
+  letter-spacing: 0.06em;
+  transition:
+    color 0.15s,
+    letter-spacing 0.2s;
 }
-.arena-hover {
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
-  pointer-events: none;
-  text-shadow: 0 2px 6px #000;
-  text-align: center;
+.arena-menu-panel button:hover,
+.arena-menu-panel button:focus-visible {
+  color: var(--gold-bright);
+  letter-spacing: 0.1em;
+  outline: 0;
 }
-.arena-hover b {
-  font: 19px Georgia;
+.arena-menu-panel button.menu-danger {
+  margin-top: 10px;
+  padding-top: 16px;
+  border-top: 1px solid var(--gold-line);
+  color: #d29a8d;
+  font-size: 17px;
 }
-.arena-hover small {
-  display: block;
-  font-size: 9px;
-  color: #b8c6ad;
-  margin-top: 6px;
+.arena-menu-panel button.menu-danger:hover {
+  color: #ffb9ab;
 }
-.arena-stack {
-  position: absolute;
-  right: 24px;
-  top: 200px;
-  max-width: 230px;
-  padding: 13px;
-  background: #192e24ef;
-  border: 1px solid #bcae7477;
-  text-align: left;
-  color: #e4dab5;
-}
-.arena-stack > * {
-  display: block;
-  margin-bottom: 6px;
-}
-.arena-stack span,
-.arena-stack small {
-  font-size: 9px;
-  letter-spacing: 1px;
-}
-.arena-stack b {
-  font: 16px Georgia;
-}
+
+/* Result screen. ----------------------------------------------------------- */
 .arena-victory {
   position: absolute;
   inset: 0;
@@ -494,570 +773,58 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: radial-gradient(#173628ef, #00110def);
+  text-align: center;
+  padding: 24px;
+  background: radial-gradient(#173628f2, #00110dfb 70%);
+  backdrop-filter: blur(8px);
   z-index: 80;
+  animation: fade-in 0.6s ease-out both;
+}
+.arena-victory.lost {
+  background: radial-gradient(#2b1d17f2, #0d0806fb 70%);
 }
 .arena-victory h1 {
-  font: 90px Georgia;
-  color: #e6d499;
-  margin: 20px;
+  margin: 10px 20px 14px;
+  font:
+    600 110px/1 var(--font-display),
+    serif;
+  letter-spacing: 0.12em;
+  color: var(--gold-bright);
+  text-shadow: 0 0 60px #e6d49966;
 }
-.arena-victory small {
-  letter-spacing: 5px;
+.arena-victory.lost h1 {
+  color: #e7b9a0;
+  text-shadow: 0 0 60px #e7917055;
 }
 .arena-victory p {
-  color: #b0bea8;
-}
-.arena-victory button {
-  margin-top: 30px;
-  background: none;
-  border: 1px solid #cabb80;
-  color: #e5d6a6;
-  padding: 15px 25px;
-}
-.arena-accessibility {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip-path: inset(50%);
-}
-.arena-accessibility:focus-within {
-  clip-path: none;
-  width: 250px;
-  height: auto;
-  top: 150px;
-  left: 10px;
-  z-index: 100;
-  background: #163021;
-  padding: 12px;
-}
-.arena-error {
-  position: absolute;
-  inset: 40%;
-  background: #182a20;
-  color: #edddae;
-  z-index: 90;
-}
-.login-dialog {
-  position: relative;
-  max-width: 420px;
-  padding: 40px;
-  background: #142a21;
-  border: 1px solid #968f68;
-}
-.login-dialog h2 {
-  font: 30px Georgia;
-}
-.login-dialog input,
-.login-dialog > button.gold {
-  width: 100%;
-  margin-bottom: 12px;
-}
-.login-dialog p:not(.eyebrow) {
-  font-size: 12px;
-  line-height: 1.6;
-  color: #aebfa8;
-}
-.playing-arena .toast {
-  z-index: 110;
-}
-.playing-arena .modal-backdrop {
-  z-index: 120;
-}
-@keyframes arena-drift {
-  to {
-    background-position:
-      90px -217px,
-      -70px -331px;
-  }
-}
-@media (max-width: 1000px) {
-  .duelist {
-    left: 16px;
-    gap: 8px;
-  }
-  .duelist-portrait {
-    width: 56px;
-    height: 65px;
-  }
-  .duelist-life {
-    left: 12px;
-  }
-  .duelist-info > b {
-    font-size: 13px;
-  }
-  .duelist-element {
-    font-size: 9px;
-  }
-  .arena-pass {
-    right: 10px;
-    max-width: 155px;
-    gap: 8px;
-  }
-  .arena-deck {
-    right: 22px;
-    width: 55px;
-    height: 80px;
-  }
-  .arena-wordmark {
-    display: none;
-  }
-  .fan-card {
-    width: 125px;
-    height: 175px;
-    left: -62px;
-  }
-  .arena-hand {
-    height: 177px;
-    bottom: -35px;
-  }
-  .hand-caption {
-    bottom: 192px;
-  }
-  .arena-preparation {
-    bottom: 195px;
-  }
-  .arena-hover {
-    bottom: 194px;
-  }
-}
-@media (max-width: 759px) {
-  .arena-top {
-    top: 7px;
-    left: 7px;
-    right: 7px;
-  }
-  .arena-room {
-    font-size: 8px;
-  }
-  .duelist-portrait {
-    width: 40px;
-    height: 48px;
-  }
-  .duelist-info {
-    gap: 2px;
-  }
-  .arena-pass {
-    top: auto;
-  }
-  .arena-pass b {
-    font-size: 20px;
-  }
-  .arena-deck {
-    right: 16px;
-    bottom: 40px;
-    width: 36px;
-    height: 54px;
-  }
-  .arena-deck > span {
-    font-size: 23px;
-  }
-  .arena-deck > b {
-    font-size: 11px;
-    padding: 4px;
-  }
-  .fan-card {
-    width: 90px;
-    height: 126px;
-    left: -45px;
-  }
-  .arena-hand {
-    height: 126px;
-    bottom: -24px;
-  }
-  .hand-caption {
-    bottom: 131px;
-    font-size: 6px;
-    letter-spacing: 1px;
-  }
-  .fan-cost {
-    width: 21px;
-    height: 21px;
-    font-size: 15px;
-  }
-  .fan-zoom {
-    opacity: 1;
-    width: 22px;
-    font-size: 17px;
-  }
-  .arena-preparation {
-    bottom: 205px;
-    padding: 15px 8px;
-    width: 96vw;
-  }
-  .arena-preparation p {
-    font-size: 10px;
-    margin: 5px 0 12px;
-  }
-  .arena-stack {
-    top: 123px;
-    right: 8px;
-    max-width: 160px;
-    padding: 8px;
-  }
-  .arena-stack b {
-    font-size: 12px;
-  }
-  .arena-stack small,
-  .arena-stack span {
-    font-size: 7px;
-  }
-  .arena-hover {
-    font-size: 12px;
-    max-width: 180px;
-  }
-  .arena-hover b {
-    font-size: 13px;
-  }
-  .arena-hover small {
-    font-size: 7px;
-  }
-  .arena-victory h1 {
-    font-size: 55px;
-  }
-  .opponent-hand {
-    display: none;
-  }
-  .arena-menu-panel {
-    left: 8px;
-    top: 50px;
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .arena-dust {
-    animation: none;
-  }
-  .fan-card {
-    transition: none;
-  }
-}
-/* Sanctuary menu */
-.app:has(.home) {
-  max-width: none;
-  min-height: 100dvh;
-  padding: 0 5vw;
-  background:
-    linear-gradient(90deg, #07170df2, #08170bb8 50%, #0a1b10d9),
-    url("/assets/arena/shrine.png") center/cover fixed;
-}
-.app:has(.home) > header {
-  max-width: none;
-  border-color: #b9bc7933;
-  background: none;
-}
-.home {
-  max-width: 1500px;
-  margin: auto;
-  padding-top: 4vh;
-}
-.home .hero {
-  min-height: 360px;
-  position: relative;
-  grid-template-columns: 1fr 360px;
-  background: none;
-  border: 0;
-  padding: 30px 0;
-}
-.home .hero h1 {
+  max-width: 520px;
+  color: var(--mist);
   font:
-    clamp(32px, 4.5vw, 75px) Georgia,
+    italic 20px/1.5 var(--font-display),
     serif;
-  letter-spacing: 5px;
-  line-height: 1.2;
 }
-.home .hero h1 em {
-  display: block;
-  font: 18px Georgia;
-  letter-spacing: 4px;
-  margin-top: 16px;
-  color: #aebb9b;
-}
-.home .hero-copy > p:not(.eyebrow) {
-  font-size: 13px;
-  max-width: 430px;
-  color: #a9baa3;
-}
-.home .hero-copy .actions {
+.victory-portrait {
+  width: 140px;
+  height: 160px;
   margin-top: 26px;
+  background: var(--ink-800) 50% 18% / 170% auto no-repeat;
+  border: 2px solid var(--gold);
+  border-radius: 48% 48% 36% 36%;
+  box-shadow:
+    0 0 0 6px #d8c38a22,
+    0 0 60px #e6d49944;
 }
-.home .hero-copy .actions button {
-  padding: 15px 25px;
-  border-radius: 2px;
+.arena-victory.lost .victory-portrait {
+  border-color: #d68d75;
+  filter: saturate(0.8);
 }
-.home .hero-art {
-  height: 300px;
-  overflow: visible;
+.arena-victory .seal-button {
+  width: auto;
+  min-width: 300px;
+  margin-top: 32px;
 }
-.home .hero-kanji {
-  color: #e1ce9188;
-  font-size: 64px;
-}
-.home .hero-card {
-  width: 150px;
-}
-.home .hero-card.front {
-  left: 120px;
-  top: 38px;
-}
-.home .hero-card.back {
-  left: 40px;
-  top: 18px;
-}
-.home .home-bottom {
-  border: 0;
-  background: linear-gradient(90deg, transparent, #182d1b77);
-  padding: 28px 0;
-  gap: 6vw;
-}
-.home .home-bottom h2 {
-  font: 28px Georgia;
-}
-.home .home-bottom p.muted {
-  font-size: 13px;
-  max-width: 360px;
-}
-.home .roomcard {
-  background: none;
-  border: 0;
-  border-left: 1px solid #a6b38144;
-  padding: 5px 0 5px 35px;
-}
-.home .roomcard label {
-  font-size: 9px;
-  letter-spacing: 2px;
-  color: #b6c2a4;
-}
-.home .roomcard input,
-.home .roomcard select {
-  background: #10281d99;
-  border-color: #83936577;
-  border-radius: 2px;
-}
-.home .recent-rooms {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-.home .recent-rooms h3 {
-  width: 100%;
-  font-size: 10px;
-  letter-spacing: 2px;
-  font-weight: normal;
-}
-.home .recent-rooms button {
-  background: #1a3022aa;
-  border-color: #83936555;
-  padding: 10px;
-  font-size: 12px;
-}
-.home .recent-rooms button small {
-  display: block;
-  font-size: 8px;
-  margin-top: 5px;
-}
-@media (max-width: 759px) {
-  .home {
-    padding: 0;
-  }
-  .home .hero {
-    display: block;
-    padding: 35px 0;
-    min-height: 0;
-  }
-  .home .hero h1 {
-    font-size: 34px;
-    letter-spacing: 2px;
-  }
-  .home .hero h1 em {
-    font-size: 13px;
-    letter-spacing: 2px;
-  }
-  .home .hero-art {
-    display: none;
-  }
-  .home .hero-copy {
-    text-align: left;
-  }
-  .home .hero-copy .actions {
-    justify-content: flex-start;
-  }
-  .home .hero-copy .actions button {
-    font-size: 11px;
-    padding: 12px;
-  }
-  .home .home-bottom {
-    display: block;
-    padding: 0 0 30px;
-  }
-  .home .home-bottom > div:first-child > p,
-  .home .home-bottom > div:first-child > h2 {
-    display: none;
-  }
-  .home .roomcard {
-    border: 0;
-    padding: 10px 0;
-  }
-  .home .recent-rooms {
-    margin-bottom: 20px;
-  }
-}
-body:has(.playing-arena) {
-  overflow: hidden;
-  height: 100dvh;
-}
-.playing-arena,
-.arena-shell {
-  overflow: clip;
-}
-.arena-shell {
-  contain: layout paint;
-}
-.arena-connection {
-  position: fixed;
-  top: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 130;
-  padding: 8px 18px;
-  background: #704522;
-  color: #ffe7b7;
-  font-size: 12px;
-}
-footer {
-  font-family: ShikigamidoJP, Arial, sans-serif;
-}
-@media (max-height: 559px) and (orientation: landscape) {
-  .arena-top {
-    top: 3px;
-    left: 8px;
-    right: 8px;
-  }
-  .arena-wordmark {
-    display: none;
-  }
-  .arena-phase > small {
-    letter-spacing: 2px;
-  }
-  .opponent-hand {
-    display: none;
-  }
-  .duelist {
-    left: 12px;
-    gap: 8px;
-  }
-  .duelist-portrait {
-    width: 44px;
-    height: 52px;
-  }
-  .duelist-life {
-    bottom: -10px;
-  }
-  .duelist-info > b {
-    max-width: 100px;
-    overflow: hidden;
-    white-space: nowrap;
-    text-overflow: ellipsis;
-  }
-  .duelist-element {
-    display: none;
-  }
-  .arena-hand {
-    height: 126px;
-    bottom: -24px;
-  }
-  .fan-card {
-    width: 90px;
-    height: 126px;
-    left: -45px;
-  }
-  .fan-cost {
-    width: 21px;
-    height: 21px;
-    font-size: 15px;
-  }
-  .fan-card:hover,
-  .fan-card:focus-within {
-    transform: translate(var(--offset), -30px) rotate(0deg) scale(1.15);
-  }
-  .hand-caption {
-    bottom: 136px;
-    font-size: 6px;
-  }
-  .arena-preparation {
-    left: auto;
-    right: 8px;
-    top: 68px;
-    bottom: auto;
-    transform: none;
-    width: 155px;
-    background: #0c2119ed;
-    padding: 12px 8px;
-    border: 1px solid #87926766;
-  }
-  .arena-preparation p {
-    font-size: 9px;
-    line-height: 1.4;
-    margin: 6px 0;
-  }
-  .arena-deck {
-    width: 38px;
-    height: 55px;
-    bottom: 33px;
-    right: 30px;
-  }
-  .arena-deck > span {
-    font-size: 24px;
-  }
-  .arena-deck > b {
-    font-size: 11px;
-    padding: 4px;
-  }
-  .arena-pass {
-    top: 42%;
-  }
-  .arena-pass b {
-    font-size: 20px;
-  }
-  .arena-hover b {
-    font-size: 12px;
-  }
-  .arena-hover small {
-    font-size: 7px;
-  }
-  .arena-stack {
-    top: 65px;
-    right: 8px;
-    max-width: 155px;
-    padding: 8px;
-  }
-  .arena-stack b {
-    font-size: 11px;
-  }
-  .arena-stack span,
-  .arena-stack small {
-    font-size: 7px;
-  }
-  .arena-victory h1 {
-    font-size: 45px;
-    margin: 10px;
-  }
-  .arena-victory button {
-    margin-top: 10px;
-  }
-  .arena-menu-panel {
-    top: 42px;
-    max-height: calc(100dvh - 55px);
-    padding: 15px 20px;
-  }
-  .arena-menu-panel h2 {
-    margin: 5px 0 8px;
-  }
-  .arena-menu-panel button {
-    padding: 8px 0;
-  }
-}
-/* Clear decision surfaces for the opening hand and optional discard. */
+
+/* Setup: the starting seal choice beside the board. ----------------------- */
 .card-choice-screen {
   position: absolute;
   inset: 0;
@@ -1066,33 +833,11 @@ footer {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 28px;
-  background: radial-gradient(ellipse, #163026ef, #071710f7);
-  backdrop-filter: blur(6px);
+  gap: 26px;
+  background: radial-gradient(ellipse at 50% 40%, #163026f0, #061510f8 70%);
+  backdrop-filter: blur(8px);
   padding: 42px 30px;
   overflow-y: auto;
-}
-.position-options {
-  display: flex;
-  gap: 6px;
-  margin: 18px 0;
-}
-.position-options button {
-  flex: 1;
-  padding: 10px 5px;
-  background: #1a3226;
-  border: 1px solid #9bab7155;
-  color: #dbdab8;
-  font: bold 19px Georgia;
-}
-.position-options span {
-  display: block;
-  font: 9px Arial;
-  margin-top: 6px;
-}
-.position-options .active {
-  border-color: #e9d58a;
-  background: #596443;
 }
 .preparation-wait {
   position: absolute;
@@ -1105,11 +850,13 @@ footer {
   min-width: 300px;
 }
 .preparation-wait b {
-  font: 23px Georgia;
+  font:
+    600 24px var(--font-display),
+    serif;
   display: block;
 }
 .preparation-wait p {
-  font-size: 12px;
+  font-size: 13px;
   color: #adbea5;
 }
 .waiting-pulse {
@@ -1121,64 +868,54 @@ footer {
   margin-bottom: 12px;
   animation: wait-pulse 1.5s infinite;
 }
-.preparing-position .arena-hand {
-  display: none;
+@keyframes wait-pulse {
+  50% {
+    opacity: 0.3;
+    transform: scale(0.75);
+  }
 }
-.player-resources {
-  display: grid;
-}
-.player-resources > div {
-  display: grid;
-  align-items: baseline;
-}
-.player-resources b {
-  font: 20px Georgia;
-  color: #ecdfb6;
-}
-.player-resources small {
-  font: 12px Arial;
-}
-.player-resources em {
-  grid-column: 1/-1;
-  font-style: normal;
-}
-.duelist-life {
-  width: 48px;
-  left: 14px;
-  border-radius: 16px;
-  font-size: 18px;
-}
-.duelist-info {
-  gap: 4px;
-}
-.duelist-opponent {
-  top: 85px;
-}
-.duelist-self {
-  bottom: 28px;
-}
+
+/* Discard entry, draw flight and reserve gain. ----------------------------- */
 .open-discard {
   position: absolute;
   right: 24px;
-  padding: 20px 15px;
-  background: #1e3b27;
-  border: 1px solid #d3bc77;
-  color: #e4d9aa;
+  bottom: 285px;
+  z-index: 34;
+  width: 250px;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: 12px;
+  align-items: center;
+  padding: 14px 16px;
   text-align: left;
+  color: var(--parchment);
+  background: var(--lacquer);
+  border: 1px solid var(--gold-line-strong);
+  border-radius: var(--radius);
+  box-shadow: var(--hairline), var(--panel-shadow);
+  transition:
+    border-color 0.15s,
+    translate 0.15s;
+}
+.open-discard:hover {
+  border-color: var(--gold-bright);
+  translate: 0 -1px;
 }
 .open-discard > span {
-  float: left;
-  font-size: 25px;
-  margin-right: 12px;
+  grid-row: 1 / span 2;
+  color: var(--gold);
+  font-size: 22px;
 }
 .open-discard b {
-  font-size: 13px;
+  font:
+    600 17px var(--font-display),
+    serif;
 }
 .open-discard small {
   display: block;
-  font-size: 9px;
-  color: #b9c79e;
-  margin-top: 7px;
+  font-size: 12px;
+  color: var(--mist);
+  margin-top: 2px;
 }
 .draw-flight {
   position: absolute;
@@ -1197,39 +934,17 @@ footer {
 .drawing .fan-card:last-child {
   animation: draw-arrive 0.95s both;
 }
-.drawing .arena-canvas {
-  pointer-events: none;
-}
-.drawing .arena-hand {
-  pointer-events: none;
-}
-.drawing .fan-card {
-  pointer-events: none;
-}
 .reserve-gain {
   position: absolute;
   bottom: 150px;
   left: 40px;
-  font: bold 24px Georgia;
+  font:
+    700 26px var(--font-display),
+    serif;
   color: #efd98a;
   z-index: 90;
   pointer-events: none;
   animation: reserve-gain 1.5s both;
-}
-.arena-pass {
-  z-index: 55;
-}
-.arena-hover {
-  bottom: 205px;
-}
-.arena-phase h1 {
-  font-size: 27px;
-}
-@keyframes wait-pulse {
-  50% {
-    opacity: 0.3;
-    transform: scale(0.75);
-  }
 }
 @keyframes draw-to-hand {
   0% {
@@ -1275,66 +990,491 @@ footer {
     transform: translateY(-30px);
   }
 }
-@media (max-width: 1100px) {
-  .player-resources > div {
-    grid-template-columns: 48px auto;
-    gap: 0 4px;
+
+/* Utilities and edge cases. ------------------------------------------------- */
+.arena-accessibility {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+.arena-accessibility:focus-within {
+  clip-path: none;
+  width: 250px;
+  height: auto;
+  top: 150px;
+  left: 10px;
+  z-index: 100;
+  background: #163021;
+  padding: 12px;
+}
+.arena-error {
+  position: absolute;
+  inset: 40%;
+  background: #182a20;
+  color: #edddae;
+  z-index: 90;
+}
+.login-dialog {
+  position: relative;
+  max-width: 420px;
+  padding: 40px;
+  background: #142a21;
+  border: 1px solid #968f68;
+}
+.login-dialog h2 {
+  font:
+    600 32px var(--font-display),
+    serif;
+}
+.login-dialog input,
+.login-dialog > button.gold {
+  width: 100%;
+  margin-bottom: 12px;
+}
+.login-dialog p:not(.eyebrow) {
+  font-size: 13px;
+  line-height: 1.6;
+  color: #aebfa8;
+}
+.playing-arena .toast {
+  z-index: 110;
+}
+.playing-arena .modal-backdrop {
+  z-index: 120;
+}
+.arena-connection {
+  position: fixed;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 130;
+  padding: 8px 18px;
+  background: #704522;
+  color: #ffe7b7;
+  font-size: 13px;
+}
+footer {
+  font-family: var(--font-jp);
+}
+
+/* Sanctuary menu (home). ------------------------------------------------------ */
+.app:has(.home) {
+  max-width: none;
+  min-height: 100dvh;
+  padding: 0 5vw;
+  background:
+    linear-gradient(90deg, #07170df2, #08170bb8 50%, #0a1b10d9),
+    url("/assets/arena/shrine.png") center/cover fixed;
+}
+.app:has(.home) > header {
+  max-width: none;
+  border-color: #b9bc7933;
+  background: none;
+}
+.home {
+  max-width: 1500px;
+  margin: auto;
+  padding-top: 4vh;
+}
+.home .hero {
+  min-height: 360px;
+  position: relative;
+  grid-template-columns: 1fr 360px;
+  background: none;
+  border: 0;
+  padding: 30px 0;
+}
+.home .hero h1 {
+  font:
+    600 clamp(32px, 4.5vw, 75px) var(--font-display),
+    serif;
+  letter-spacing: 5px;
+  line-height: 1.2;
+}
+.home .hero h1 em {
+  display: block;
+  font:
+    italic 20px var(--font-display),
+    serif;
+  letter-spacing: 4px;
+  margin-top: 16px;
+  color: #aebb9b;
+}
+.home .hero-copy > p:not(.eyebrow) {
+  font-size: 14px;
+  max-width: 430px;
+  color: #a9baa3;
+}
+.home .hero-copy .actions {
+  margin-top: 26px;
+}
+.home .hero-copy .actions button {
+  padding: 15px 25px;
+  border-radius: 2px;
+}
+.home .hero-art {
+  height: 300px;
+  overflow: visible;
+}
+.home .hero-kanji {
+  color: #e1ce9188;
+  font-size: 64px;
+}
+.home .hero-card {
+  width: 150px;
+}
+.home .hero-card.front {
+  left: 120px;
+  top: 38px;
+}
+.home .hero-card.back {
+  left: 40px;
+  top: 18px;
+}
+.home .home-bottom {
+  border: 0;
+  background: linear-gradient(90deg, transparent, #182d1b77);
+  padding: 28px 0;
+  gap: 6vw;
+}
+.home .home-bottom h2 {
+  font:
+    600 30px var(--font-display),
+    serif;
+}
+.home .home-bottom p.muted {
+  font-size: 14px;
+  max-width: 360px;
+}
+.home .roomcard {
+  background: none;
+  border: 0;
+  border-left: 1px solid #a6b38144;
+  padding: 5px 0 5px 35px;
+}
+.home .roomcard label {
+  font-size: 10px;
+  letter-spacing: 2px;
+  color: #b6c2a4;
+}
+.home .roomcard input,
+.home .roomcard select {
+  background: #10281d99;
+  border-color: #83936577;
+  border-radius: 2px;
+  font-size: 15px;
+  letter-spacing: 0.5px;
+  color: #eee6cc;
+}
+.home .roomcard input::placeholder {
+  color: #8d9c89;
+}
+@media (min-width: 1200px) {
+  .home .hero {
+    grid-template-columns: 1fr minmax(420px, 560px);
+    min-height: 460px;
   }
-  .player-resources span {
-    font-size: 9px;
+  .home .hero-art {
+    height: 400px;
   }
-  .player-resources b {
+  .home .hero-card {
+    width: 215px;
+    transition:
+      transform 0.35s ease,
+      filter 0.35s ease;
+  }
+  .home .hero-card.back {
+    left: 30px;
+    top: 30px;
+  }
+  .home .hero-card.front {
+    left: 215px;
+    top: 50px;
+  }
+  .home .hero-art:hover .hero-card.front {
+    transform: rotate(6deg) translateY(-8px);
+  }
+  .home .hero-art:hover .hero-card.back {
+    transform: rotate(-18deg) translateX(-10px);
+    filter: brightness(0.95);
+  }
+  .home .hero-kanji {
+    font-size: 72px;
+    right: 0;
+  }
+  .home .hero-copy > p:not(.eyebrow) {
+    font-size: 16px;
+    max-width: 470px;
+  }
+  .home .hero-copy .actions button {
+    font-size: 15px;
+  }
+  .home .hero-copy > small {
+    font-size: 12px;
+  }
+  .home .home-bottom p.muted {
     font-size: 16px;
   }
-  .player-resources em {
-    font-size: 7px;
-  }
-  .duelist-life {
-    left: 5px;
-  }
-  .open-discard {
-    padding: 14px 10px;
-  }
-  .open-discard b {
+  .home .roomcard label {
     font-size: 11px;
   }
-  .open-discard small {
-    font-size: 8px;
+  .home .roomcard .actions > button {
+    font-size: 14px;
   }
-  .open-discard > span {
-    display: none;
+}
+.home .recent-rooms {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.home .recent-rooms h3 {
+  width: 100%;
+  font-size: 11px;
+  letter-spacing: 2px;
+  font-weight: normal;
+}
+.home .recent-rooms button {
+  background: #1a3022aa;
+  border-color: #83936555;
+  padding: 10px;
+  font-size: 13px;
+}
+.home .recent-rooms button small {
+  display: block;
+  font-size: 9px;
+  margin-top: 5px;
+}
+
+/* Smaller screens. Desktop is the reference; these keep phones usable. ------- */
+@media (max-width: 1100px) {
+  .duelist {
+    left: 16px;
+    gap: 10px;
+  }
+  .duelist-portrait {
+    width: 58px;
+    height: 68px;
+  }
+  .duelist-info > b {
+    font-size: 18px;
+    max-width: 170px;
+  }
+  .mana-total {
+    width: 56px;
+    height: 56px;
+  }
+  .mana-total > b {
+    font-size: 27px;
+  }
+  .energy-resource,
+  .reserve-resource {
+    grid-template-columns: 46px auto auto;
+    gap: 6px;
+  }
+  .energy-resource > span,
+  .reserve-resource > span {
+    font-size: 10px;
+  }
+  .opponent-hand {
+    left: 92px;
+    top: 220px;
+  }
+  .arena-deck {
+    right: 22px;
+    width: 55px;
+    height: 80px;
+  }
+  .arena-wordmark {
+    font-size: 0;
+    letter-spacing: 0;
+  }
+  .fan-card {
+    width: 122px;
+    height: 171px;
+    left: -61px;
+  }
+  .arena-hand {
+    height: 171px;
+    bottom: 16px;
+  }
+  .hand-caption {
+    bottom: 186px;
+  }
+  .arena-hover {
+    bottom: 200px;
+  }
+  .open-discard {
+    width: 205px;
+    right: 12px;
   }
 }
 @media (max-width: 759px) {
-  .card-choice-screen {
-    padding: 30px 14px;
-    gap: 18px;
-    justify-content: center;
+  .arena-top {
+    top: 8px;
+    left: 8px;
+    right: 8px;
   }
-  .position-options {
-    margin: 10px 0;
+  .arena-top .stud {
+    width: 34px;
+    height: 34px;
   }
-  .position-options button {
-    padding: 6px;
+  .arena-tools {
+    gap: 5px;
+  }
+  .duelist-portrait {
+    width: 42px;
+    height: 50px;
+  }
+  .duelist-life {
+    min-width: 40px;
+    height: 22px;
+    font-size: 14px;
+    bottom: -9px;
+  }
+  .duelist-info {
+    gap: 1px;
+  }
+  .duelist-info > small {
+    font-size: 8px;
+  }
+  .duelist-info > b {
+    font-size: 15px;
+    max-width: 126px;
+  }
+  .duelist-element {
+    display: none;
+  }
+  .player-resources {
+    gap: 8px;
+    margin-top: 4px;
+  }
+  .mana-total {
+    width: 48px;
+    height: 48px;
+  }
+  .mana-total::before {
+    inset: 4px;
+  }
+  .mana-total > b {
+    font-size: 27px;
+  }
+  .mana-total > span {
+    display: none;
+  }
+  .mana-pools {
+    gap: 3px;
+  }
+  .energy-resource,
+  .reserve-resource {
+    grid-template-columns: auto auto;
+  }
+  .energy-resource > span,
+  .reserve-resource > span {
+    display: none;
+  }
+  .energy-resource > b,
+  .reserve-resource > b {
+    font-size: 14px;
+  }
+  .pips em {
+    width: 7px;
+    height: 7px;
+  }
+  .duelist-opponent {
+    top: 176px;
+  }
+  .duelist-self {
+    bottom: 130px;
   }
   .preparing-position .duelist-self {
     display: none;
   }
-  .duelist-life {
-    width: 38px;
-    height: 23px;
-    left: 0;
-    font-size: 13px;
-    bottom: -8px;
-  }
-  .player-resources em {
+  .opponent-hand {
     display: none;
   }
-  .arena-pass {
-    z-index: 55;
+  .arena-deck {
+    right: 16px;
+    bottom: 40px;
+    width: 36px;
+    height: 54px;
+  }
+  .arena-deck > span {
+    font-size: 23px;
+  }
+  .arena-deck > b {
+    min-width: 22px;
+    height: 22px;
+    font-size: 12px;
+  }
+  .fan-card {
+    width: 90px;
+    height: 126px;
+    left: -45px;
+  }
+  .fan-card:hover,
+  .fan-card:focus-within {
+    transform: translate(var(--offset), -70px) rotate(0deg) scale(1.15);
+  }
+  .arena-hand {
+    height: 126px;
+    bottom: 10px;
+  }
+  .hand-caption {
+    bottom: 134px;
+    font-size: 7px;
+    letter-spacing: 1px;
+  }
+  .fan-cost {
+    width: 22px;
+    height: 22px;
+    font-size: 14px;
+  }
+  .fan-zoom {
+    opacity: 1;
+    top: auto;
+    bottom: -31px;
+    height: 26px;
+  }
+  .fan-card:hover::before,
+  .fan-card:focus-within::before,
+  .fan-card.selected::before {
+    inset: auto 0 -34px;
+    height: 36px;
+  }
+  .arena-hover {
+    bottom: 240px;
+    min-width: 0;
+    max-width: 200px;
+    padding: 8px 12px;
+  }
+  .arena-hover b {
+    font-size: 14px;
+  }
+  .arena-victory h1 {
+    font-size: 58px;
+  }
+  .arena-victory p {
+    font-size: 15px;
+  }
+  .victory-portrait {
+    width: 80px;
+    height: 92px;
+    margin-top: 12px;
+  }
+  .arena-menu-panel {
+    width: calc(100vw - 32px);
+    padding: 24px 20px 16px;
+  }
+  .card-choice-screen {
+    padding: 30px 14px;
+    gap: 18px;
   }
   .open-discard {
-    top: auto;
+    width: 170px;
+    right: 10px;
+    bottom: 130px;
   }
   .open-discard small {
     display: none;
@@ -1350,624 +1490,218 @@ footer {
     padding: 20px;
     min-width: 280px;
   }
-  .arena-hover {
-    bottom: 255px;
-  }
 }
 @media (max-height: 559px) and (orientation: landscape) {
-  .card-choice-screen {
-    padding: 16px 22px;
-    gap: 12px;
+  .arena-top {
+    top: 4px;
+    left: 8px;
+    right: 8px;
   }
-  .position-options {
-    margin: 9px 0;
+  .arena-top .stud {
+    width: 32px;
+    height: 32px;
   }
-  .position-options span {
-    font-size: 7px;
+  .arena-wordmark {
+    font-size: 0;
+    letter-spacing: 0;
   }
-  .position-options button {
-    padding: 6px 3px;
-    font-size: 14px;
-  }
-  .player-resources em {
+  .opponent-hand {
     display: none;
+  }
+  .duelist {
+    left: 12px;
+    gap: 8px;
+  }
+  .duelist-opponent {
+    top: 66px;
   }
   .duelist-self {
     bottom: 28px;
   }
+  .duelist-portrait {
+    width: 44px;
+    height: 52px;
+  }
   .duelist-life {
+    min-width: 38px;
+    height: 22px;
     font-size: 13px;
-    width: 37px;
-    left: 2px;
-    height: 23px;
+    bottom: -9px;
+  }
+  .duelist-info > b {
+    max-width: 100px;
+    font-size: 15px;
+  }
+  .duelist-element {
+    display: none;
+  }
+  .player-resources {
+    gap: 8px;
+    margin-top: 3px;
+  }
+  .mana-total {
+    width: 48px;
+    height: 48px;
+  }
+  .mana-total::before {
+    inset: 4px;
+  }
+  .mana-total > b {
+    font-size: 27px;
+  }
+  .mana-total > span {
+    display: none;
+  }
+  .energy-resource,
+  .reserve-resource {
+    grid-template-columns: auto auto;
+  }
+  .energy-resource > span,
+  .reserve-resource > span {
+    display: none;
+  }
+  .arena-hand {
+    height: 126px;
+    bottom: 8px;
+  }
+  .fan-card {
+    width: 90px;
+    height: 126px;
+    left: -45px;
+  }
+  .fan-cost {
+    width: 22px;
+    height: 22px;
+    font-size: 14px;
+  }
+  .fan-card:hover,
+  .fan-card:focus-within {
+    transform: translate(var(--offset), -30px) rotate(0deg) scale(1.15);
+  }
+  .hand-caption {
+    bottom: 132px;
+    font-size: 7px;
+  }
+  .arena-deck {
+    width: 38px;
+    height: 55px;
+    bottom: 33px;
+    right: 30px;
+  }
+  .arena-deck > span {
+    font-size: 24px;
+  }
+  .arena-deck > b {
+    min-width: 22px;
+    height: 22px;
+    font-size: 12px;
   }
   .arena-hover {
     bottom: 126px;
+    min-width: 0;
+    padding: 6px 12px;
+  }
+  .arena-hover b {
+    font-size: 13px;
+  }
+  .arena-victory h1 {
+    font-size: 46px;
+    margin: 10px;
+  }
+  .arena-victory .seal-button {
+    margin-top: 12px;
+  }
+  .victory-portrait {
+    display: none;
+  }
+  .arena-menu-panel {
+    max-height: calc(100dvh - 24px);
+    padding: 18px 20px 12px;
+    overflow-y: auto;
+  }
+  .arena-menu-panel h2 {
+    margin: 4px 0 8px;
+    font-size: 24px;
+  }
+  .arena-menu-panel button {
+    padding: 7px 0;
+    font-size: 16px;
+  }
+  .card-choice-screen {
+    padding: 16px 22px;
+    gap: 12px;
   }
   .open-discard {
+    right: 8px;
+    bottom: 190px;
+    width: 145px;
     padding: 10px;
   }
-  .preparation-wait {
-    bottom: 25px;
-    padding: 15px;
+  .open-discard small,
+  .open-discard > span {
+    display: none;
   }
   .reserve-gain {
     left: 20px;
     bottom: 125px;
     font-size: 18px;
   }
-}
-/* Response windows occupy a reserved side of the square arena. */
-.arena-phase h1 {
-  margin: 7px 0;
-}
-.response-mode .arena-phase {
-  background: linear-gradient(90deg, transparent, #482c1bd9, transparent);
-  padding: 8px 20px;
-}
-.response-mode .arena-phase h1 {
-  color: #ffd5af;
-}
-.arena-pass {
-  top: auto;
-  bottom: 205px;
-  right: 24px;
-  width: 245px;
-  justify-content: space-between;
-  font-size: 12px;
-  padding: 18px 16px 18px 27px;
-}
-.arena-stack-panel {
-  position: absolute;
-  right: 24px;
-  top: 175px;
-  bottom: 295px;
-  width: 245px;
-  display: flex;
-  flex-direction: column;
-  padding: 15px;
-  background: linear-gradient(#162d22ed, #0d211ae8);
-  border: 1px solid #a0a77a66;
-  border-radius: 3px;
-  z-index: 30;
-}
-.stack-heading > b {
-  font: 17px Georgia;
-  color: #e9d3a2;
-  display: block;
-}
-.stack-heading > span {
-  font-size: 8px;
-  line-height: 1.5;
-  letter-spacing: 1px;
-  color: #d4b889;
-  display: block;
-  margin-top: 8px;
-}
-.pending-combat {
-  display: flex;
-  gap: 7px;
-  align-items: center;
-  font-size: 10px;
-  line-height: 1.5;
-  color: #c5d2b5;
-  border-top: 1px solid #a7ab7333;
-  margin-top: 12px;
-  padding-top: 12px;
-}
-.pending-combat span {
-  flex: 1;
-}
-.pending-combat b {
-  color: #e4b48b;
-}
-.stack-list {
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  margin-top: 13px;
-  flex: 1;
-  min-height: 0;
-}
-.stack-card {
-  display: flex;
-  gap: 9px;
-  padding: 9px 0;
-  background: none;
-  border: 0;
-  border-bottom: 1px solid #8e9a692f;
-  width: 100%;
-  text-align: left;
-  color: #cbd5bb;
-}
-.stack-card img {
-  width: 44px;
-  height: 62px;
-  object-fit: cover;
-  border: 1px solid #aaa77455;
-  border-radius: 3px;
-}
-.stack-card > div {
-  min-width: 0;
-}
-.stack-card small {
-  font-size: 7px;
-  letter-spacing: 1px;
-  color: #c9b47c;
-}
-.stack-card b {
-  font-size: 11px;
-  line-height: 1.4;
-  display: block;
-  margin-top: 4px;
-  font-weight: 500;
-}
-.stack-card span {
-  display: block;
-  font-size: 8px;
-  line-height: 1.5;
-  color: #89a282;
-  margin-top: 5px;
-}
-.arena-stack-panel > p {
-  font-size: 9px;
-  line-height: 1.5;
-  color: #9eb395;
-  border-top: 1px solid #8e9a6944;
-  padding-top: 10px;
-  margin: 12px 0 0;
-}
-.presenting .arena-canvas,
-.presenting .fan-card {
-  pointer-events: none;
-}
-.open-discard {
-  top: auto;
-  bottom: 285px;
-  width: 245px;
-}
-.preparing-position .arena-phase {
-  top: 32px;
-}
-.duelist-portrait {
-  pointer-events: auto;
-}
-@media (max-width: 1100px) {
-  .arena-pass {
-    width: 205px;
-    right: 12px;
-    font-size: 10px;
-    padding: 15px 12px 15px 23px;
+  .preparation-wait {
+    bottom: 25px;
+    padding: 15px;
   }
-  .arena-stack-panel {
-    width: 205px;
-    right: 12px;
+}
+@media (max-width: 759px) {
+  .home {
+    padding: 0;
+  }
+  .home .hero {
+    display: block;
+    padding: 35px 0;
+    min-height: 0;
+  }
+  .home .hero h1 {
+    font-size: 34px;
+    letter-spacing: 2px;
+  }
+  .home .hero h1 em {
+    font-size: 14px;
+    letter-spacing: 2px;
+  }
+  .home .hero-art {
+    display: none;
+  }
+  .home .hero-copy {
+    text-align: left;
+  }
+  .home .hero-copy .actions {
+    justify-content: flex-start;
+  }
+  .home .hero-copy .actions button {
+    font-size: 12px;
     padding: 12px;
   }
-  .arena-stack-panel .stack-heading > b {
-    font-size: 15px;
+  .home .home-bottom {
+    display: block;
+    padding: 0 0 30px;
   }
-  .open-discard {
-    width: 205px;
-    right: 12px;
-  }
-}
-@media (max-width: 759px) {
-  .arena-stack-panel {
-    bottom: auto;
-    right: 10px;
-    width: 185px;
-  }
-  .pending-combat {
-    font-size: 8px;
-    margin-top: 6px;
-    padding-top: 6px;
-  }
-  .stack-list {
-    display: flex;
-    overflow-x: auto;
-    overflow-y: hidden;
-    gap: 8px;
-    flex: none;
-  }
-  .stack-card {
-    min-width: 150px;
-    width: 150px;
-    padding: 3px 0;
-    gap: 5px;
-    border-bottom: 0;
-  }
-  .stack-card small {
-    font-size: 5px;
-  }
-  .stack-card span {
-    font-size: 6px;
-    margin-top: 2px;
-  }
-  .arena-stack-panel > p {
-    font-size: 6px;
-    padding-top: 5px;
-    margin-top: 5px;
-  }
-  .arena-pass {
-    right: 10px;
-    width: 170px;
-    max-width: 170px;
-    font-size: 9px;
-  }
-  .open-discard {
-    width: 170px;
-    right: 10px;
-  }
-  .response-mode .arena-phase {
-    padding: 2px 5px;
-  }
-  .preparing-position .arena-phase {
-    top: 50px;
-  }
-}
-@media (max-height: 559px) and (orientation: landscape) {
-  .arena-pass {
-    bottom: 130px;
-    right: 8px;
-    width: 145px;
-    max-width: 145px;
-    font-size: 9px;
-    padding: 12px 8px 12px 19px;
-  }
-  .arena-stack-panel {
-    top: 65px;
-    bottom: 190px;
-    right: 8px;
-    width: 170px;
-    padding: 8px;
-  }
-  .stack-heading > b {
-    font-size: 12px !important;
-  }
-  .stack-heading > span {
-    font-size: 6px;
-  }
-  .stack-card img {
-    width: 28px;
-    height: 40px;
-  }
-  .stack-card b {
-    font-size: 8px;
-  }
-  .stack-card small,
-  .stack-card span {
-    font-size: 6px;
-  }
-  .stack-list {
-    margin-top: 5px;
-  }
-  .pending-combat {
-    font-size: 8px;
-    margin-top: 5px;
-    padding-top: 5px;
-  }
-  .arena-stack-panel > p {
+  .home .home-bottom > div:first-child > p,
+  .home .home-bottom > div:first-child > h2 {
     display: none;
   }
-  .open-discard {
-    right: 8px;
-    bottom: 190px;
-    top: auto;
-    width: 145px;
-    font-size: 9px;
+  .home .roomcard {
+    border: 0;
+    padding: 10px 0;
   }
-  .preparing-position .arena-phase {
-    top: 8px;
-  }
-  .duelist-opponent {
-    top: 66px;
+  .home .recent-rooms {
+    margin-bottom: 20px;
   }
 }
-@media (min-width: 760px) and (min-height: 560px) {
-  .arena-stack-panel {
-    bottom: auto;
-    max-height: calc(100dvh - 440px);
-  }
-  .stack-list {
-    flex: none;
-  }
-  .stack-card img {
-    width: 54px;
-    height: 76px;
-  }
-  .stack-card b {
-    font-size: 12px;
-  }
-  .stack-card span,
-  .arena-stack-panel > p {
-    font-size: 10px;
-  }
-}
-@media (max-width: 759px) {
-  .arena-stack-panel > p {
-    display: none;
-  }
-  .stack-heading > b {
-    font-size: 11px !important;
-    line-height: 14px;
-  }
-  .stack-heading > span {
-    margin-top: 2px;
-    font-size: 6px;
-  }
-}
-@media (max-width: 759px) {
-  .stack-card span {
-    display: none;
-  }
-}
-/* Hand reading controls stay outside the printed card. */
-.fan-zoom {
-  top: -34px;
-  right: 0;
-  width: auto;
-  min-width: 58px;
-  height: 28px;
-  padding: 0 9px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 5px;
-  font-size: 12px;
-  border-radius: 14px;
-  pointer-events: none;
-  opacity: 0;
-}
-.fan-zoom span {
-  font-size: 19px;
-}
-.fan-card:hover .fan-zoom,
-.fan-card:focus-within .fan-zoom,
-.fan-card.selected .fan-zoom {
-  opacity: 1;
-  pointer-events: auto;
-}
-.fan-card:hover::before,
-.fan-card:focus-within::before,
-.fan-card.selected::before {
-  content: "";
-  position: absolute;
-  inset: -38px 0 auto;
-  height: 40px;
-}
-.arena-hand:has(.fan-card:hover) .hand-caption,
-.arena-hand:has(.fan-card:focus-within) .hand-caption {
-  opacity: 0;
-}
-/* The HUD is read continuously during play, so its labels use body-sized text. */
-.player-resources > div {
-  grid-template-columns: 76px auto;
-  gap: 1px 12px;
-}
-.player-resources span {
-  font-size: 14px;
-  color: #d5e0c8;
-}
-.player-resources b {
-  font-size: 27px;
-}
-.player-resources small {
-  font-size: 15px;
-  color: #b6c7a9;
-}
-.player-resources em {
-  font-size: 11px;
-  color: #a5b99f;
-}
-.duelist-info > small {
-  font-size: 10px;
-  letter-spacing: 1.5px;
-}
-.duelist-info > b {
-  font-size: 20px;
-}
-.duelist-element {
-  font-size: 14px;
-  color: #c2cbb6;
-}
-.arena-phase {
-  width: min(580px, calc(100vw - 48px));
-  top: 15px;
-}
-.arena-phase > small {
-  font-size: 11px;
-  letter-spacing: 2px;
-}
-@media (min-width: 760px) and (min-height: 560px) {
-  .duelist-opponent {
-    top: 76px;
-  }
-  .arena-phase h1 {
-    font-size: 34px;
-  }
-}
-@media (max-width: 1100px) and (min-width: 760px) and (min-height: 560px) {
-  .player-resources > div {
-    grid-template-columns: 67px auto;
-    gap: 0 7px;
-  }
-  .player-resources span {
-    font-size: 13px;
-  }
-  .player-resources b {
-    font-size: 24px;
-  }
-  .player-resources em {
-    font-size: 10px;
-  }
-  .duelist-info > b {
-    font-size: 18px;
-  }
-  .duelist-element {
-    font-size: 13px;
-  }
-}
-@media (max-width: 759px) {
-  .player-resources {
-    gap: 1px;
-    margin-top: 4px;
-  }
-  .player-resources > div {
-    grid-template-columns: 49px auto;
-    gap: 0 5px;
-  }
-  .player-resources span {
-    font-size: 11px;
-  }
-  .player-resources b {
-    font-size: 18px;
-  }
-  .player-resources small {
-    font-size: 11px;
-  }
-  .duelist-info > small {
-    font-size: 8px;
-  }
-  .duelist-info > b {
-    font-size: 14px;
-  }
-  .duelist-element {
-    font-size: 11px;
-  }
-  .arena-phase {
-    top: 48px;
-    width: calc(100vw - 28px);
-  }
-  .arena-phase > small {
-    font-size: 9px;
-    letter-spacing: 1.4px;
-  }
-  .arena-phase h1 {
-    font-size: 24px;
-    margin: 6px 0;
-  }
-  .duelist-opponent {
-    top: 176px;
-  }
-  .response-mode .duelist-opponent {
-    top: 180px;
-  }
-  .arena-stack-panel {
-    top: 175px;
-  }
-  .duelist-self {
-    bottom: 148px;
-  }
-}
-@media (max-height: 559px) and (orientation: landscape) {
-  .player-resources {
-    gap: 1px;
-    margin-top: 3px;
-  }
-  .player-resources > div {
-    grid-template-columns: 55px auto;
-    gap: 0 6px;
-  }
-  .player-resources span {
-    font-size: 12px;
-  }
-  .player-resources b {
-    font-size: 20px;
-  }
-  .player-resources small {
-    font-size: 12px;
-  }
-  .duelist-info > small {
-    font-size: 9px;
-  }
-  .duelist-info > b {
-    font-size: 15px;
-  }
-  .duelist-element {
-    font-size: 12px;
-  }
-  .arena-phase {
-    top: 6px;
-    width: 390px;
-  }
-  .arena-phase > small {
-    font-size: 10px;
-  }
-  .arena-phase h1 {
-    font-size: 21px;
-    margin: 3px 0;
-  }
-}
-@media (min-width: 760px) and (min-height: 560px) {
-  .opponent-hand {
-    left: auto;
-    right: 250px;
-    transform: none;
-    top: -65px;
-  }
-}
-@media (min-width: 760px) and (max-width: 1100px) {
-  .arena-hand {
-    left: calc(50% + 35px);
-  }
-  .opponent-hand {
-    right: 170px;
-  }
-}
-@media (max-width: 759px) {
-  .fan-card:hover,
-  .fan-card:focus-within {
-    transform: translate(var(--offset), -70px) rotate(0deg) scale(1.15);
-  }
-  .duelist-self,
-  .arena-pass {
-    bottom: 130px;
-  }
-  .arena-stack-panel {
-    max-height: 75px;
-    padding: 5px;
-  }
-  .stack-heading > span,
-  .stack-card small {
-    display: none;
-  }
-  .stack-list {
-    margin-top: 4px;
-  }
-  .stack-card img {
-    width: 26px;
-    height: 36px;
-  }
-  .stack-card b {
-    font-size: 10px;
-    line-height: 1.3;
-    margin-top: 0;
-  }
-}
-@media (max-width: 759px) {
-  .arena-pass {
-    bottom: 216px;
-    min-height: 36px;
-    padding: 9px 10px 9px 20px;
-  }
-  .open-discard {
-    bottom: 130px;
-  }
-  .fan-zoom {
-    top: auto;
-    bottom: -31px;
-    height: 26px;
-  }
-  .fan-card:hover::before,
-  .fan-card:focus-within::before,
-  .fan-card.selected::before {
-    inset: auto 0 -34px;
-    height: 36px;
-  }
-  .duelist-info > b {
-    max-width: 126px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+@media (prefers-reduced-motion: reduce) {
+  .arena-dust,
+  .arena-victory,
+  .mana-total::before,
+  .mana-total > b {
+    animation: none;
   }
 }

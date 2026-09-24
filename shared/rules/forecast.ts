@@ -71,6 +71,8 @@ export type ActionForecast = {
   combatKind?: "announced" | "ranged" | "melee";
   error?: string;
   affected: string[];
+  /** What changes on each affected piece, in reading order. */
+  outcomes: { unitId: string; changes: string[]; removed: boolean }[];
   path: [number, number][];
   uncertainty?: "stack" | "hidden" | "random" | "search";
   combat?: CombatPreview;
@@ -80,7 +82,7 @@ export function forecastAction(
   seat: number,
   c: CommandDraft,
 ): ActionForecast {
-  const result: ActionForecast = { affected: [], path: [] };
+  const result: ActionForecast = { affected: [], outcomes: [], path: [] };
   if (seat !== 0 && seat !== 1) return { ...result, error: "Modo espectador" };
   const state = adviceState(g);
   result.error = apply(state, seat, c);
@@ -162,12 +164,14 @@ export function forecastAction(
       );
     }
   }
-  result.affected = g.units
-    .filter((before) => {
-      const after = state.units.find((u) => u.id === before.id);
-      return !after || unitChanges(before, after).length > 0;
-    })
-    .map((u) => u.id);
+  result.outcomes = g.units.flatMap((before) => {
+    const after = state.units.find((u) => u.id === before.id),
+      changes = after ? unitChanges(before, after) : [];
+    return !after || changes.length
+      ? [{ unitId: before.id, changes, removed: !after }]
+      : [];
+  });
+  result.affected = result.outcomes.map((o) => o.unitId);
   if (g.stack.length) result.uncertainty = "stack";
   if (
     forecastsCombat &&

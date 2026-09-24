@@ -18,7 +18,7 @@ export type ArenaOverlays = {
 };
 
 // Keep the exit duration in sync with duel-hud.css.
-const readingMs = 4000,
+const readingMs = 2800,
   exitMs = 450,
   drawMs = 950;
 
@@ -86,29 +86,33 @@ export class DuelPresentation {
     ) {
       this.pending = null;
     } else if (before?.stage !== stage || gain) {
-      const yours = game.phaseOwner === seat;
-      this.pending = {
-        key: stage,
-        title: game.centerPending
-          ? "O centro se abriu"
-          : `${yours ? "Sua vez" : names[game.phaseOwner ?? game.priority]} · ${phases[game.phase]}`,
-        detail: game.centerPending
-          ? "Escolha uma unidade para avançar em segredo."
-          : yours
-            ? [
-                "Uma nova carta vem para sua mão.",
-                "Invoque criaturas nos selos junto aos seus cristais.",
-                "Mova suas unidades. Os dois primeiros movimentos são grátis.",
-                "Conjure magias ou use as habilidades das suas unidades.",
-                "Converta cartas em reserva ou mantenha sua mão.",
-              ][game.phase]
-            : game.phase === 4
-              ? `${names[game.phaseOwner ?? game.priority]} está escolhendo quais cartas converter em reserva.`
-              : "Acompanhe as ações no tabuleiro.",
-        mana: gain
-          ? `Mana máxima aumentou para ${player.maxPe} PE!`
-          : this.pending?.mana || "",
-      };
+      const yours = game.phaseOwner === seat,
+        newTurn = game.phase === 1 && game.phaseOwner === game.first;
+      // The turn bar already tracks the opponent's half-phases. Interrupt the
+      // board only when control reaches you, a turn begins or something changes.
+      this.pending =
+        yours || newTurn || gain || game.centerPending
+          ? {
+              key: stage,
+              title: game.centerPending
+                ? "O centro se abriu"
+                : `${yours ? "Sua vez" : names[game.phaseOwner ?? game.priority]} · ${phases[game.phase]}`,
+              detail: game.centerPending
+                ? "Escolha uma unidade para avançar em segredo."
+                : yours
+                  ? [
+                      "Uma nova carta vem para sua mão.",
+                      "Invoque criaturas nos selos junto aos seus cristais.",
+                      "Mova suas unidades. Os dois primeiros movimentos são grátis.",
+                      "Conjure magias ou use as habilidades das suas unidades.",
+                      "Converta cartas em reserva ou mantenha sua mão.",
+                    ][game.phase]
+                  : `Novo turno. ${names[game.phaseOwner ?? game.priority]} começa.`,
+              mana: gain
+                ? `Mana máxima aumentou para ${player.maxPe} PE!`
+                : this.pending?.mana || "",
+            }
+          : null;
     }
     this.advance(now);
   }

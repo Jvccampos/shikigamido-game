@@ -1,117 +1,178 @@
+/* Match history: a lacquer panel docked on the right. */
 .duel-journal {
   position: absolute;
-  right: 18px;
-  top: 75px;
-  bottom: 25px;
-  width: 410px;
+  right: 20px;
+  top: 76px;
+  bottom: 136px;
+  width: 420px;
   max-width: calc(100vw - 24px);
   z-index: 70;
   display: flex;
   flex-direction: column;
-  background: #0c211bf7;
-  border: 1px solid #9ca77877;
-  border-radius: 5px;
-  box-shadow: 0 18px 60px #0009;
+  background: var(--lacquer);
+  border: 1px solid var(--gold-line-strong);
+  border-radius: 8px;
+  box-shadow: var(--hairline), var(--panel-shadow);
   overflow: hidden;
 }
 .duel-journal > header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 22px 22px 15px;
+  flex: 0 0 auto;
+  height: auto;
+  min-height: 0;
+  padding: 22px 22px 14px;
   border: 0;
   background: none;
-  min-height: 0;
 }
 .duel-journal header small {
-  font-size: 8px;
-  letter-spacing: 2px;
-  color: #9fb293;
+  color: var(--gold);
+  font:
+    600 10px var(--font-ui),
+    sans-serif;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
 }
 .duel-journal header h2 {
-  font: 28px Georgia;
   margin: 6px 0 0;
+  font:
+    600 30px var(--font-display),
+    serif;
 }
 .duel-journal header button {
+  width: 36px;
+  height: 36px;
+  padding: 0;
   background: none;
-  border: 0;
-  color: #e1d3aa;
-  font-size: 25px;
-  padding: 5px;
+  border: 1px solid transparent;
+  border-radius: 50%;
+  color: var(--parchment-dim);
+  font-size: 26px;
+  line-height: 1;
+}
+.duel-journal header button:hover {
+  border-color: var(--gold-line-strong);
+  color: var(--gold-bright);
 }
 .duel-journal > nav {
   display: flex;
-  border-bottom: 1px solid #87976844;
-  padding: 0 20px;
-  gap: 15px;
+  flex: 0 0 auto;
+  gap: 18px;
+  padding: 0 22px;
+  border-bottom: 1px solid var(--gold-line);
 }
 .duel-journal nav button {
   background: none;
   border: 0;
   border-bottom: 2px solid transparent;
-  padding: 12px 0;
-  color: #8ca489;
-  font-size: 12px;
+  margin-bottom: -1px;
+  padding: 10px 0 12px;
+  color: var(--mist-dim);
+  font:
+    600 16px var(--font-display),
+    serif;
+  letter-spacing: 0.04em;
+  transition: color 0.15s;
+}
+.duel-journal nav button:hover {
+  color: var(--parchment);
 }
 .duel-journal nav button.active {
-  color: #e3d398;
-  border-color: #d2be7f;
+  color: var(--gold-bright);
+  border-color: var(--gold);
 }
-.journal-filters {
+.journal-filters,
+.journal-players {
   display: flex;
-  gap: 7px;
-  padding: 15px 20px;
+  flex: 0 0 auto;
+  gap: 6px;
   align-items: center;
+  padding: 14px 22px;
 }
 .journal-filters button,
 .journal-players button {
-  background: #173428;
-  border: 1px solid #91a57244;
-  border-radius: 3px;
-  color: #acc29e;
-  font-size: 10px;
-  padding: 6px 8px;
+  padding: 6px 12px;
+  border: 1px solid var(--gold-line);
+  border-radius: 999px;
+  background: #ffffff06;
+  color: var(--mist);
+  font:
+    500 12px var(--font-ui),
+    sans-serif;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  transition:
+    background 0.15s,
+    color 0.15s,
+    border-color 0.15s;
+}
+.journal-filters button:hover,
+.journal-players button:hover {
+  border-color: var(--gold-line-strong);
+  color: var(--parchment);
 }
 .journal-filters .active,
 .journal-players .active {
-  background: #405b37;
-  color: #f0e3b2;
+  background: var(--gold);
+  border-color: var(--gold);
+  color: var(--ink-900);
+  font-weight: 700;
 }
 .journal-filters > span {
-  font-size: 8px;
-  color: #7f987b;
   margin-left: auto;
+  color: var(--mist-dim);
+  font:
+    italic 12px var(--font-display),
+    serif;
 }
 .journal-scroll {
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
-  padding: 0 20px 24px;
+  padding: 0 22px 24px;
+  scrollbar-width: thin;
+  scrollbar-color: #8e8056 transparent;
 }
 .journal-turn {
-  font-size: 10px;
-  font-weight: normal;
-  letter-spacing: 2px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 10px 0 6px;
+  padding: 8px 0;
+  color: var(--gold);
+  font:
+    600 10px var(--font-ui),
+    sans-serif;
+  letter-spacing: 0.24em;
   text-transform: uppercase;
-  color: #beccaa;
-  padding: 12px 0;
-  border-bottom: 1px solid #8d9b6333;
-  margin: 5px 0 8px;
+}
+.journal-turn::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, var(--gold-line-strong), transparent);
 }
 .journal-event {
   display: flex;
   gap: 12px;
-  padding: 13px 0;
-  border-bottom: 1px solid #85946c22;
+  padding: 12px 0;
+  border-bottom: 1px solid #85946c1f;
 }
 .event-card {
   padding: 0 !important;
   border: 1px solid #9bad7f77;
   border-radius: 3px;
-  width: 39px;
+  width: 40px;
+  height: 56px;
   flex-shrink: 0;
   background: none;
-  height: 54px;
   overflow: hidden;
+  transition: border-color 0.15s;
+}
+.event-card:hover {
+  border-color: var(--gold-bright);
 }
 .event-card img {
   width: 100%;
@@ -119,34 +180,40 @@
   object-fit: cover;
 }
 .event-icon {
-  width: 39px;
+  width: 40px;
   flex-shrink: 0;
   display: grid;
   place-items: center;
-  color: #d3c58d;
+  color: var(--gold);
   font-size: 22px;
+}
+.event-body {
+  min-width: 0;
 }
 .event-body strong {
   display: block;
-  font-size: 12px;
-  color: #e0ddbc;
-  font-weight: 500;
+  font:
+    600 16px/1.25 var(--font-display),
+    serif;
+  color: var(--parchment);
 }
 .event-body p {
-  font-size: 11px;
-  color: #adbea1;
-  line-height: 1.5;
-  margin: 6px 0;
+  font-size: 13px;
+  color: var(--mist);
+  line-height: 1.45;
+  margin: 4px 0;
 }
 .event-body small {
-  font-size: 8px;
+  font:
+    600 9px var(--font-ui),
+    sans-serif;
   text-transform: uppercase;
-  letter-spacing: 1px;
-  color: #7c987d;
+  letter-spacing: 0.16em;
+  color: var(--mist-dim);
 }
 .event-body b {
   color: #e8bda0;
-  font-weight: normal;
+  font-weight: 600;
 }
 .event-duel {
   display: flex;
@@ -160,11 +227,6 @@
 .event-duel > span {
   color: #d7b185;
   font-size: 12px;
-}
-.journal-players {
-  display: flex;
-  gap: 8px;
-  padding: 15px 20px;
 }
 .journal-players button {
   flex: 1;
@@ -182,7 +244,7 @@
   position: relative;
   padding: 0;
   background: none;
-  color: #c2d0ae;
+  color: var(--mist);
   border: 0;
   text-align: left;
 }
@@ -190,27 +252,39 @@
   width: 100%;
   border-radius: 4px;
   border: 1px solid #7e926955;
+  transition: border-color 0.15s;
+}
+.discard-gallery > button:hover img {
+  border-color: var(--gold-bright);
 }
 .discard-gallery span {
   display: block;
-  font-size: 9px;
-  line-height: 1.4;
+  font-size: 12px;
+  line-height: 1.35;
   margin-top: 6px;
 }
 .discard-gallery b {
   position: absolute;
-  right: 3px;
-  top: 3px;
-  background: #173124;
-  padding: 3px 5px;
-  font-size: 11px;
+  right: 4px;
+  top: 4px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  background: var(--ink-900);
+  border: 1px solid var(--gold-line-strong);
+  font:
+    700 12px var(--font-display),
+    serif;
 }
 .journal-empty {
-  font-size: 12px;
-  color: #93aa8a;
-  line-height: 1.7;
-  padding: 25px 0;
   grid-column: 1/-1;
+  padding: 25px 0;
+  color: var(--mist-dim);
+  font:
+    italic 16px/1.6 var(--font-display),
+    serif;
+}
+.duel-journal .event-cast {
+  display: none;
 }
 @media (max-width: 759px) {
   .duel-journal {
@@ -230,22 +304,4 @@
   .duel-journal header h2 {
     font-size: 22px;
   }
-}
-.duel-journal .event-cast {
-  display: none;
-}
-.duel-journal > header {
-  height: auto;
-  flex: 0 0 auto;
-}
-.duel-journal > nav {
-  flex: 0 0 auto;
-}
-.journal-filters,
-.journal-players {
-  flex: 0 0 auto;
-}
-.journal-scroll {
-  flex: 1;
-  min-height: 0;
 }

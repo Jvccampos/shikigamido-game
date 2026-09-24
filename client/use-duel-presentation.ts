@@ -13,7 +13,7 @@ export function useDuelPresentation(
   names: string[],
 ) {
   const [model] = useState(() => new DuelPresentation());
-  const [, refresh] = useReducer((n: number) => n + 1, 0);
+  const [version, refresh] = useReducer((n: number) => n + 1, 0);
   model.update(game, seat, names, performance.now());
   const view = model.view;
   const handlers = useMemo(
@@ -43,15 +43,17 @@ export function useDuelPresentation(
   );
   useEffect(() => {
     if (view.nextDeadline === null) return;
+    // Timers may fire slightly before performance.now() reaches the deadline.
+    // Re-arm after every refresh so an early wake-up cannot strand the state.
     const timer = setTimeout(
       () => {
         model.advance(performance.now());
         refresh(undefined);
       },
-      Math.max(0, view.nextDeadline - performance.now()),
+      Math.max(0, view.nextDeadline - performance.now()) + 1,
     );
     return () => clearTimeout(timer);
-  }, [model, view.nextDeadline]);
+  }, [model, view.nextDeadline, version]);
   useEffect(() => {
     if (!view.noticeDismissible) return;
     const pointer = (event: PointerEvent) => {

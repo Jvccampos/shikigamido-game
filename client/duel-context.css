@@ -1,0 +1,335 @@
+/* Turn bar: the stepper says where the turn is, the title says who acts and
+   the detail says what to do. Seat colors match the pieces and portraits. */
+.arena-phase {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  text-align: center;
+  pointer-events: none;
+  text-shadow: 0 2px 8px #000;
+}
+.arena-shell .arena-phase {
+  top: 16px;
+  z-index: 30;
+  width: min(820px, calc(100vw - 48px));
+}
+.duel-context {
+  --actor: var(--gold);
+  display: grid;
+  justify-items: center;
+}
+.duel-context.actor-0 {
+  --actor: var(--seat-0);
+}
+.duel-context.actor-1 {
+  --actor: var(--seat-1);
+}
+.duel-context.tone-response {
+  --actor: #ebb46c;
+}
+.duel-context.tone-setup {
+  --actor: var(--gold);
+}
+
+/* Stepper: a slim lacquer bar. */
+.turn-steps {
+  display: flex;
+  align-items: flex-end;
+  gap: 22px;
+  margin: 0;
+  padding: 8px 20px 9px;
+  list-style: none;
+  border: 1px solid var(--gold-line);
+  border-radius: 999px;
+  background: #06140fe0;
+  box-shadow:
+    var(--hairline),
+    0 6px 20px #0008;
+  text-shadow: none;
+}
+.turn-number {
+  align-self: center;
+  padding-right: 20px;
+  border-right: 1px solid var(--gold-line);
+  color: var(--gold);
+  font:
+    600 11px var(--font-ui),
+    sans-serif;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.turn-phase {
+  display: grid;
+  justify-items: center;
+  gap: 5px;
+}
+.turn-phase-name {
+  color: var(--mist-dim);
+  font:
+    500 12px var(--font-ui),
+    sans-serif;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.turn-phase.done .turn-phase-name {
+  color: #5f7367;
+}
+.turn-phase.current .turn-phase-name {
+  color: var(--parchment);
+  font-weight: 700;
+}
+.turn-pips {
+  display: flex;
+  gap: 4px;
+}
+.turn-pip {
+  --pip: #c4c4b4;
+  width: 18px;
+  height: 4px;
+  border-radius: 3px;
+  background: #ffffff0d;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--pip) 45%, transparent);
+  transition:
+    width 0.3s ease,
+    background 0.3s,
+    box-shadow 0.3s;
+}
+.turn-pip.seat-0 {
+  --pip: var(--seat-0);
+}
+.turn-pip.seat-1 {
+  --pip: var(--seat-1);
+}
+.turn-pip.done {
+  background: color-mix(in srgb, var(--pip) 35%, transparent);
+  box-shadow: none;
+}
+.turn-pip.current {
+  width: 30px;
+  background: var(--pip);
+  box-shadow: 0 0 10px var(--pip);
+}
+.tone-setup .turn-pip {
+  --pip: var(--gold);
+}
+
+/* Headline: who acts, then what to do. */
+.duel-context h1 {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  margin: 10px 0 0;
+  color: var(--parchment);
+  font:
+    600 36px/1.1 var(--font-display),
+    serif;
+  letter-spacing: 0.01em;
+}
+.duel-context.tone-theirs h1 {
+  color: color-mix(in srgb, var(--actor) 30%, #e3dccb);
+}
+.context-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--actor);
+  font:
+    700 11px var(--font-ui),
+    sans-serif;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  text-shadow: 0 0 12px color-mix(in srgb, var(--actor) 60%, transparent);
+}
+.context-badge::before,
+.context-badge::after {
+  content: "";
+  width: 22px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--actor));
+}
+.context-badge::after {
+  background: linear-gradient(90deg, var(--actor), transparent);
+}
+.context-detail {
+  max-width: 780px;
+  text-wrap: balance;
+  margin: 7px 0 0;
+  color: var(--mist);
+  font:
+    400 16px/1.4 var(--font-ui),
+    sans-serif;
+}
+.tone-mine .context-detail {
+  color: #dfe8dc;
+}
+.tone-response .context-detail {
+  color: #ffdcb6;
+}
+.context-event {
+  min-height: 18px;
+  margin: 5px 0 0;
+  color: #d9c58c;
+  font:
+    italic 15px/1.4 var(--font-display),
+    serif;
+}
+.context-event span::before {
+  content: "✦ ";
+  font-style: normal;
+}
+.context-event span:not(.active) {
+  color: #a9a07c;
+}
+.context-event span:not(.active)::before {
+  content: "Última jogada · ";
+  font:
+    500 11px var(--font-ui),
+    sans-serif;
+  letter-spacing: 0.08em;
+}
+.duel-context h1 .waiting-pulse {
+  margin: 0 12px 0 0;
+  vertical-align: middle;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .duel-context h1 {
+    animation: fade-up 280ms ease-out;
+  }
+  .context-detail {
+    animation: fade-in 240ms ease-out;
+  }
+  .tone-mine .context-badge {
+    animation: badge-arrive 1.2s ease-out;
+  }
+  .context-event span {
+    display: inline-block;
+    animation: fade-up 220ms ease-out;
+  }
+  .context-event span:not(.active) {
+    animation: event-linger 4s ease-in forwards;
+  }
+}
+@keyframes badge-arrive {
+  0% {
+    opacity: 0;
+    letter-spacing: 0.6em;
+  }
+  30% {
+    opacity: 1;
+  }
+  100% {
+    letter-spacing: 0.3em;
+  }
+}
+@keyframes event-linger {
+  0%,
+  75% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@media (max-width: 1100px) {
+  .turn-steps {
+    gap: 13px;
+    padding: 6px 14px 7px;
+  }
+  .turn-number {
+    padding-right: 13px;
+  }
+  .duel-context h1 {
+    font-size: 28px;
+  }
+  .context-detail {
+    font-size: 14px;
+  }
+}
+@media (max-width: 759px) {
+  .arena-shell .arena-phase {
+    top: 48px;
+    width: calc(100vw - 20px);
+  }
+  .turn-steps {
+    gap: 8px;
+    padding: 5px 10px 6px;
+  }
+  .turn-number {
+    padding-right: 8px;
+    font-size: 9px;
+    letter-spacing: 1px;
+  }
+  .turn-phase-name {
+    font-size: 9px;
+  }
+  .turn-pip {
+    width: 11px;
+  }
+  .turn-pip.current {
+    width: 18px;
+  }
+  .duel-context h1 {
+    margin-top: 6px;
+    font-size: 21px;
+    gap: 1px;
+  }
+  .context-badge {
+    font-size: 9px;
+    letter-spacing: 0.2em;
+  }
+  .context-badge::before,
+  .context-badge::after {
+    width: 12px;
+  }
+  .context-detail {
+    font-size: 12px;
+    margin-top: 4px;
+  }
+  .context-event {
+    display: none;
+  }
+}
+@media (max-height: 559px) and (orientation: landscape) {
+  .arena-shell .arena-phase {
+    top: 5px;
+    width: min(440px, 100vw - 300px);
+  }
+  .arena-top .arena-room {
+    visibility: hidden;
+  }
+  .turn-steps {
+    gap: 8px;
+    padding: 4px 10px;
+  }
+  .turn-phase-name {
+    display: none;
+  }
+  .turn-number {
+    padding-right: 8px;
+    font-size: 9px;
+  }
+  .duel-context h1 {
+    margin-top: 4px;
+    font-size: 19px;
+    gap: 0;
+  }
+  .context-badge {
+    font-size: 8px;
+    letter-spacing: 0.2em;
+  }
+  .context-badge::before,
+  .context-badge::after {
+    width: 10px;
+  }
+  .context-detail {
+    margin-top: 2px;
+    font-size: 11px;
+  }
+  .context-event {
+    display: none;
+  }
+}

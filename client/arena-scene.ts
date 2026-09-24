@@ -21,6 +21,7 @@ export type ArenaState = {
   game: GameView;
   seat: number;
   highlights: Point[];
+  aim?: Point | null;
   selectedId?: string;
   targets: string[];
   validTargets?: string[];
@@ -62,8 +63,23 @@ export class ArenaScene {
     string,
     { view: Container; x: number; y: number; hp: number | null; image: string }
   >();
-  private sparks: { view: Graphics; vx: number; vy: number; life: number }[] =
-    [];
+  private sparks: {
+    view: Graphics;
+    vx: number;
+    vy: number;
+    life: number;
+    gravity: number;
+  }[] = [];
+  private litGlows: Graphics[] = [];
+  private hoverId: string | null = null;
+  private shake = 0;
+  private motionQuery =
+    typeof matchMedia === "function"
+      ? matchMedia("(prefers-reduced-motion: reduce)")
+      : null;
+  private get calm() {
+    return !!this.motionQuery?.matches;
+  }
   private selectedPulse = new Graphics();
   private drag: {
     id: string;
@@ -85,7 +101,10 @@ export class ArenaScene {
   private cancels = new Set<() => void>();
   async init(host: HTMLElement, state: ArenaState) {
     this.state = state;
-    await document.fonts.load("16px ShikigamidoJP");
+    await Promise.all([
+      document.fonts.load("16px ShikigamidoJP"),
+      document.fonts.load("600 16px 'Alegreya Sans'"),
+    ]).catch(() => {});
     await this.app.init({
       resizeTo: host,
       backgroundAlpha: 0,
@@ -234,17 +253,23 @@ export class ArenaScene {
       JSON.stringify(state.game.terrain),
       JSON.stringify(state.game.flowers),
       JSON.stringify(state.highlights),
+      // Only a legal destination under the pointer changes the board.
+      state.highlights.find((v) => v.x === state.aim?.x && v.y === state.aim?.y)
+        ? `${state.aim!.x},${state.aim!.y}`
+        : "",
       state.selectedId,
       state.targets.join(),
       state.validTargets?.join(),
       JSON.stringify(state.previewPath || []),
       state.affected?.join(),
       state.game.setup,
+      state.seat >= 0 && state.game.players[state.seat].ready,
       state.startY,
     ].join("|");
     if (key !== this.buildKey) {
       this.buildKey = key;
       clear(this.board);
+      this.litGlows = [];
       this.drawBoard(l);
     }
     const incoming = (state.game.events || []).filter(
@@ -277,9 +302,9 @@ export class ArenaScene {
     for (const [id, item] of this.units)
       if (!alive.has(id)) {
         this.localDrops.delete(id);
-        this.burst(item.view.x, item.view.y, 0xf8a978, 20);
-        item.view.destroy({ children: true });
         this.units.delete(id);
+        if (this.hoverId === id) this.hoverId = null;
+        this.dissolve(item.view);
       }
     for (const u of state.game.units) {
       const p = l.point(
@@ -304,6 +329,8 @@ export class ArenaScene {
         u.statuses?.burn,
         u.statuses?.hidden,
         state.game.turn,
+        state.game.phase,
+        state.game.phaseOwner,
         state.game.moved.includes(u.id),
         JSON.stringify(u.statuses),
         state.validTargets?.includes(u.id),
@@ -318,6 +345,7 @@ export class ArenaScene {
         this.units.set(u.id, item);
         this.burst(p.x, p.y, colors[u.kind === "curse" ? 2 : u.owner], 12);
       }
+      item.view.tint = 0xffffff;
       const drop = this.localDrops.get(u.id);
       if (drop && u.x === drop.x && u.y === drop.y)
         this.localDrops.delete(u.id);
@@ -419,11 +447,13 @@ export class ArenaScene {
     for (const p of nodes) {
       const q = l.point(p.x, p.y),
         lit = this.state.highlights.some((v) => v.x === p.x && v.y === p.y),
+        aimed = lit && this.state.aim?.x === p.x && this.state.aim?.y === p.y,
         spawn = p.x < 0 || p.x > 6,
         center = p.x === 3 && p.y === 3,
         setup =
           this.state.game.setup &&
           this.state.seat >= 0 &&
+          !this.state.game.players[this.state.seat].ready &&
           p.x === (this.state.seat ? 6 : 0) &&
           [2, 4].includes(p.y);
       const r = Math.max(9, Math.min(l.dy * 0.18, 17));
@@ -431,15 +461,18 @@ export class ArenaScene {
       node.position.set(q.x, q.y);
       const g = new Graphics();
       if (lit || setup) {
-        g.ellipse(0, 0, r * 2.05, r * 2.05).fill({
-          color: 0xd7e39b,
-          alpha: 0.08,
-        });
-        g.ellipse(0, 0, r * 1.5, r * 1.5).stroke({
-          width: 2,
-          color: 0xf9e6a9,
-          alpha: 0.85,
-        });
+        const glow = new Graphics()
+          .ellipse(0, 0, r * 2.05, r * 2.05)
+          .fill({ color: 0xd7e39b, alpha: aimed ? 0.28 : 0.08 })
+          .ellipse(0, 0, r * 1.5, r * 1.5)
+          .stroke({
+            width: aimed ? 3 : 2,
+            color: aimed ? 0xfff4c8 : 0xf9e6a9,
+            alpha: aimed ? 1 : 0.85,
+          });
+        node.addChild(glow);
+        // Legal destinations breathe gently; the aimed one stays steady.
+        if (!aimed) this.litGlows.push(glow);
       }
       g.ellipse(0, 4, r + 3, r + 3).fill({
         color: 0x061713,
@@ -462,12 +495,21 @@ export class ArenaScene {
       });
       node.addChild(g);
       if (setup) {
-        const t = label(p.y === 2 ? "A" : "B", 15, 0xffe7a3);
+        // A pill label on the outer side names each seal like the panel does.
+        const chosen = p.y === this.state.startY,
+          side = this.state.seat ? 1 : -1,
+          t = label(p.y === 2 ? "A" : "B", 16, chosen ? 0x17221e : 0xffe7a3);
         t.anchor.set(0.5);
-        t.position.set(-r * 2.4, 0);
-        node.addChild(t);
-        if (p.y === this.state.startY)
-          g.circle(0, 0, r * 1.8).stroke({ width: 2, color: 0xffdd91 });
+        t.position.set(side * r * 3.1, 0);
+        node.addChild(
+          new Graphics()
+            .circle(t.x, 0, 14)
+            .fill({ color: chosen ? 0xf1d68f : 0x0b1c17, alpha: 0.95 })
+            .stroke({ color: 0xf1d68f, width: 1.5 }),
+          t,
+        );
+        if (chosen)
+          g.circle(0, 0, r * 1.8).stroke({ width: 2.5, color: 0xffdd91 });
       }
       if (center || spawn) {
         const t = label(
@@ -501,6 +543,13 @@ export class ArenaScene {
     }
   }
   private drawUnit(view: Container, u: UnitView, size: number) {
+    this.paintUnit(view, u, size);
+    view.on("pointerover", () => (this.hoverId = u.id));
+    view.on("pointerout", () => {
+      if (this.hoverId === u.id) this.hoverId = null;
+    });
+  }
+  private paintUnit(view: Container, u: UnitView, size: number) {
     drawUnit(
       view,
       u,
@@ -617,21 +666,42 @@ export class ArenaScene {
           kind: "summon",
           label:
             e.unit.kind === "curse"
-              ? `Uma maldição foi invocada! · Nível ${e.unit.level || 1}`
+              ? `Uma maldição de nível ${e.unit.level || 1} surgiu`
               : `${name} entrou no campo`,
         });
         const u = e.unit,
-          item = this.ensureUnit(u),
-          point = l.point(u.x, u.y),
+          point = l.point(u.x, u.y);
+        // Show where an opponent's piece came from; your own drag already did.
+        if (u.kind === "unit" && u.owner !== this.state.seat && u.cardId)
+          await this.showCard(u.cardId, this.handOrigin(u.owner), point, 420);
+        if (this.destroyed) return;
+        const item = this.ensureUnit(u),
           ring = new Graphics();
+        let landed = false;
         this.fx.addChild(ring);
         this.activeViews.add(u.id);
         item.view.scale.set(0.1);
         item.view.alpha = 0;
-        await this.animate(e.unit.kind === "curse" ? 1050 : 600, (p) => {
+        const glow = new Graphics();
+        this.fx.addChildAt(glow, 0);
+        await this.animate(e.unit.kind === "curse" ? 1050 : 650, (p) => {
           const eased = 1 - (1 - p) ** 3;
-          item.view.scale.set(eased);
-          item.view.alpha = eased;
+          // Settle from slightly above with a soft overshoot.
+          const back = 1 + 2.2 * (p - 1) ** 3 + 1.2 * (p - 1) ** 2;
+          item.view.scale.set(Math.max(0.1, back));
+          item.view.alpha = Math.min(1, p * 2.5);
+          item.view.position.set(point.x, point.y - (1 - eased) * l.dy * 0.35);
+          glow
+            .clear()
+            .ellipse(point.x, point.y + l.dy * 0.2, l.dx * 0.5, l.dy * 0.16)
+            .fill({
+              color: e.unit.kind === "curse" ? 0xc19afa : color,
+              alpha: 0.35 * Math.sin(p * Math.PI),
+            });
+          if (p > 0.55 && !landed) {
+            landed = true;
+            this.shakeBy(e.unit.kind === "curse" ? 4 : 1.5);
+          }
           ring
             .clear()
             .circle(point.x, point.y, 8 + p * l.dx * 0.7)
@@ -644,8 +714,10 @@ export class ArenaScene {
         });
         if (this.destroyed) return;
         ring.destroy();
+        glow.destroy();
         item.view.scale.set(1);
         item.view.alpha = 1;
+        item.view.position.set(point.x, point.y);
         this.activeViews.delete(u.id);
       } else if (e.type === "move" || e.type === "approach") {
         const item = this.units.get(e.unitId);
@@ -682,30 +754,48 @@ export class ArenaScene {
             y: first.y + (last.y - first.y) * 0.3,
           };
         }
-        await this.animate(
-          localMove ? 150 : Math.min(1100, 360 * (path.length - 1)),
-          (p) => {
-            const f = p * (path.length - 1),
-              i = Math.min(path.length - 2, Math.floor(f)),
-              t = f - i,
-              a = path[i],
-              b = path[i + 1];
-            item.view.position.set(
-              a.x + (b.x - a.x) * t,
-              a.y +
-                (b.y - a.y) * t -
-                (localMove ? 0 : Math.sin(t * Math.PI) * 7),
-            );
-          },
-        );
+        // Travel along the path, then a quick squash as the piece lands.
+        const travel = localMove
+            ? 150
+            : Math.min(1100, 360 * (path.length - 1)),
+          settle = localMove || this.calm ? 0 : 220,
+          total = travel + settle;
+        await this.animate(total, (progress) => {
+          const linear = Math.min(1, (progress * total) / travel);
+          // Ease the whole journey so pieces accelerate and settle.
+          const p = localMove
+            ? linear
+            : linear < 0.5
+              ? 2 * linear * linear
+              : 1 - (-2 * linear + 2) ** 2 / 2;
+          const f = p * (path.length - 1),
+            i = Math.min(path.length - 2, Math.floor(f)),
+            t = f - i,
+            a = path[i],
+            b = path[i + 1];
+          item.view.position.set(
+            a.x + (b.x - a.x) * t,
+            a.y + (b.y - a.y) * t - (localMove ? 0 : Math.sin(t * Math.PI) * 7),
+          );
+          if (settle && progress * total > travel) {
+            const q = (progress * total - travel) / settle,
+              squash = Math.sin(q * Math.PI) * (1 - q);
+            item.view.scale.set(1 + squash * 0.1, 1 - squash * 0.12);
+          }
+        });
         if (this.destroyed) return;
+        item.view.scale.set(1);
         item.x = item.view.x;
         item.y = item.view.y;
+        if (!localMove && e.type === "move")
+          this.burst(item.view.x, item.view.y + l.dy * 0.3, 0xcfc7a0, 7, 0.04);
         this.activeViews.delete(e.unitId);
       } else if (e.type === "combat") {
         this.state.onPresentation({
           kind: "combat",
-          label: `${e.keyword} · resolvendo dano`,
+          label: `${catalog.get(e.attacker.cardId)?.name || "Uma peça"} ataca ${
+            catalog.get(e.defender.cardId)?.name || "uma peça"
+          } · ${e.keyword}`,
         });
         const a = e.attacker,
           d = e.defender,
@@ -758,6 +848,7 @@ export class ArenaScene {
             di.hp = d.hp === null ? null : Math.max(0, d.hp - e.attackDamage);
             if (e.attackDamage > 0) this.damage(dp.x, dp.y, e.attackDamage);
             this.burst(dp.x, dp.y, color, 22);
+            this.shakeBy(Math.min(7, 2 + e.attackDamage));
             this.drawUnit(
               di.view,
               d.hp === null
@@ -786,6 +877,12 @@ export class ArenaScene {
         if (this.destroyed) return;
         flash.destroy();
         text.destroy();
+        // Fallen fighters fade to grey before the board removes them.
+        for (const [fighter, item] of [
+          [a.hp === null ? null : a.hp - e.defenseDamage, ai],
+          [d.hp === null ? null : d.hp - e.attackDamage, di],
+        ] as const)
+          if (fighter !== null && fighter <= 0) item.view.tint = 0x8a8a8a;
         ai.view.scale.set(1);
         di.view.scale.set(1);
         ai.view.position.set(ap.x, ap.y);
@@ -800,10 +897,7 @@ export class ArenaScene {
         });
         await this.showCard(
           e.cardId,
-          {
-            x: this.app.screen.width * 0.5,
-            y: e.seat === this.state.seat ? this.app.screen.height - 65 : 30,
-          },
+          this.handOrigin(e.seat),
           { x: this.app.screen.width - 135, y: 230 },
           650,
         );
@@ -815,14 +909,21 @@ export class ArenaScene {
             : typeof e.x === "number"
               ? l.point(e.x, e.y ?? 3)
               : { x: l.cx, y: l.cy };
-        const ring = new Graphics();
-        this.fx.addChild(ring);
+        const ring = new Graphics(),
+          inner = new Graphics();
+        this.fx.addChild(ring, inner);
+        if (target) this.activeViews.add(e.targetId!);
         this.burst(point.x, point.y, color, 30);
         await this.animate(850, (p) => {
           ring
             .clear()
             .circle(point.x, point.y, 8 + p * l.dx)
             .stroke({ color, width: 4 * (1 - p) + 1, alpha: 1 - p });
+          const q = Math.max(0, (p - 0.2) / 0.8);
+          inner
+            .clear()
+            .circle(point.x, point.y, 6 + q * l.dx * 0.6)
+            .stroke({ color: 0xfff1cc, width: 1.5, alpha: (1 - q) * 0.7 });
           if (target) {
             target.view.scale.set(1 + Math.sin(p * Math.PI) * 0.1);
             target.view.tint = p < 0.45 ? color : 0xffffff;
@@ -830,6 +931,7 @@ export class ArenaScene {
         });
         if (this.destroyed) return;
         ring.destroy();
+        inner.destroy();
         if (
           target &&
           e.afterTarget &&
@@ -839,6 +941,8 @@ export class ArenaScene {
         ) {
           const diff = e.afterTarget.hp - e.beforeTarget.hp;
           if (diff !== 0) this.damage(point.x, point.y, -diff);
+          if (diff > 0) this.burst(point.x, point.y, 0x98ecc1, 14, -0.05);
+          if (diff < 0) this.shakeBy(Math.min(6, 1 - diff));
           target.hp = e.afterTarget.hp;
           this.drawUnit(
             target.view,
@@ -849,6 +953,7 @@ export class ArenaScene {
         if (target) {
           target.view.scale.set(1);
           target.view.tint = 0xffffff;
+          this.activeViews.delete(e.targetId!);
         }
       }
     }
@@ -862,7 +967,45 @@ export class ArenaScene {
       this.state.game.revision,
     );
   }
-  private burst(x: number, y: number, color: number, count: number) {
+  /** Where a player's cards come from: their hand in the DOM, or a screen edge. */
+  private handOrigin(seat: number): Point {
+    const { width, height } = this.app.screen;
+    if (seat === this.state.seat) return { x: width / 2, y: height - 65 };
+    const hand =
+      typeof document === "undefined"
+        ? null
+        : document.querySelector(".opponent-hand")?.getBoundingClientRect();
+    return hand && hand.width
+      ? { x: hand.left + hand.width / 2, y: hand.top + hand.height / 2 }
+      : { x: width / 2, y: 30 };
+  }
+  private shakeBy(amount: number) {
+    if (!this.calm) this.shake = Math.max(this.shake, amount);
+  }
+  /** Fades a removed piece out in place, releasing a few rising motes. */
+  private dissolve(view: Container) {
+    view.eventMode = "none";
+    this.burst(view.x, view.y, 0xf8a978, 14);
+    this.burst(view.x, view.y, 0xe9e2c8, 8, -0.06);
+    const y = view.y;
+    void this.animate(this.calm ? 1 : 480, (p) => {
+      if (view.destroyed) return;
+      const eased = p * p;
+      view.alpha = 1 - eased;
+      view.scale.set(1 - eased * 0.35);
+      view.rotation = eased * 0.12;
+      view.y = y + eased * 12;
+    }).then(() => {
+      if (!view.destroyed) view.destroy({ children: true });
+    });
+  }
+  private burst(
+    x: number,
+    y: number,
+    color: number,
+    count: number,
+    gravity = 0,
+  ) {
     for (let i = 0; i < count; i++) {
       const g = new Graphics()
         .circle(0, 0, 1 + Math.random() * 2)
@@ -876,6 +1019,7 @@ export class ArenaScene {
         vx: Math.cos(a) * v,
         vy: Math.sin(a) * v,
         life: 35 + Math.random() * 20,
+        gravity,
       });
     }
   }
@@ -888,10 +1032,13 @@ export class ArenaScene {
     t.anchor.set(0.5);
     t.position.set(x, y - 20);
     this.fx.addChild(t);
-    let life = 70;
+    let life = 80;
     const update = (dt: Ticker) => {
       life -= dt.deltaTime;
-      t.y -= dt.deltaTime * 0.5;
+      const age = 80 - life;
+      // Pop in, then drift upward while slowing down.
+      t.scale.set(age < 10 ? 1.6 - (age / 10) * 0.6 : 1);
+      t.y -= dt.deltaTime * Math.max(0.15, 1.1 - age / 45);
       t.alpha = Math.min(1, life / 25);
       if (life <= 0) {
         this.app.ticker.remove(update);
@@ -905,9 +1052,29 @@ export class ArenaScene {
       if (this.drag?.id !== id && !this.activeViews.has(id)) {
         item.view.x += (item.x - item.view.x) * Math.min(1, dt * 0.18);
         item.view.y += (item.y - item.view.y) * Math.min(1, dt * 0.18);
+        const scale =
+          id === this.hoverId && !this.presenting && !this.calm ? 1.07 : 1;
+        item.view.scale.set(
+          item.view.scale.x +
+            (scale - item.view.scale.x) * Math.min(1, dt * 0.25),
+        );
       }
+    const breath = 0.72 + Math.sin(performance.now() / 420) * 0.28;
+    for (const glow of this.litGlows) glow.alpha = breath;
+    if (this.shake > 0.25) {
+      const x = (Math.random() - 0.5) * this.shake,
+        y = (Math.random() - 0.5) * this.shake;
+      for (const layer of [this.board, this.pieces, this.fx])
+        layer.position.set(x, y);
+      this.shake *= 0.86 ** dt;
+    } else if (this.shake) {
+      this.shake = 0;
+      for (const layer of [this.board, this.pieces, this.fx])
+        layer.position.set(0, 0);
+    }
     for (const p of [...this.sparks]) {
       p.life -= dt;
+      p.vy += p.gravity * dt;
       p.view.x += p.vx * dt;
       p.view.y += p.vy * dt;
       p.view.alpha = Math.min(1, p.life / 25);

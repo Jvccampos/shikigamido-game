@@ -33,16 +33,16 @@ test("a notice waits for the scene, allows input while reading, and blocks autom
   assert.match(model.view.notice!.title, /Sua vez/);
   assert.equal(model.view.inputBlocked, false);
   assert.equal(model.view.automationBlocked, true);
-  assert.equal(model.view.nextDeadline, 4100);
+  assert.equal(model.view.nextDeadline, 2900);
   update(1000); // Renders and unrelated updates must not restart the reading time.
-  model.advance(4099);
+  model.advance(2899);
   assert.equal(model.view.noticeLeaving, false);
-  model.advance(4100);
+  model.advance(2900);
   assert.equal(model.view.noticeLeaving, true);
-  assert.equal(model.view.nextDeadline, 4550);
-  model.advance(4549);
+  assert.equal(model.view.nextDeadline, 3350);
+  model.advance(3349);
   assert.equal(model.view.automationBlocked, true);
-  model.advance(4550);
+  model.advance(3350);
   assert.equal(model.view.notice, null);
   assert.equal(model.view.automationBlocked, false);
   assert.equal(model.view.nextDeadline, null);
@@ -80,7 +80,7 @@ test("new phases wait for the latest board revision and supersede old pending no
   assert.equal(model.view.inputBlocked, true);
   settle(800);
   assert.match(model.view.notice!.title, /Magia/);
-  assert.equal(model.view.nextDeadline, 4800);
+  assert.equal(model.view.nextDeadline, 3600);
   assert.equal(model.view.inputBlocked, false);
 });
 
@@ -107,7 +107,7 @@ test("card draws survive unrelated updates and delay notices until their animati
   assert.equal(model.view.drawing, false);
   assert.equal(model.view.inputBlocked, false);
   assert.match(model.view.notice!.mana, /Mana máxima aumentou/);
-  assert.equal(model.view.nextDeadline, 5950);
+  assert.equal(model.view.nextDeadline, 4750);
 });
 
 test("overlays and searches defer notices without spending their reading time", () => {
@@ -138,7 +138,7 @@ test("overlays and searches defer notices without spending their reading time", 
   );
   g.searches = [];
   update(12000);
-  assert.equal(model.view.nextDeadline, 16000);
+  assert.equal(model.view.nextDeadline, 14800);
   assert(model.view.notice);
   assert.equal(model.view.automationBlocked, true);
 });
@@ -149,8 +149,8 @@ test("the player's discard choice never leaves a deferred banner behind the dial
   g.phaseOwner = g.priority = 1;
   update(0);
   model.sceneReady(true, 0);
-  assert.match(model.view.notice!.title, /Guardião.*Descarte/);
-  model.dismiss(100);
+  // The turn bar covers the opponent's half-phase; the board stays clear.
+  assert.equal(model.view.notice, null);
   model.advance(550);
   g.phaseOwner = g.priority = 0;
   g.revision = (g.revision || 0) + 1;
@@ -181,4 +181,36 @@ test("result presentation waits for the final animation and its revision to sett
   assert.equal(model.view.resultReady, true);
   assert.equal(model.view.visibleUnits, g.units);
   assert.equal(model.view.automationBlocked, false);
+});
+
+test("banners announce your phases and new turns, not the opponent's half-phases", () => {
+  const { g, model, update, settle } = fixture();
+  g.first = 0;
+  model.sceneReady(true, 0);
+  assert.match(model.view.notice!.title, /Sua vez · Invocação/);
+  model.dismiss(0);
+  model.advance(500);
+  const step = (now: number, change: () => void) => {
+    change();
+    g.revision = (g.revision || 0) + 1;
+    update(now);
+    settle(now);
+  };
+  step(1000, () => (g.phaseOwner = g.priority = 1));
+  assert.equal(model.view.notice, null, "opponent's invocation half");
+  step(2000, () => {
+    g.phase = 2;
+    g.phaseOwner = g.priority = 0;
+  });
+  assert.match(model.view.notice!.title, /Sua vez · Movimento/);
+  model.dismiss(2000);
+  model.advance(2500);
+  step(3000, () => {
+    g.turn++;
+    g.first = 1;
+    g.phase = 1;
+    g.phaseOwner = g.priority = 1;
+  });
+  assert.match(model.view.notice!.title, /Guardião · Invocação/);
+  assert.match(model.view.notice!.detail, /Novo turno/);
 });

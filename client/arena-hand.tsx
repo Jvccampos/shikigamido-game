@@ -13,6 +13,8 @@ type Props = {
   busy: boolean;
   viewport: number;
   railLeft: number;
+  /** Deal the cards in one by one when the hand first appears. */
+  deal: boolean;
   obscured: boolean;
   cellAt: (x: number, y: number) => Point | null;
   onAim: (point: Point | null) => void;
@@ -45,6 +47,13 @@ export function ArenaHand(p: Props) {
   const handHoverRef = useRef<number | null>(null),
     dragRef = useRef(dragging);
   dragRef.current = dragging;
+  // The opening hand is dealt card by card the first time it appears.
+  const [dealing, setDealing] = useState(p.deal);
+  useEffect(() => {
+    if (!dealing) return;
+    const timer = setTimeout(() => setDealing(false), 1200);
+    return () => clearTimeout(timer);
+  }, []);
   useEffect(() => {
     p.onDragging(!!dragging);
   }, [!!dragging]);
@@ -124,13 +133,19 @@ export function ArenaHand(p: Props) {
       window.removeEventListener("pointerup", end);
     };
   }, []);
+  const playable = me.hand.filter((_, i) => !p.handPlans[i]?.reason).length,
+    count = `${me.hand.length} ${me.hand.length === 1 ? "CARTA" : "CARTAS"}`;
   return (
     <>
       <div className="arena-hand">
         <span className="hand-caption">
-          {`${me.hand.length} CARTAS · ARRASTE PARA JOGAR`}
+          {g.priority !== p.seat || g.phase === 4
+            ? count
+            : playable
+              ? `${playable} DE ${me.hand.length} ${playable === 1 ? "JOGÁVEL" : "JOGÁVEIS"} · ARRASTE PARA JOGAR`
+              : `${count} · NENHUMA JOGÁVEL AGORA`}
         </span>
-        <div className="hand-fan">
+        <div className={`hand-fan ${dealing ? "dealing" : ""}`}>
           {me.hand.map((id, index) => {
             const c = cards.get(id)!,
               plan = p.handPlans[index],
@@ -209,6 +224,17 @@ export function ArenaHand(p: Props) {
                       : (plan?.cost ?? c.stats.cost)}
                   </b>
                 </button>
+                {handHover === index &&
+                  !p.obscured &&
+                  plan?.reason &&
+                  // The selected card's panel already explains the reason.
+                  !(
+                    p.selected?.kind === "hand" && p.selected.index === index
+                  ) && (
+                    <div className="hand-action-hint" role="status">
+                      {plan.reason}
+                    </div>
+                  )}
                 <button
                   className="fan-zoom"
                   aria-label={`Ler ${c.name}`}
@@ -219,24 +245,6 @@ export function ArenaHand(p: Props) {
               </div>
             );
           })}
-        </div>
-      </div>
-      <div
-        className={`hand-action-hint ${!p.obscured && handHover !== null && p.handPlans[handHover]?.reason ? "visible" : ""}`}
-        role="status"
-      >
-        <span className="hand-hint-icon" aria-hidden="true">
-          !
-        </span>
-        <div>
-          <small>
-            {handHover !== null
-              ? cards.get(me?.hand[handHover] || "")?.name
-              : ""}
-          </small>
-          <span>
-            {handHover !== null ? p.handPlans[handHover]?.reason : ""}
-          </span>
         </div>
       </div>
       {dragging?.moving && me && (

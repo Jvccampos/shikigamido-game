@@ -40,11 +40,20 @@ export function MatchSession({
   const presentation = useDuelPresentation(g, seat, names);
   const localRef = useRef(practice);
   localRef.current = practice;
+  // Both the player and the bot write the practice game. Keep the ref current
+  // between renders so neither overwrites a command the other just applied.
+  const commit = (next: Game) => {
+    localRef.current = next;
+    setPractice(next);
+  };
   const myTurn = seat === g.priority && !g.setup && !g.centerPending;
+  // Setup has no board events to present. Letting the bot's setup update
+  // block input would briefly disable the choice the player is clicking.
+  const inputBlocked = presentation.inputBlocked && !g.setup;
   const interaction = useMatchInteraction(
     g,
     seat,
-    busy || presentation.inputBlocked,
+    busy || inputBlocked,
     act,
     setFocus,
     code,
@@ -76,7 +85,7 @@ export function MatchSession({
         const clean = structuredClone(original);
         if (!apply(clean, 1, { type: "pass" })) {
           clean.revision = (clean.revision || 0) + 1;
-          setPractice(clean);
+          commit(clean);
         }
         return;
       }
@@ -84,21 +93,21 @@ export function MatchSession({
       // thinking pause after every discarded card and the final pass.
       if (cmd.type === "discardMany") apply(next, 1, { type: "pass" });
       next.revision = (next.revision || 0) + 1;
-      setPractice(next);
+      commit(next);
     }, 750);
     return () => clearTimeout(timer);
   }, [practice, presentation.automationBlocked]);
   async function act(cmd: Cmd) {
-    if (busy || presentation.inputBlocked) return false;
-    if (practice) {
-      const next = structuredClone(practice),
+    if (busy || inputBlocked) return false;
+    if (localRef.current) {
+      const next = structuredClone(localRef.current),
         error = apply(next, 0, cmd);
       if (error) {
         flash(error);
         return false;
       }
       next.revision = (next.revision || 0) + 1;
-      setPractice(next);
+      commit(next);
 
       return true;
     }
@@ -116,12 +125,12 @@ export function MatchSession({
       !g.combat &&
       !g.searches?.length &&
       !busy &&
-      !presentation.inputBlocked
+      !inputBlocked
     ) {
       const timer = setTimeout(() => void act({ type: "pass" }), 500);
       return () => clearTimeout(timer);
     }
-  }, [g, seat, busy, presentation.inputBlocked]);
+  }, [g, seat, busy, inputBlocked]);
   return (
     <>
       <Arena
@@ -130,7 +139,7 @@ export function MatchSession({
         code={code}
         names={names}
         {...interaction.arena}
-        busy={busy || presentation.inputBlocked}
+        busy={busy || inputBlocked}
         presentation={presentation}
         onExit={onExit}
         onConcede={() => setConcede(true)}

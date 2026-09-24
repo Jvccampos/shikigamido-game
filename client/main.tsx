@@ -1,5 +1,6 @@
 import { render } from "preact";
 import { App } from "./index.js";
+import "./theme.css";
 import "./style.css";
 import "./arena.css";
 import "./duel-hud.css";
@@ -10,4 +11,7 @@ import "./action-ui.css";
 import "./choices.css";
 import "./journal.css";
 import "./turn-timeline.css";
+import "./duel-context.css";
+import "./phase-action.css";
+import "./motion.css";
 render(<App />, document.getElementById("app")!);

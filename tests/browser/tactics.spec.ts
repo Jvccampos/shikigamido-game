@@ -31,28 +31,32 @@ test("legal actions and movement remain clear without redundant panels across vi
   );
   await page.getByRole("button", { name: "Jogar treino local" }).click();
   await page.getByRole("button", { name: "Manter estas cartas" }).click();
-  await page.getByRole("button", { name: "Começar neste selo" }).click();
+  await page.getByRole("button", { name: /^Começar no selo/ }).click();
   await expect(page.locator(".arena-shell")).not.toHaveClass(
     /preparing-position/,
   );
   await idle(page);
-  await expect(page.locator(".context-origin")).toContainText(
-    "Invocação · Você",
-  );
+  await expect(
+    page.locator('.turn-steps [aria-current="step"]'),
+  ).toHaveAttribute("aria-label", "Invocação · Você");
   const crystal = page.getByRole("button", {
     name: /^Selecionar Cristal Primordial/,
   });
   await crystal.click();
+  // An unplayable card explains itself in the panel instead of offering a
+  // disabled cast button.
   await expect(
     page.getByRole("button", { name: "Conjurar · 3 PE" }),
-  ).toBeDisabled();
-  await expect(page.locator(".action-requirement")).toContainText(
+  ).toHaveCount(0);
+  await expect(page.locator(".action-blocked")).toContainText(
     "Magia lenta · fase de Magia",
   );
   await expect(crystal).toHaveAttribute(
     "aria-label",
     /Magia lenta · fase de Magia/,
   );
+  // Hovering an unplayable card that isn't selected explains it in place.
+  await page.keyboard.press("Escape");
   await crystal.hover();
   await expect(page.locator(".hand-action-hint")).toBeVisible();
   await expect(async () => {
@@ -81,7 +85,8 @@ test("legal actions and movement remain clear without redundant panels across vi
   await idle(page);
   await page.mouse.move(point.x, point.y);
   await expect(page.locator(".arena-hover")).toContainText("Serpente de Gelo");
-  await expect(page.locator(".arena-hover")).not.toContainText("Invocado");
+  // The piece shows only a small clock badge; the hover label explains it.
+  await expect(page.locator(".arena-hover")).toContainText("Invocado agora");
   await page.keyboard.press("f");
   await expect(
     page.getByRole("dialog", { name: "Serpente de Gelo" }),
@@ -153,9 +158,10 @@ test("spell outcomes, pending combat and status sources are readable in a contro
   await page.getByRole("button", { name: /UXTEST/ }).click();
   await idle(page);
   await page.getByRole("button", { name: /^Selecionar Gishikido/ }).click();
+  // No commit is offered until the target is chosen.
   await expect(
     page.getByRole("button", { name: "Conjurar · 1 PE" }),
-  ).toBeDisabled();
+  ).toHaveCount(0);
   const from = layout(1440, 1000).point(2, 2),
     to = layout(1440, 1000).point(3, 2);
   await page.mouse.click(from.x, from.y);
@@ -174,9 +180,9 @@ test("spell outcomes, pending combat and status sources are readable in a contro
   g.phase = 2;
   g.revision = (g.revision || 0) + 1;
   send();
-  await expect(page.locator(".context-origin")).toContainText(
-    "Movimento · Você",
-  );
+  await expect(
+    page.locator('.turn-steps [aria-current="step"]'),
+  ).toHaveAttribute("aria-label", "Movimento · Você");
   await page.evaluate(
     () =>
       new Promise<void>((resolve) =>
@@ -240,8 +246,8 @@ test("spell outcomes, pending combat and status sources are readable in a contro
       ),
   );
   await page.mouse.click(to.x, to.y);
-  await expect(page.locator(".duel-context h1")).toHaveText(
-    "Resposta de Oponente",
+  await expect(page.locator(".duel-context h1")).toContainText(
+    "Oponente pode responder",
   );
   await expect(page.locator(".combat-forecast")).toContainText(
     "Combate anunciado",

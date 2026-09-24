@@ -1,9 +1,4 @@
-.arena-top .timeline-toggle {
-  font-size: 12px;
-  border: 1px solid #c5b98066;
-  border-radius: 6px;
-  background: #0a1c16e8;
-}
+/* Turn timeline: the compact track beside the board and its full dialog. */
 .timeline-mana {
   --event-color: #7bd6f4;
 }
@@ -15,31 +10,6 @@
 }
 .timeline-effect {
   --event-color: #c4a0f2;
-}
-/* The compact view shares the action rail's flow, outside the board. */
-.turn-timeline-bar {
-  container: turn-timeline / inline-size;
-  align-self: stretch;
-  width: 100%;
-  padding: 0 12px;
-  color: #c2cbb7;
-  text-shadow: 0 1px 5px #07120d;
-}
-.timeline-bar-heading {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 2px 8px 0;
-}
-.timeline-bar-heading > span {
-  font-size: 9px;
-  letter-spacing: 2px;
-  color: #aeb8a1;
-}
-.timeline-bar-heading > button {
-  padding: 0 5px;
-  color: #cdb983;
-  font-size: 15px;
 }
 .timeline-track {
   display: flex;
@@ -61,7 +31,7 @@
   right: 0;
   top: 38px;
   height: 1px;
-  background: #8eab9566;
+  background: linear-gradient(90deg, #8eab9533, #8eab9577, #8eab9533);
 }
 .timeline-stop:first-child::before {
   left: 50%;
@@ -75,7 +45,7 @@
   width: 100%;
   height: 56px;
   padding: 0;
-  color: #aebfad;
+  color: var(--mist);
   border-radius: 4px;
 }
 .timeline-node:focus-visible,
@@ -89,33 +59,40 @@
   right: 0;
   display: flex;
   justify-content: center;
-  align-items: center;
-  gap: 4px;
-  font-size: 11px;
+  align-items: baseline;
+  gap: 5px;
+  font:
+    700 12px var(--font-ui),
+    sans-serif;
+  letter-spacing: 0.06em;
 }
 .timeline-turn-label small {
-  font-size: 8px;
+  font:
+    600 9px var(--font-ui),
+    sans-serif;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
 }
 .timeline-dot {
   position: absolute;
-  top: 35px;
+  top: 34px;
   left: calc(50% - 4px);
-  width: 8px;
-  height: 8px;
+  width: 9px;
+  height: 9px;
+  rotate: 45deg;
   border: 1px solid #83a28d;
-  border-radius: 50%;
-  background: #10251e;
+  border-radius: 2px;
+  background: var(--ink-700);
 }
 .timeline-node[aria-current] {
-  color: #f8de99;
+  color: var(--gold-bright);
 }
 .timeline-node[aria-current] .timeline-dot {
-  border-color: #f8de99;
-  background: #f8de99;
+  border-color: var(--gold-bright);
+  background: var(--gold-bright);
   box-shadow:
     0 0 0 3px #f8de9915,
-    0 0 10px #f8de9944;
+    0 0 10px #f8de9966;
 }
 .timeline-markers {
   display: flex;
@@ -140,67 +117,7 @@
 }
 .timeline-icon:hover,
 .timeline-icon:focus-visible {
-  background: #aec6ad15;
-}
-.turn-timeline-bar .timeline-track {
-  flex-direction: column;
-  padding: 0 2px;
-  overflow: visible;
-}
-.turn-timeline-bar .timeline-stop {
-  flex: none;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  height: 36px;
-}
-.turn-timeline-bar .timeline-stop::before {
-  left: 39px;
-  right: auto;
-  top: 0;
-  bottom: 0;
-  width: 1px;
-  height: auto;
-  background: linear-gradient(#8eab9540, #8eab9570);
-}
-.turn-timeline-bar .timeline-stop:first-child::before {
-  top: 50%;
-}
-.turn-timeline-bar .timeline-stop:last-child::before {
-  bottom: 50%;
-}
-.turn-timeline-bar .timeline-node {
-  flex: 0 0 50px;
-  width: 50px;
-  height: 34px;
-}
-.turn-timeline-bar .timeline-turn-label {
-  left: 0;
-  right: auto;
-  top: 5px;
-  min-width: 24px;
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  font-size: 11px;
-}
-.turn-timeline-bar .timeline-turn-label small {
-  font-size: 7px;
-  letter-spacing: 0.3px;
-}
-.turn-timeline-bar .timeline-node:not([aria-current]) .timeline-turn-label {
-  top: 10px;
-  color: #9eae98;
-}
-.turn-timeline-bar .timeline-dot {
-  top: 14px;
-  left: 36px;
-  width: 7px;
-  height: 7px;
-}
-.turn-timeline-bar .timeline-markers {
-  padding: 0;
-  justify-content: flex-start;
+  background: #aec6ad18;
 }
 .timeline-tooltip {
   position: fixed;
@@ -208,35 +125,47 @@
   width: min(340px, calc(100vw - 24px));
   max-height: min(380px, calc(100dvh - 32px));
   overflow: auto;
-  padding: 16px;
-  border: 1px solid #a7b89388;
-  border-radius: 8px;
-  color: #f0e5c6;
+  padding: 16px 18px;
+  border: 1px solid var(--gold-line-strong);
+  border-radius: 6px;
+  color: var(--parchment);
   background: #0c201afa;
-  box-shadow: 0 12px 40px #0009;
+  box-shadow:
+    var(--hairline),
+    0 12px 40px #000a;
   font:
-    13px/1.4 Arial,
+    14px/1.4 var(--font-ui),
     sans-serif;
 }
 .timeline-tooltip-heading {
   display: flex;
   justify-content: space-between;
+  align-items: baseline;
   gap: 12px;
+}
+.timeline-tooltip-heading > b {
+  font:
+    600 18px var(--font-display),
+    serif;
 }
 .timeline-tooltip-heading > span {
   color: #7bd6f4;
   font-size: 12px;
+  letter-spacing: 0.04em;
 }
 .timeline-tooltip h4 {
-  color: #aabda8;
-  font-size: 11px;
-  font-weight: normal;
+  color: var(--gold);
+  font:
+    600 10px var(--font-ui),
+    sans-serif;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
   margin: 16px 0 8px;
 }
 .timeline-tooltip p {
   margin: 4px 0 0;
-  color: #c1cdbb;
-  font-size: 12px;
+  color: var(--mist);
+  font-size: 13px;
   line-height: 1.5;
 }
 .timeline-event {
@@ -246,21 +175,26 @@
 }
 .timeline-event strong {
   color: var(--event-color);
-  font-size: 13px;
+  font-size: 14px;
 }
+
+/* Full dialog. ---------------------------------------------------------------- */
 .turn-timeline-dialog {
   width: min(1000px, calc(100vw - 24px));
   max-height: calc(100dvh - 24px);
-  padding: 28px;
-  border: 1px solid #bda46a;
-  border-radius: 12px;
-  background: #10251e;
-  color: #f1e2bf;
-  box-shadow: 0 20px 80px #0009;
+  padding: 30px 34px 26px;
+  border: 1px solid var(--gold-line-strong);
+  border-radius: 10px;
+  background: var(--lacquer-solid);
+  color: var(--parchment);
+  box-shadow:
+    var(--hairline),
+    0 30px 100px #000d;
   overflow: visible;
 }
 .turn-timeline-dialog::backdrop {
-  background: #020906bb;
+  background: #020906c8;
+  backdrop-filter: blur(6px);
 }
 .timeline-dialog-heading {
   display: flex;
@@ -269,25 +203,37 @@
   gap: 16px;
 }
 .timeline-dialog-heading small {
-  color: #cbb57f;
-  font-size: 11px;
-  letter-spacing: 1px;
+  color: var(--gold);
+  font:
+    600 11px var(--font-ui),
+    sans-serif;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
 }
 .timeline-dialog-heading h2 {
-  margin: 8px 0 16px;
-  font-size: 28px;
+  margin: 8px 0 14px;
+  font:
+    600 34px var(--font-display),
+    serif;
 }
 .timeline-dialog-heading button {
   flex-shrink: 0;
-  width: 40px;
-  height: 40px;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 50%;
+  color: var(--parchment-dim);
   font-size: 26px;
-  border: 1px solid #c5b98066;
-  border-radius: 6px;
+  line-height: 1;
+}
+.timeline-dialog-heading button:hover {
+  border-color: var(--gold-line-strong);
+  color: var(--gold-bright);
 }
 .turn-timeline-dialog > p {
-  color: #bdcbbd;
-  font-size: 13px;
+  color: var(--mist);
+  font-size: 14px;
   line-height: 1.5;
 }
 .turn-timeline-dialog .timeline-track {
@@ -301,90 +247,241 @@
   align-items: center;
   justify-content: space-between;
   gap: 24px;
-  border-top: 1px solid #b6c4a52b;
+  border-top: 1px solid var(--gold-line);
   padding-top: 16px;
 }
 .timeline-dialog-footer > span {
   max-width: 500px;
-  color: #9fb29d;
-  font-size: 12px;
+  color: var(--mist-dim);
+  font-size: 13px;
   line-height: 1.5;
 }
 .timeline-dialog-footer button {
   flex-shrink: 0;
-  border: 1px solid #c5b98066;
+  min-height: 40px;
+  padding: 0 16px;
+  border: 1px solid var(--gold-line-strong);
   border-radius: 6px;
-  padding: 10px 14px;
-  font-size: 12px;
+  color: var(--parchment-dim);
+  font:
+    500 15px var(--font-display),
+    serif;
 }
-@media (min-width: 1201px) and (min-height: 701px) {
-  .turn-timeline-bar {
-    padding: 0 18px;
+.timeline-dialog-footer button:hover {
+  border-color: var(--gold);
+  color: var(--parchment);
+}
+
+/* Always-visible track: a vertical path in the left column, running from the
+   opponent toward you. Each stop is a diamond on the line, like the board's
+   nodes, with the turn's events beside it. The line fades past the last stop
+   into a stud that opens the full timeline. ---------------------------------- */
+.turn-track {
+  position: absolute;
+  z-index: 30;
+  left: 28px;
+  top: 336px;
+  /* Never reach the board's outer portal, whatever the aspect ratio. */
+  width: min(
+    230px,
+    calc(var(--board-left) - 56px),
+    calc(50vw - 3.85 * var(--board-step) - 84px)
+  );
+  padding: 0 0 44px;
+  color: var(--mist);
+}
+.turn-track-heading {
+  display: block;
+  padding: 0 0 12px 32px;
+}
+.turn-track-heading > span {
+  color: var(--gold);
+  font:
+    600 10px var(--font-ui),
+    sans-serif;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+}
+.turn-track-heading > button {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 1px solid var(--gold-line-strong);
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 50% 30%, #1d3a2c, #0a1712 72%), var(--ink-800);
+  box-shadow: 0 4px 12px #0009;
+  color: var(--gold);
+  transition:
+    border-color 0.15s,
+    color 0.15s,
+    box-shadow 0.15s;
+}
+.turn-track-heading > button svg {
+  width: 14px;
+  height: 14px;
+}
+.turn-track-heading > button:hover,
+.turn-track-heading > button:focus-visible {
+  border-color: var(--gold-bright);
+  color: var(--gold-bright);
+  box-shadow:
+    0 4px 12px #0009,
+    0 0 14px #d9c08440;
+}
+.turn-track .timeline-track {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  overflow: visible;
+  padding: 0;
+}
+/* The spine. */
+.turn-track .timeline-track::before {
+  content: "";
+  position: absolute;
+  left: 14px;
+  top: 6px;
+  bottom: -40px;
+  width: 1px;
+  background: linear-gradient(
+    #d9c08480,
+    #d9c08480 calc(100% - 60px),
+    transparent
+  );
+}
+.turn-track .timeline-stop {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 58px;
+  min-width: 0;
+}
+.turn-track .timeline-stop::before {
+  display: none;
+}
+.turn-track .timeline-node {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: auto;
+  height: auto;
+  padding: 6px 6px 6px 0;
+  border-radius: 6px;
+  transition: background 0.15s;
+}
+.turn-track .timeline-node:hover {
+  background: #ffffff08;
+}
+.turn-track .timeline-dot {
+  position: static;
+  order: -1;
+  width: 11px;
+  height: 11px;
+  margin-left: 9px;
+  border-color: #83a28d;
+  background: var(--ink-700);
+  transition:
+    scale 0.2s,
+    box-shadow 0.2s;
+}
+.turn-track .timeline-node:hover .timeline-dot {
+  border-color: var(--gold);
+}
+.turn-track .timeline-node[aria-current] .timeline-dot {
+  scale: 1.25;
+  border-color: var(--gold-bright);
+  background: var(--gold-bright);
+  box-shadow:
+    0 0 0 4px #f8de9918,
+    0 0 14px #f8de9977;
+}
+.turn-track .timeline-turn-label {
+  position: static;
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  font:
+    700 13px var(--font-ui),
+    sans-serif;
+  letter-spacing: 0.1em;
+}
+.turn-track .timeline-turn-label small {
+  display: inline;
+  color: var(--gold);
+  font-size: 9px;
+}
+.turn-track .timeline-markers {
+  flex-wrap: nowrap;
+  gap: 2px;
+  min-height: 0;
+  padding: 0;
+}
+.turn-track .timeline-icon {
+  flex-basis: 24px;
+  width: 24px;
+  height: 24px;
+}
+.turn-track .timeline-icon svg {
+  width: 17px;
+  height: 17px;
+}
+@media (max-width: 1100px) {
+  .turn-track {
+    left: 16px;
+    top: 292px;
+    width: min(
+      200px,
+      calc(var(--board-left) - 36px),
+      calc(50vw - 3.85 * var(--board-step) - 52px)
+    );
+    padding-bottom: 36px;
+  }
+  .turn-track-heading {
+    padding: 0 0 6px 28px;
+  }
+  .turn-track-heading > button {
+    width: 26px;
+    height: 26px;
+  }
+  .turn-track .timeline-track::before {
+    bottom: -32px;
+  }
+  .turn-track .timeline-stop {
+    min-height: 44px;
+  }
+  .turn-track .timeline-node {
+    padding: 3px 4px 3px 0;
+  }
+  .turn-track .timeline-icon {
+    flex-basis: 20px;
+    width: 20px;
+    height: 20px;
+  }
+  .turn-track .timeline-icon svg {
+    width: 15px;
+    height: 15px;
   }
 }
-@container turn-timeline (min-width: 240px) {
-  .timeline-bar-heading {
-    padding-bottom: 12px;
-  }
-  .timeline-bar-heading > span {
-    font-size: 11px;
-  }
-  .timeline-bar-heading > button {
-    font-size: 19px;
-  }
-  .turn-timeline-bar .timeline-stop {
-    height: 48px;
-    gap: 10px;
-  }
-  .turn-timeline-bar .timeline-node {
-    flex-basis: 64px;
-    width: 64px;
-    height: 46px;
-  }
-  .turn-timeline-bar .timeline-turn-label {
-    top: 8px;
-    min-width: 32px;
-    font-size: 14px;
-    gap: 2px;
-  }
-  .turn-timeline-bar .timeline-turn-label small {
-    font-size: 9px;
-  }
-  .turn-timeline-bar .timeline-node:not([aria-current]) .timeline-turn-label {
-    top: 15px;
-  }
-  .turn-timeline-bar .timeline-stop::before {
-    left: 51px;
-  }
-  .turn-timeline-bar .timeline-dot {
-    top: 19px;
-    left: 47px;
-    width: 9px;
-    height: 9px;
-  }
-  .turn-timeline-bar .timeline-markers {
-    gap: 5px;
-  }
-  .turn-timeline-bar .timeline-icon {
-    flex-basis: 30px;
-    width: 30px;
-    height: 32px;
-  }
-  .turn-timeline-bar .timeline-icon svg {
-    width: 22px;
-    height: 22px;
+@media (max-width: 759px), (max-height: 559px) and (orientation: landscape) {
+  .turn-track {
+    display: none;
   }
 }
 @media (max-width: 759px), (max-height: 559px) {
-  .turn-timeline-bar {
-    display: none;
-  }
   .turn-timeline-dialog {
     padding: 18px 14px;
     overflow-y: auto;
   }
   .timeline-dialog-heading h2 {
-    font-size: 23px;
+    font-size: 24px;
   }
   .timeline-dialog-footer {
     flex-wrap: wrap;

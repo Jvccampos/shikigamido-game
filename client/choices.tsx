@@ -25,6 +25,7 @@ function ChoiceCard({
   return (
     <div
       className={`choice-card ${p.selected.includes(index) ? "chosen" : ""}`}
+      style={{ "--i": index }}
     >
       <button
         className="choice-art"
@@ -84,11 +85,16 @@ function ChoiceCard({
 }
 export function ChoiceCards(p: ChoiceProps) {
   return (
-    <div className="choice-cards">
-      {p.hand.map((id, i) => (
-        <ChoiceCard {...p} key={`${i}-${id}`} cardId={id} index={i} />
-      ))}
-    </div>
+    <>
+      <div className="choice-cards">
+        {p.hand.map((id, i) => (
+          <ChoiceCard {...p} key={`${i}-${id}`} cardId={id} index={i} />
+        ))}
+      </div>
+      <p className="choice-read-hint">
+        <kbd>Botão direito</kbd> em uma carta para ler seus detalhes
+      </p>
+    </>
   );
 }
 export function OpeningHand(

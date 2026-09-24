@@ -8,7 +8,7 @@ test("right-clicking a board card opens its details without the native context m
   await page.goto("/");
   await page.getByRole("button", { name: "Jogar treino local" }).click();
   await page.getByRole("button", { name: "Manter estas cartas" }).click();
-  await page.getByRole("button", { name: "Começar neste selo" }).click();
+  await page.getByRole("button", { name: /^Começar no selo/ }).click();
   await expect(page.locator(".position-guide")).toHaveCount(0);
   await idle(page);
   await page.evaluate(() => {
