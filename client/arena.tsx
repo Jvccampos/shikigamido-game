@@ -291,7 +291,7 @@ export function Arena(p: Props) {
               aria-label={`${v.pe + v.permanentPe} PE disponíveis. ${v.pe} energia e ${v.permanentPe} reserva.`}
             >
               <b key={`${v.pe}:${v.permanentPe}`}>{v.pe + v.permanentPe}</b>
-              <span>PE</span>
+              <span className="mana-unit">PE</span>
               <ValueDelta value={v.pe + v.permanentPe} />
             </div>
             <div className="mana-pools">

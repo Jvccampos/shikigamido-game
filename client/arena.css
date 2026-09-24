@@ -302,7 +302,7 @@ body:has(.playing-arena) {
   text-shadow: 0 1px 3px #000;
   animation: mana-change 450ms ease-out;
 }
-.mana-total > span {
+.mana-total > .mana-unit {
   position: absolute;
   left: 50%;
   bottom: -6px;
@@ -923,7 +923,9 @@ body:has(.playing-arena) {
   height: 147px;
   z-index: 45;
   pointer-events: none;
-  animation: draw-to-hand 0.95s cubic-bezier(0.2, 0.6, 0.3, 1) both;
+  /* The model keeps the flight for 950ms; it lands a little earlier so the
+     sprite is gone before it is removed. */
+  animation: draw-to-hand 0.8s cubic-bezier(0.2, 0.6, 0.3, 1) both;
   filter: drop-shadow(0 7px 16px #000a);
 }
 .draw-flight img {
@@ -932,7 +934,7 @@ body:has(.playing-arena) {
   border: 2px solid #e8d89b;
 }
 .drawing .fan-card:last-child {
-  animation: draw-arrive 0.95s both;
+  animation: draw-arrive 0.8s both;
 }
 .reserve-gain {
   position: absolute;
@@ -1360,7 +1362,7 @@ footer {
   .mana-total > b {
     font-size: 27px;
   }
-  .mana-total > span {
+  .mana-total > .mana-unit {
     display: none;
   }
   .mana-pools {
@@ -1549,7 +1551,7 @@ footer {
   .mana-total > b {
     font-size: 27px;
   }
-  .mana-total > span {
+  .mana-total > .mana-unit {
     display: none;
   }
   .energy-resource,

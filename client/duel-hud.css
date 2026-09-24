@@ -77,8 +77,10 @@
   letter-spacing: 0.12em;
   text-transform: uppercase;
 }
+/* The presentation model removes the notice 450ms after the exit begins;
+   the DOM starts the fade a frame or two later, so it finishes earlier. */
 .arena-notice.leaving {
-  animation: notice-depart 450ms ease-in forwards;
+  animation: notice-depart 300ms ease-in forwards;
 }
 @keyframes notice-arrive {
   from {
