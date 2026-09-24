@@ -441,6 +441,8 @@ export function apply(g: Game, seat: Seat, c: unknown): string | undefined {
       p.permanentPe++;
       event(g, { type: "discard", seat, cardId: id });
     }
+    // Converting cards is the whole discard phase: one choice ends it.
+    if (!g.stack.length && !g.combat) endHalfPhase(g, seat);
     return;
   }
   if (c.type !== "pass") return "Comando inválido.";
@@ -457,7 +459,11 @@ export function apply(g: Game, seat: Seat, c: unknown): string | undefined {
     g.priority = g.phaseOwner!;
     return;
   }
+  endHalfPhase(g, seat);
+}
 
+/** Hands the phase to the other player, or opens the next phase or turn. */
+function endHalfPhase(g: Game, seat: Seat) {
   if (g.phase === 2) endMovement(g, seat);
   if (seat === g.first) {
     g.phaseOwner = (1 - g.first) as Seat;

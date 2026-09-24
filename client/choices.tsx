@@ -175,8 +175,8 @@ export function DiscardChoice(p: {
         <span className="choice-step">SUA VEZ · DESCARTE OPCIONAL</span>
         <h1>Transforme cartas em energia</h1>
         <p>
-          Cada carta descartada dá <b>1 ponto de Reserva</b>, que você pode
-          gastar agora ou guardar para outro turno.
+          Cada carta descartada dá <b>1 ponto de Reserva</b>, que fica guardado
+          para os próximos turnos. Descartar encerra a fase.
         </p>
         <div className="reserve-preview">
           <span>Reserva</span>

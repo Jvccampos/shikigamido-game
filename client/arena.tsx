@@ -130,6 +130,8 @@ export function Arena(p: Props) {
     }
   }, [me?.permanentPe]);
   useEffect(() => {
+    // Only open the choice when there is something to convert; otherwise
+    // the phase button ends the phase from the board.
     setDiscardOpen(
       g.phase === 4 &&
         yourTurn &&
@@ -137,7 +139,10 @@ export function Arena(p: Props) {
         !done &&
         !g.stack.length &&
         !g.combat &&
-        !g.searches?.length,
+        !g.searches?.length &&
+        !!me &&
+        me.permanentPe < 3 &&
+        me.hand.length > 0,
     );
   }, [
     g.turn,
@@ -148,6 +153,8 @@ export function Arena(p: Props) {
     g.stack.length,
     !!g.combat,
     g.searches?.length,
+    me?.permanentPe,
+    me?.hand.length,
   ]);
   const { drawing, presenting, visibleUnits } = p.presentation;
   useEffect(() => {
@@ -644,13 +651,19 @@ export function Arena(p: Props) {
       {!g.setup && !discardOpen && !presenting && shownCombat?.combat && (
         <CombatForecast preview={shownCombat} game={g} />
       )}
-      {me && g.phase === 4 && yourTurn && !g.setup && !done && (
-        <button className="open-discard" onClick={() => setDiscardOpen(true)}>
-          <span>✦</span>
-          <b>Converter cartas</b>
-          <small>Ganhe energia de reserva</small>
-        </button>
-      )}
+      {me &&
+        g.phase === 4 &&
+        yourTurn &&
+        !g.setup &&
+        !done &&
+        me.permanentPe < 3 &&
+        me.hand.length > 0 && (
+          <button className="open-discard" onClick={() => setDiscardOpen(true)}>
+            <span>✦</span>
+            <b>Converter cartas</b>
+            <small>Ganhe energia de reserva</small>
+          </button>
+        )}
       {discardOpen && me && g.phase === 4 && yourTurn && !done && !response && (
         <DiscardChoice
           game={g}
