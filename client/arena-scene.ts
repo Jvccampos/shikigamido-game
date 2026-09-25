@@ -1,4 +1,5 @@
 import { drawUnit } from "./unit-renderer.js";
+import { drawField, type FieldItem } from "./field-renderer.js";
 import { label, clear, colors } from "./arena-drawing.js";
 import type { GameView, UnitView } from "../shared/room.js";
 import type { GameEvent } from "../shared/model.js";
@@ -57,6 +58,8 @@ export class ArenaScene {
   state!: ArenaState;
   private background = new Container();
   private board = new Container();
+  private field = new Container();
+  private fieldItems: FieldItem[] = [];
   private pieces = new Container();
   private fx = new Container();
   private units = new Map<
@@ -126,6 +129,7 @@ export class ArenaScene {
     this.app.stage.addChild(
       this.background,
       this.board,
+      this.field,
       this.pieces,
       this.fx,
       this.selectedPulse,
@@ -269,8 +273,10 @@ export class ArenaScene {
     if (key !== this.buildKey) {
       this.buildKey = key;
       clear(this.board);
+      clear(this.field);
       this.litGlows = [];
       this.drawBoard(l);
+      this.fieldItems = drawField(this.field, state.game, l);
     }
     const incoming = (state.game.events || []).filter(
       (e) => !this.eventIds.has(e.id),
@@ -371,6 +377,15 @@ export class ArenaScene {
       for (const b of nodes.slice(i + 1)) {
         const a = nodes[i];
         if (!connected(game, a.x, a.y, b.x, b.y)) continue;
+        // Extra paths (bridges, rift links) get their own look in the field.
+        if (
+          (game.edges || []).some(
+            ([x1, y1, x2, y2]) =>
+              (x1 === a.x && y1 === a.y && x2 === b.x && y2 === b.y) ||
+              (x1 === b.x && y1 === b.y && x2 === a.x && y2 === a.y),
+          )
+        )
+          continue;
         const p = l.point(a.x, a.y),
           q = l.point(b.x, b.y);
         const locked =
@@ -412,29 +427,6 @@ export class ArenaScene {
           .stroke({ color: 0x9df0dc, width: 3 }),
       );
     }
-    for (const t of game.terrain) {
-      const q = l.point(t.x, t.y);
-      const glow = new Graphics()
-        .ellipse(q.x, q.y, l.dx * 0.42, l.dy * 0.38)
-        .fill({
-          color:
-            t.kind === "lake"
-              ? 0x49afd5
-              : t.kind === "wind"
-                ? 0x91dbae
-                : 0xe9a166,
-          alpha: 0.22,
-        });
-      this.board.addChild(glow);
-    }
-    for (const f of game.flowers || []) {
-      const q = l.point(f.x, f.y),
-        flower = label("✿", 20, 0xefb8d3);
-      flower.anchor.set(0.5);
-      flower.position.set(q.x, q.y - 12);
-      this.board.addChild(flower);
-    }
-
     const center = l.point(3, 3),
       seal = new Graphics();
     for (const r of [36, 45, 61])
@@ -1059,17 +1051,25 @@ export class ArenaScene {
             (scale - item.view.scale.x) * Math.min(1, dt * 0.25),
         );
       }
-    const breath = 0.72 + Math.sin(performance.now() / 420) * 0.28;
+    const now = performance.now();
+    const breath = 0.72 + Math.sin(now / 420) * 0.28;
     for (const glow of this.litGlows) glow.alpha = breath;
+    if (!this.calm) {
+      for (const item of this.fieldItems) item.update?.(now / 1000);
+      for (const [, item] of this.units)
+        for (const child of item.view.children)
+          if (child.label === "spin") child.rotation = now / 1400;
+          else if (child.label === "spin-back") child.rotation = -now / 2200;
+    }
     if (this.shake > 0.25) {
       const x = (Math.random() - 0.5) * this.shake,
         y = (Math.random() - 0.5) * this.shake;
-      for (const layer of [this.board, this.pieces, this.fx])
+      for (const layer of [this.board, this.field, this.pieces, this.fx])
         layer.position.set(x, y);
       this.shake *= 0.86 ** dt;
     } else if (this.shake) {
       this.shake = 0;
-      for (const layer of [this.board, this.pieces, this.fx])
+      for (const layer of [this.board, this.field, this.pieces, this.fx])
         layer.position.set(0, 0);
     }
     for (const p of [...this.sparks]) {

@@ -67,20 +67,107 @@ export function drawUnit(
     return;
   }
   if (u.kind === "rift") {
+    // A void portal: a dark eye with two counter-rotating rune rings.
     frame.clear();
-    const portal = new Graphics()
-      .ellipse(0, 0, w * 0.27, h * 0.37)
-      .fill({ color: 0x26104a, alpha: 0.95 })
-      .stroke({ color: 0xd39cff, width: 3, alpha: 0.95 })
-      .ellipse(0, 0, w * 0.17, h * 0.27)
-      .stroke({ color: 0x6f3bc1, width: 2, alpha: 0.9 });
-    view.addChild(portal);
-    const icon = label("裂", Math.max(14, size * 0.28), 0xe6c5ff);
+    const r = Math.min(w, h) * 0.34;
+    const halo = new Graphics()
+      .circle(0, 0, r * 1.5)
+      .fill({ color: 0x5a2aa0, alpha: 0.18 })
+      .circle(0, 0, r * 1.1)
+      .fill({ color: 0x1a0836, alpha: 0.95 })
+      .circle(0, 0, r * 0.55)
+      .fill({ color: 0x0a0318, alpha: 1 });
+    view.addChild(halo);
+    const outer = new Graphics();
+    outer.label = "spin";
+    for (let i = 0; i < 6; i++) {
+      const a0 = (i / 6) * Math.PI * 2,
+        a1 = a0 + Math.PI / 5;
+      outer
+        .arc(0, 0, r * 1.05, a0, a1)
+        .stroke({ color: 0xd39cff, width: 2.5, alpha: 0.9, cap: "round" });
+    }
+    const inner = new Graphics();
+    inner.label = "spin-back";
+    for (let i = 0; i < 4; i++) {
+      const a0 = (i / 4) * Math.PI * 2,
+        a1 = a0 + Math.PI / 3;
+      inner
+        .arc(0, 0, r * 0.75, a0, a1)
+        .stroke({ color: 0x9a6ae0, width: 1.5, alpha: 0.85, cap: "round" });
+    }
+    view.addChild(outer, inner);
+    const icon = label("空", Math.max(14, size * 0.26), 0xe6c5ff);
     icon.anchor.set(0.5);
     view.addChild(icon);
     view.on("pointertap", () => getState().onCell(u.x, u.y, u));
     view.on("pointerover", () => getState().onHover(u));
     view.on("pointerout", () => getState().onHover(null));
+    return;
+  }
+  if (u.kind === "wall") {
+    // Earth ward: a lacquer slab in the piece frame's language, the earth
+    // glyph set in a rune ring, and its remaining life in a single chip.
+    frame.clear();
+    const ww = w * 0.9,
+      wh = h * 0.7,
+      earth = 0xd7ae67;
+    const slab = new Graphics()
+      .roundRect(-ww / 2 - 3, -wh / 2 - 3, ww + 6, wh + 6, 8)
+      .fill({ color: 0x081510, alpha: 0.98 })
+      .stroke({ color: owner, width: 2, alpha: 0.8 })
+      .roundRect(-ww / 2, -wh / 2, ww, wh, 5)
+      .fill({ color: 0x241a0c, alpha: 0.95 })
+      .roundRect(-ww / 2 + 3, -wh / 2 + 3, ww - 6, wh - 6, 4)
+      .stroke({ color: earth, width: 1, alpha: 0.45 });
+    // Courses of stone suggested by a few hairlines.
+    for (let row = 1; row < 4; row++) {
+      const y = -wh / 2 + (row * wh) / 4;
+      slab
+        .moveTo(-ww / 2 + 6, y)
+        .lineTo(ww / 2 - 6, y)
+        .stroke({ color: earth, width: 1, alpha: 0.2 });
+    }
+    view.addChild(slab);
+    const r = Math.min(ww, wh) * 0.3;
+    const ring = new Graphics()
+      .circle(0, -2, r)
+      .stroke({ color: earth, width: 1.2, alpha: 0.8 });
+    for (let i = 0; i < 8; i++) {
+      const a = (i / 8) * Math.PI * 2;
+      ring
+        .moveTo(Math.cos(a) * r, -2 + Math.sin(a) * r)
+        .lineTo(Math.cos(a) * r * 1.18, -2 + Math.sin(a) * r * 1.18)
+        .stroke({ color: earth, width: 1, alpha: 0.5 });
+    }
+    view.addChild(ring);
+    const glyph = label("地", Math.max(14, r * 1.2), earth);
+    glyph.anchor.set(0.5);
+    glyph.y = -2;
+    view.addChild(glyph);
+    const life = label(`♥ ${u.hp ?? 0}`, Math.max(10, size * 0.18), 0xf2e4c0);
+    life.anchor.set(0.5);
+    life.y = wh / 2 - Math.max(8, size * 0.13);
+    view.addChild(
+      new Graphics()
+        .roundRect(
+          -life.width / 2 - 6,
+          life.y - life.height / 2 - 1,
+          life.width + 12,
+          life.height + 2,
+          4,
+        )
+        .fill({ color: 0x0a1713, alpha: 0.98 })
+        .stroke({ color: 0x68c5ef, width: 1, alpha: 0.6 }),
+      life,
+    );
+    view.on("pointertap", () => getState().onCell(u.x, u.y, u));
+    view.on("pointerover", () => getState().onHover(u));
+    view.on("pointerout", () => getState().onHover(null));
+    view.on("rightclick", (e) => {
+      e.preventDefault();
+      getState().onInspect(u);
+    });
     return;
   }
   const art = new Container();
