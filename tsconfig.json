@@ -22,5 +22,6 @@
     "vite.config.ts",
     "tests",
     "playwright.config.ts"
-  ]
+  ],
+  "exclude": ["server/worker.ts", "server/sqlite-durable.ts"]
 }

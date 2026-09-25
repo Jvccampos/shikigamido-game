@@ -1,0 +1,23 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "shikigamido",
+  "main": "server/worker.ts",
+  "account_id": "d1659379c7d8202a21c44f2f04c0caf8",
+  "compatibility_date": "2026-09-19",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": false,
+  "preview_urls": false,
+  "observability": { "enabled": true },
+  "vars": { "PUBLIC_URL": "https://shikigamido.ellep.dev" },
+  "secrets": { "required": ["ADMIN_TOKEN"] },
+  "durable_objects": {
+    "bindings": [{ "name": "GAME", "class_name": "Game" }],
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Game"] }],
+  "assets": {
+    "directory": "dist/client",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*", "/socket", "/healthz", "/admin/*"],
+  },
+  "routes": [{ "pattern": "shikigamido.ellep.dev", "custom_domain": true }],
+}

@@ -1,19 +1,19 @@
 # Shikigamido
 
-Jogo de cartas e tabuleiro online, com arena PixiJS 8, interface Preact, servidor Node/Fastify e sincronização por WebSocket. O servidor aplica as regras e envia a cada participante somente as informações que ele pode ver.
+Jogo de cartas e tabuleiro online, com arena PixiJS 8, interface Preact, servidor em Cloudflare Worker com Durable Object e sincronização por WebSocket. O servidor aplica as regras e envia a cada participante somente as informações que ele pode ver.
 
-**Jogar:** https://shikigamido-game-production.up.railway.app
+**Jogar:** https://shikigamido.ellep.dev
 
 ## Desenvolvimento
 
-Node.js 22.12+ (Docker usa Node 24).
+Node.js 24.
 
 ```sh
 npm ci
 npm run dev
 ```
 
-Abra http://localhost:5175. Vite encaminha API e WebSocket ao servidor na porta 3000. `npm run build && npm start` serve a aplicação compilada em uma única porta. Assets originais são copiados para `public/` durante o build.
+Abra http://localhost:5175. Vite encaminha API e WebSocket ao `wrangler dev` na porta 3000, que executa o Worker e o Durable Object localmente, com SQLite em `.wrangler/`. `npm run build && npm start` serve a aplicação compilada em uma única porta. Assets originais são copiados para `public/` durante o build.
 
 ## Organização do código
 
@@ -25,7 +25,7 @@ Abra http://localhost:5175. Vite encaminha API e WebSocket ao servidor na porta 
 - `client/action-selection.ts` controla seleção, alvos, arraste, prévias e validação dos comandos em preparação. `client/match-interaction.tsx` conecta esse modelo ao ciclo da partida no Preact; `client/match-controls.tsx` apresenta as ações preparadas e chama seus callbacks. `client/card.tsx` apresenta cartas e leitura ampliada.
 - `client/duel-presentation.ts` coordena a revisão exibida no tabuleiro, a animação de compra e os avisos de fase. Define quando a entrada e o bot podem prosseguir. `client/use-duel-presentation.ts` conecta esse modelo aos timers do navegador; `client/arena-notices.tsx` desenha o aviso e sua saída.
 - `client/arena.tsx` compõe a interface da partida; `client/arena-hand.tsx` mantém a mão, seu arraste e leitura; `client/use-arena-scene.ts` cuida da criação, atualização e destruição da cena; `client/arena-scene.ts` controla o tabuleiro, a entrada e a sequência de animações PixiJS; `client/unit-renderer.ts` desenha cada peça; `client/field-renderer.ts` desenha e anima os elementos do campo (lagos, ventos, fogo, flores, pontes e o elo entre fendas) em uma camada entre os caminhos e as peças. Estados de apresentação e motivos de incerteza são tipados, separados dos textos exibidos. `client/theme.css` define as fontes (Cormorant Garamond para títulos e números de destaque, Alegreya Sans para a interface), a paleta e as superfícies compartilhadas (`.plaque`, `.stud`, `.rune-label`); os demais arquivos CSS do cliente consomem esses tokens. Os estilos das escolhas e do histórico ficam em `client/choices.css` e `client/journal.css`. `client/network.ts` mantém a conexão da sala e aplica a mesma verificação de revisão às respostas HTTP e WebSocket.
-- `server/index.ts` trata salas e baralhos. `server/main.ts` fornece HTTP, sessões e WebSocket; `server/database.ts` concentra a persistência SQLite.
+- `server/index.ts` trata salas e baralhos. `server/app.ts` fornece HTTP e sessões com `Request`/`Response` padrão; `server/worker.ts` contém o Worker e o Durable Object `Game`, que guarda os WebSockets e expõe exportação e importação. `server/database.ts` concentra a persistência SQLite; `server/sqlite-durable.ts` a liga ao Durable Object e `server/sqlite-node.ts` ao `node:sqlite` dos testes.
 
 As opções extras de magia ficam em `shared/spells.ts`; interface e sugestões de ações consultam essas definições. `shared/effects.ts` aplica efeitos e controla sua expiração usando os campos das partidas salvas. A leitura de keywords em `kw` reúne os valores impressos e concedidos, inclusive os nomes antigos de campos. `resolveSpell` recebe um objeto com os alvos e as escolhas da magia.
 
@@ -52,13 +52,16 @@ O perfil por nome usa um cookie de sessão de 30 dias neste navegador. Sair ou a
 
 ## Publicação e persistência
 
-`Dockerfile` gera uma imagem que serve cliente, API e WebSocket. `docker compose up --build` usa volume persistente em `/data`. No Railway, o serviço tem um volume em `/data`, `DATABASE_PATH=/data/shikigamido.db`, `PUBLIC_URL` com o domínio HTTPS e domínio apontando à porta definida por `PORT` (8080 no deploy atual). Use uma única réplica: SQLite e as notificações WebSocket pertencem a este processo. Reiniciar preserva sessões, baralhos e partidas; navegadores reconectam automaticamente.
+O jogo roda em Cloudflare: um Worker serve `dist/client` como assets e encaminha `/api/*`, `/socket`, `/healthz` e `/admin/*` a um único Durable Object (`Game`). Sessões, baralhos e partidas ficam no SQLite desse Durable Object; os WebSockets usam a API de hibernação e reconectam sozinhos após uma atualização. A configuração está em `wrangler.jsonc`, e `npm run types` gera `worker-configuration.d.ts` (fora do Git).
 
-O serviço de produção está conectado a `Jvccampos/shikigamido-game`, branch `main`, com deploy automático e **Wait for CI** habilitados. Cada push na `main` publica uma nova versão depois que o workflow `Check` passa; uma falha no CI impede a publicação. O Railway compila o `Dockerfile` e verifica `/healthz` antes de ativar a versão. Acompanhe as verificações na aba Actions do GitHub e a publicação no histórico de deploys do Railway.
+A publicação é feita de uma estação de trabalho; o CI não tem credenciais da Cloudflare e só executa `npm run check`:
 
-Não é necessário executar `railway up` após um push. Para uma publicação manual excepcional, use `railway up --detach` com o projeto, ambiente e serviço de produção selecionados no CLI.
+```sh
+npm run build
+CLOUDFLARE_API_TOKEN=... npm run deploy
+```
 
-O site anterior em d.ellep.dev permanece separado. Dados e sessões dele não foram importados para o novo servidor.
+O segredo `ADMIN_TOKEN` (`npx wrangler secret put ADMIN_TOKEN`) protege `GET /admin/export`, que devolve usuários, sessões, baralhos e salas em JSON, e `POST /admin/import`, que aceita esse mesmo JSON apenas quando não há usuários, baralhos nem salas. Use `Authorization: Bearer <token>`. Assim se fazem backups e a migração única dos dados antigos. Em desenvolvimento, crie `.dev.vars` com `ADMIN_TOKEN=dev-token`.
 
 ## Verificação
 
@@ -69,9 +72,9 @@ npm run test:browser
 npm run test:multiplayer
 ```
 
-O comando `check` verifica formatação, lint e tipos, depois executa os testes de regras, catálogo, privacidade, salas, SQLite, HTTP e WebSocket. O CI executa o mesmo comando.
+O comando `check` verifica formatação, lint e tipos, depois executa os testes de regras, catálogo, privacidade, salas, SQLite e HTTP. O CI executa o mesmo comando.
 
-`tests/interactions.test.ts` cobre mortes simultâneas, ressurreição, respostas na pilha, alvos removidos, efeitos temporários e privacidade dos eventos. `tests/recovery.test.ts` inicia um servidor em outro processo, joga um movimento, encerra o processo com `SIGKILL`, reabre o mesmo SQLite e verifica sessões, visão do espectador, rejeição de comandos antigos e continuação da partida. Usa um diretório temporário e remove os dados ao terminar.
+`tests/interactions.test.ts` cobre mortes simultâneas, ressurreição, respostas na pilha, alvos removidos, efeitos temporários e privacidade dos eventos. `tests/http.test.ts` chama `createApp` diretamente com `node:sqlite`: sessões, privacidade do espectador, comandos simultâneos, origem inválida, limite de requisições e reabertura do mesmo arquivo SQLite.
 
 ```sh
 npm run format       # Aplica Prettier ao código, estilos e documentação
@@ -82,7 +85,7 @@ npm run lint:fix     # Aplica as correções automáticas disponíveis
 
 As configurações ficam em `.prettierrc.json` e `eslint.config.mjs`. O Prettier cuida da formatação; o ESLint usa as regras recomendadas para detectar erros e código desnecessário. O lint proíbe `any` no cliente, servidor e motor; fixtures de teste podem representar entradas malformadas. Assets, catálogo original, arquivos gerados e dados locais ficam fora da formatação. Não há hooks de commit ou ferramentas adicionais para executar esses comandos.
 
-`test:browser` compila a aplicação e inicia um servidor isolado na porta 3187 com SQLite em memória. Exercita a preparação e a leitura em quatro tamanhos de tela. O multiplayer tem cenários separados para organizar o lobby, receber uma resposta HTTP atrasada, reconectar um espectador e arrastar cartas e peças. Cada cenário renderiza uma única arena; os demais participantes usam a API real. `test:multiplayer` executa somente esses cenários. Falhas deixam capturas e traces em `.sited/playwright-results/` e um relatório em `.sited/playwright-report/`. Os testes de navegador são executados localmente ou contra um deploy com `TEST_URL`; não rodam no CI. O GitHub Actions executa apenas `npm run check` a cada push e pull request.
+`test:browser` compila a aplicação e inicia `wrangler dev` na porta 3187 com estado novo em `.sited/wrangler/`. Exercita a preparação e a leitura em quatro tamanhos de tela. O multiplayer tem cenários separados para organizar o lobby, receber uma resposta HTTP atrasada, reconectar um espectador e arrastar cartas e peças. Cada cenário renderiza uma única arena; os demais participantes usam a API real. `test:multiplayer` executa somente esses cenários. Falhas deixam capturas e traces em `.sited/playwright-results/` e um relatório em `.sited/playwright-report/`. Os testes de navegador são executados localmente ou contra um deploy com `TEST_URL`; não rodam no CI. O GitHub Actions executa apenas `npm run check` a cada push e pull request.
 
 Os cenários visuais estão em `tests/browser/`. A fixture `scenario` usa o motor real com transporte isolado para reproduzir magias, combate e busca; as fixtures de multiplayer usam HTTP e WebSocket reais. Capturas ficam em `.sited/qa*/`. `TEST_URL` permite executar a suíte contra um deploy; os cenários de multiplayer criam perfis e salas de QA nesse servidor.
 

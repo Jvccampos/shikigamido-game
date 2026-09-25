@@ -3,23 +3,26 @@ type WithoutMetadata<T> = T extends StoredRow
   ? Omit<T, keyof StoredRow>
   : never;
 type Patch<T> = T extends StoredRow ? Partial<Omit<T, keyof StoredRow>> : never;
-import Database from "better-sqlite3";
-import { mkdirSync } from "node:fs";
-import { dirname } from "node:path";
-function readRows<T>(
-  db: Database.Database,
-  sql: string,
-  ...args: string[]
-): T[] {
+export type SqlValue = string | number | null;
+export type SqlRow = Record<string, unknown>;
+/** The few SQLite operations the game needs, on Node or in a Durable Object. */
+export type SqlDriver = {
+  exec(sql: string): void;
+  prepare(sql: string): {
+    all(...params: SqlValue[]): SqlRow[];
+    get(...params: SqlValue[]): SqlRow | undefined;
+    run(...params: SqlValue[]): { changes: number };
+  };
+  transaction<T>(fn: () => T): T;
+  close?(): void;
+};
+function readRows<T>(db: SqlDriver, sql: string, ...args: string[]): T[] {
   return db
     .prepare(sql)
     .all(...args)
-    .map((row) => JSON.parse((row as { body: string }).body) as T);
+    .map((row) => JSON.parse(row.body as string) as T);
 }
-function records<T extends StoredRow>(
-  db: Database.Database,
-  table: "decks" | "rooms",
-) {
+function records<T extends StoredRow>(db: SqlDriver, table: "decks" | "rooms") {
   return {
     insert(value: WithoutMetadata<T>): T {
       const now = new Date().toISOString(),
@@ -51,12 +54,7 @@ function records<T extends StoredRow>(
     },
   };
 }
-export function openDatabase(path: string) {
-  mkdirSync(dirname(path), { recursive: true });
-  const db = new Database(path);
-  db.pragma("journal_mode=WAL");
-  db.pragma("foreign_keys=ON");
-  db.pragma("busy_timeout=5000");
+export function openDatabase(db: SqlDriver) {
   db.exec(
     `CREATE TABLE IF NOT EXISTS decks(id TEXT PRIMARY KEY,body TEXT NOT NULL);CREATE INDEX IF NOT EXISTS deck_owner ON decks(json_extract(body,'$.ownerId'));CREATE TABLE IF NOT EXISTS rooms(id TEXT PRIMARY KEY,body TEXT NOT NULL);CREATE UNIQUE INDEX IF NOT EXISTS room_code ON rooms(json_extract(body,'$.code'));CREATE TABLE IF NOT EXISTS users(id TEXT PRIMARY KEY,name TEXT NOT NULL);CREATE TABLE IF NOT EXISTS sessions(hash TEXT PRIMARY KEY,user_id TEXT NOT NULL REFERENCES users(id),expires INTEGER NOT NULL);`,
   );
@@ -101,9 +99,9 @@ export function openDatabase(path: string) {
     transaction<T>(
       fn: (tx: { decks: typeof decks; rooms: typeof rooms }) => T,
     ): T {
-      return db.transaction(() => fn({ decks, rooms }))();
+      return db.transaction(() => fn({ decks, rooms }));
     },
-    close: () => db.close(),
+    close: () => db.close?.(),
   };
 }
 export type GameDatabase = ReturnType<typeof openDatabase>;

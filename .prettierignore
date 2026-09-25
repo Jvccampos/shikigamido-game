@@ -3,7 +3,8 @@ node_modules/
 dist/
 public/
 .sited/
-storage/
+.wrangler/
+worker-configuration.d.ts
 # Original card catalog and npm's generated lockfile.
 data/cards.json
 package-lock.json

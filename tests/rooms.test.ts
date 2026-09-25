@@ -2,9 +2,10 @@ import { test, type TestContext } from "node:test";
 import assert from "node:assert/strict";
 import app from "../server/index.js";
 import { openDatabase, type Context } from "../server/database.js";
+import { nodeSqliteDriver } from "../server/sqlite-node.js";
 import { starterDeck } from "../shared/practice.js";
 function fixture(t: TestContext) {
-  const database = openDatabase(":memory:");
+  const database = openDatabase(nodeSqliteDriver(":memory:"));
   t.after(() => database.close());
   const ctx = (id: string | null): Context => ({
     auth: { userId: id, displayName: id || "" },
@@ -109,7 +110,7 @@ test("deck deletion and lookup enforce ownership", (t) => {
   assert.equal(f.query("b", "myDecks")[0].id, f.db.id);
 });
 test("deck lists sort by update time and failed transactions roll back", (t) => {
-  const database = openDatabase(":memory:");
+  const database = openDatabase(nodeSqliteDriver(":memory:"));
   t.after(() => database.close());
   const [older, newer] = database.transaction(({ decks }) =>
     ["Older", "Newer"].map((name) =>

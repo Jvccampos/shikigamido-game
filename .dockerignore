@@ -1,9 +1,0 @@
-node_modules
-.git
-.sited
-storage
-public
-dist
-.env
-.env.*
-*.log

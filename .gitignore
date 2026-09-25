@@ -3,9 +3,8 @@ node_modules/
 dist/
 .env
 .env.*
-!.env.example
+.dev.vars
 *.log
 public/
-storage/
-.railway/*
-!.railway/railway.ts
+.wrangler/
+worker-configuration.d.ts

@@ -22,14 +22,8 @@ export default defineConfig({
   webServer: process.env.TEST_URL
     ? undefined
     : {
-        command: "npm run build && NODE_ENV=test npm start",
+        command: `rm -rf .sited/wrangler && npm run build && npx wrangler dev --port 3187 --var PUBLIC_URL:${baseURL} --persist-to .sited/wrangler`,
         url: `${baseURL}/healthz`,
-        env: {
-          PORT: "3187",
-          NODE_ENV: "production",
-          DATABASE_PATH: ":memory:",
-          PUBLIC_URL: baseURL,
-        },
         reuseExistingServer: false,
         timeout: 120000,
         gracefulShutdown: { signal: "SIGTERM", timeout: 5000 },

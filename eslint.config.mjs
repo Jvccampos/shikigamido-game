@@ -4,7 +4,14 @@ import globals from "globals";
 import tseslint from "typescript-eslint";
 
 export default defineConfig(
-  globalIgnores(["node_modules/", "dist/", "public/", ".sited/", "storage/"]),
+  globalIgnores([
+    "node_modules/",
+    "dist/",
+    "public/",
+    ".sited/",
+    ".wrangler/",
+    "worker-configuration.d.ts",
+  ]),
   {
     files: ["**/*.{js,mjs,ts,tsx}"],
     extends: [js.configs.recommended],
